@@ -150,7 +150,7 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
                                 <div className="text-xs text-slate-500 font-medium">Ubicación</div>
                                 <div className="text-sm font-bold text-slate-900">
                                     {isOffer
-                                        ? sr?.address || sr?.user?.address || 'Oculta hasta confirmar el servicio'
+                                ? sr?.address || 'Oculta hasta confirmar el servicio'
                                         : sr?.address || '—'}
                                 </div>
                             </div>

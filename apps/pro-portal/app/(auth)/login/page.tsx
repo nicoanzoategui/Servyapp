@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { API_URL } from '@/lib/api';
 
@@ -10,7 +9,6 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const router = useRouter();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -24,16 +22,30 @@ export default function LoginPage() {
                 body: JSON.stringify({ email, password }),
             });
 
-            const data = await res.json();
-            if (!res.ok || !data.success) {
+            let data: { success?: boolean; data?: { accessToken?: string }; error?: { message?: string } };
+            try {
+                data = await res.json();
+            } catch {
+                throw new Error('La API no respondió JSON. ¿Está corriendo en ' + API_URL + '?');
+            }
+
+            if (!res.ok || !data.success || !data.data?.accessToken) {
                 throw new Error(data.error?.message || 'Login fallido');
             }
 
-            Cookies.set('token', data.data.accessToken, { expires: 7 });
-            router.push('/dashboard');
+            Cookies.set('token', data.data.accessToken, {
+                expires: 7,
+                path: '/',
+                sameSite: 'lax',
+            });
+            window.location.assign('/dashboard');
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Error');
-        } finally {
+            const msg = err instanceof Error ? err.message : 'Error';
+            setError(
+                msg === 'Failed to fetch'
+                    ? `No se pudo conectar con la API. ¿Corre en ${API_URL}?`
+                    : msg
+            );
             setLoading(false);
         }
     };

@@ -30,11 +30,12 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.use('/auth', authRoutes);
-// WhatsApp POST requiere body crudo para validar firma Meta; el resto usa JSON.
+// WhatsApp primero: POST usa body crudo en la ruta (firma Meta). No pasar por express.json().
 app.use('/webhook', webhookRoutes);
 
 app.use(express.json());
+
+app.use('/auth', authRoutes);
 
 app.post('/webhook/mercadopago', handleMPWebhook);
 
