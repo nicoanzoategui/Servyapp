@@ -8,7 +8,7 @@ FROM base AS builder
 WORKDIR /app
 COPY . .
 RUN pnpm install --frozen-lockfile
-RUN npx prisma generate --schema=packages/db/prisma/schema.prisma
+RUN pnpm --filter @servy/db exec prisma generate
 RUN pnpm -F @servy/db run build
 RUN pnpm -F @servy/api build
 
