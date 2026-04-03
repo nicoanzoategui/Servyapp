@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String           @id @default(cuid())
+  phone                String           @unique
+  name                 String?
+  last_name            String?
+  address              String?
+  onboarding_completed Boolean          @default(false)
+  created_at           DateTime         @default(now())
+  last_active_at       DateTime         @default(now())
+  
+  service_requests     ServiceRequest[]
+
+  @@map("users")
+}
+
+enum ProfessionalStatus {
+  pending
+  active
+  suspended
+}
+
+model Professional {
+  id                   String             @id @default(cuid())
+  name                 String
+  last_name            String
+  phone                String             @unique
+  email                String             @unique
+  password_hash        String
+  dni                  String?
+  categories           String[]
+  zones                String[]
+  schedule_json        Json?
+  is_urgent            Boolean            @default(false)
+  is_scheduled         Boolean            @default(true)
+  cbu_alias            String?
+  mp_alias             String?
+  rating               Float              @default(0)
+  status               ProfessionalStatus @default(pending)
+  onboarding_completed Boolean            @default(false)
+  onboarding_step      Int                @default(1)
+  created_at           DateTime           @default(now())
+
+  job_offers           JobOffer[]
+  earnings             Earning[]
+
+  @@map("professionals")
+}
+
+model ServiceRequest {
+  id          String   @id @default(cuid())
+  user_phone  String
+  category    String?
+  description String?
+  photos      String[]
+  address     String?
+  latitude    Float?
+  longitude   Float?
+  status      String   @default("pending")
+  created_at  DateTime @default(now())
+
+  user        User       @relation(fields: [user_phone], references: [phone])
+  job_offers  JobOffer[]
+
+  @@map("service_requests")
+}
+
+model JobOffer {
+  id              String   @id @default(cuid())
+  request_id      String
+  professional_id String
+  priority        String   @default("normal")
+  status          String   @default("pending") // pending, accepted, rejected, quoted
+  created_at      DateTime @default(now())
+
+  service_request ServiceRequest @relation(fields: [request_id], references: [id])
+  professional    Professional   @relation(fields: [professional_id], references: [id])
+  quotations      Quotation[]
+
+  @@map("job_offers")
+}
+
+model Quotation {
+  id                 String   @id @default(cuid())
+  job_offer_id       String   @unique
+  items_json         Json     // [{description, price}]
+  total_price        Float
+  description        String?
+  estimated_duration String?
+  status             String   @default("pending") // pending, accepted, rejected
+  created_at         DateTime @default(now())
+
+  job_offer          JobOffer  @relation(fields: [job_offer_id], references: [id])
+  payment            Payment?
+  job                Job?
+
+  @@map("quotations")
+}
+
+model Payment {
+  id               String    @id @default(cuid())
+  quotation_id     String    @unique
+  mp_payment_id    String?
+  mp_preference_id String?
+  amount           Float
+  status           String    @default("pending")
+  paid_at          DateTime?
+
+  quotation        Quotation @relation(fields: [quotation_id], references: [id])
+
+  @@map("payments")
+}
+
+model Job {
+  id             String    @id @default(cuid())
+  quotation_id   String    @unique
+  scheduled_at   DateTime?
+  completed_at   DateTime?
+  status         String    @default("confirmed") // confirmed, in_progress, completed, cancelled
+  rating         Int?
+  review         String?
+  reminder_sent  Boolean   @default(false)
+
+  quotation Quotation @relation(fields: [quotation_id], references: [id])
+  earnings  Earning[]
+
+  @@map("jobs")
+}
+
+model Earning {
+  id              String    @id @default(cuid())
+  professional_id String
+  job_id          String
+  gross_amount    Float
+  commission_pct  Float
+  net_amount      Float
+  transferred_at  DateTime?
+
+  professional    Professional @relation(fields: [professional_id], references: [id])
+  job             Job          @relation(fields: [job_id], references: [id])
+
+  @@map("earnings")
+}
+
+model Admin {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password_hash String
+  name          String
+  created_at    DateTime @default(now())
+
+  @@map("admins")
+}
+
+model WhatsappSession {
+  phone      String   @id
+  step       String
+  data_json  Json?
+  expires_at DateTime
+
+  @@map("whatsapp_sessions")
+}
+
+model ProfessionalLead {
+  id          String   @id @default(cuid())
+  name        String
+  email       String
+  phone       String
+  categories  String[] @default([])
+  zone        String?
+  created_at  DateTime @default(now())
+
+  @@map("professional_leads")
+}

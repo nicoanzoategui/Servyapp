@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: servy-db
+    environment:
+      POSTGRES_USER: servy
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: servydb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: servy-redis
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: servy-api
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://servy:password@db:5432/servydb?schema=public
+      REDIS_URL: redis://redis:6379
+      PORT: 3000
+    depends_on:
+      - db
+      - redis
+
+  landing:
+    build:
+      context: .
+      dockerfile: apps/landing/Dockerfile
+    container_name: servy-landing
+    ports:
+      - "3001:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://api:3000
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

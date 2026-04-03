@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  api-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Test API
+        working-directory: apps/api
+        env:
+          JWT_SECRET: test-jwt-secret-min-32-chars-long!!
+          JWT_REFRESH_SECRET: test-refresh-secret-min-32-chars!!
+          WA_TOKEN: dummy
+          WA_PHONE_ID: dummy
+          WA_APP_SECRET: dummy
+          WA_VERIFY_TOKEN: dummy
+          R2_ACCOUNT_ID: dummy
+          R2_ACCESS_KEY: dummy
+          R2_SECRET_KEY: dummy
+          R2_BUCKET: dummy
+          MP_ACCESS_TOKEN: dummy
+          MP_WEBHOOK_SECRET: dummy
+          WA_SKIP_SIGNATURE: 'true'
+        run: pnpm test

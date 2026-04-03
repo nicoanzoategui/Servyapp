@@ -1,0 +1,25 @@
+{
+    "name": "@servy/db",
+    "version": "1.0.0",
+    "private": true,
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "db:push": "prisma db push",
+        "db:seed": "prisma db seed",
+        "build": "tsc"
+    },
+    "dependencies": {
+        "@prisma/client": "^5.10.2"
+    },
+    "devDependencies": {
+        "@types/bcrypt": "^6.0.0",
+        "@types/node": "^25.5.0",
+        "bcrypt": "^6.0.0",
+        "prisma": "^5.10.2",
+        "typescript": "^5.9.3"
+    },
+    "prisma": {
+        "seed": "ts-node prisma/seed.ts"
+    }
+}
