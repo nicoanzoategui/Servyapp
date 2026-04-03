@@ -29,6 +29,9 @@ jobs:
           WA_PHONE_ID: dummy
           WA_APP_SECRET: dummy
           WA_VERIFY_TOKEN: dummy
+          TWILIO_ACCOUNT_SID: AC0000000000000000000000000000000
+          TWILIO_AUTH_TOKEN: dummy
+          TWILIO_PHONE_NUMBER: whatsapp:+10000000000
           R2_ACCOUNT_ID: dummy
           R2_ACCESS_KEY: dummy
           R2_SECRET_KEY: dummy

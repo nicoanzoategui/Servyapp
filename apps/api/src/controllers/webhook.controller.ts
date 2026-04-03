@@ -146,3 +146,22 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
         console.error('MP Webhook Error:', error);
     }
 };
+
+export const handleTwilioMessage = async (req: Request, res: Response) => {
+    res.set('Content-Type', 'text/xml');
+    res.send('<Response></Response>');
+
+    try {
+        const phone = (req.body.From as string)?.replace(/^whatsapp:/i, '')?.trim();
+        const numMedia = parseInt(String(req.body.NumMedia ?? '0'), 10);
+        const messageType = numMedia > 0 ? 'image' : 'text';
+        const content =
+            messageType === 'image' ? (req.body.MediaUrl0 as string) : (req.body.Body as string);
+
+        if (phone && content) {
+            await ConversationService.processMessage(phone, messageType, content).catch(console.error);
+        }
+    } catch (error) {
+        console.error('Twilio webhook error:', error);
+    }
+};

@@ -1,76 +1,32 @@
 import { env } from '../utils/env';
+import twilio from 'twilio';
+
+const twilioClient = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
+
+/** Evita `whatsapp:whatsapp:+...` si el .env ya trae el prefijo. */
+function toTwilioWhatsappAddress(raw: string): string {
+    const t = raw.trim();
+    if (t.toLowerCase().startsWith('whatsapp:')) return t;
+    const num = t.startsWith('+') ? t : `+${t.replace(/^\+/, '')}`;
+    return `whatsapp:${num}`;
+}
 
 export class WhatsAppService {
-    private static get baseUrl() {
-        return `https://graph.facebook.com/v19.0/${env.WA_PHONE_ID}/messages`;
-    }
-
-    private static get headers() {
-        return {
-            'Authorization': `Bearer ${env.WA_TOKEN}`,
-            'Content-Type': 'application/json',
-        };
-    }
-
     static async sendTextMessage(phone: string, text: string) {
-        const payload = {
-            messaging_product: 'whatsapp',
-            recipient_type: 'individual',
-            to: phone,
-            type: 'text',
-            text: {
-                preview_url: false,
+        try {
+            await twilioClient.messages.create({
+                from: toTwilioWhatsappAddress(env.TWILIO_PHONE_NUMBER),
+                to: toTwilioWhatsappAddress(phone),
                 body: text,
-            },
-        };
-
-        const response = await fetch(this.baseUrl, {
-            method: 'POST',
-            headers: this.headers,
-            body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Error sending WA text message:', errorData);
+            });
+        } catch (err) {
+            console.error('Error sending Twilio message:', err);
         }
-        return response.json().catch(() => ({}));
     }
 
-    static async sendButtonMessage(
-        phone: string,
-        text: string,
-        buttons: { id: string; title: string }[]
-    ) {
-        const payload = {
-            messaging_product: 'whatsapp',
-            to: phone,
-            type: 'interactive',
-            interactive: {
-                type: 'button',
-                body: { text },
-                action: {
-                    buttons: buttons.map((btn) => ({
-                        type: 'reply',
-                        reply: {
-                            id: btn.id,
-                            title: btn.title,
-                        },
-                    })),
-                },
-            },
-        };
-
-        const response = await fetch(this.baseUrl, {
-            method: 'POST',
-            headers: this.headers,
-            body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-            console.error('Error sending WA button message:', await response.json());
-        }
-        return response.json().catch(() => ({}));
+    static async sendButtonMessage(phone: string, text: string, buttons: { id: string; title: string }[]) {
+        const body = `${text}\n\n${buttons.map((b, i) => `${i + 1}. ${b.title}`).join('\n')}`;
+        return this.sendTextMessage(phone, body);
     }
 
     static async sendListMessage(
@@ -78,53 +34,25 @@ export class WhatsAppService {
         text: string,
         sections: { title: string; rows: { id: string; title: string; description?: string }[] }[]
     ) {
-        const payload = {
-            messaging_product: 'whatsapp',
-            to: phone,
-            type: 'interactive',
-            interactive: {
-                type: 'list',
-                body: { text },
-                action: {
-                    button: 'Elegir opción',
-                    sections,
-                },
-            },
-        };
-
-        const response = await fetch(this.baseUrl, {
-            method: 'POST',
-            headers: this.headers,
-            body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-            console.error('Error sending WA list message:', await response.json());
-        }
-        return response.json().catch(() => ({}));
+        const rows = sections.flatMap((s) => s.rows);
+        const body = `${text}\n\n${rows
+            .map((r, i) => `${i + 1}. ${r.title}${r.description ? ` - ${r.description}` : ''}`)
+            .join('\n')}`;
+        return this.sendTextMessage(phone, body);
     }
 
-    static async downloadMedia(mediaId: string): Promise<Buffer | null> {
+    /** Para Twilio: URL del media (`MediaUrl0`). */
+    static async downloadMedia(mediaUrl: string): Promise<Buffer | null> {
         try {
-            const metadataResponse = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, {
-                headers: this.headers,
+            const response = await fetch(mediaUrl, {
+                headers: {
+                    Authorization: `Basic ${Buffer.from(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`).toString('base64')}`,
+                },
             });
-
-            if (!metadataResponse.ok) return null;
-            const metadata = await metadataResponse.json();
-
-            if (!metadata.url) return null;
-
-            const mediaResponse = await fetch(metadata.url, {
-                headers: { 'Authorization': `Bearer ${env.WA_TOKEN}` },
-            });
-
-            if (!mediaResponse.ok) return null;
-
-            const arrayBuffer = await mediaResponse.arrayBuffer();
-            return Buffer.from(arrayBuffer);
+            if (!response.ok) return null;
+            return Buffer.from(await response.arrayBuffer());
         } catch (err) {
-            console.error('Error downloading WA media:', err);
+            console.error('Error downloading Twilio media:', err);
             return null;
         }
     }
