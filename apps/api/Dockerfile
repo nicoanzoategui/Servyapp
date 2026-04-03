@@ -1,8 +1,8 @@
-# Base image
 FROM node:20-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
+RUN apt-get update -y && apt-get install -y openssl
 
 FROM base AS builder
 WORKDIR /app
@@ -14,13 +14,7 @@ RUN pnpm -F @servy/api build
 
 FROM base AS runner
 WORKDIR /app
-COPY --from=builder /app/package.json .
-COPY --from=builder /app/pnpm-lock.yaml .
-COPY --from=builder /app/pnpm-workspace.yaml .
-COPY --from=builder /app/apps/api/package.json ./apps/api/
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/packages/db ./packages/db
-
+COPY --from=builder /app .
 RUN pnpm install --prod --frozen-lockfile
 
 EXPOSE 3000
