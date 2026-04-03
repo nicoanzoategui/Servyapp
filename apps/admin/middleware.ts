@@ -15,11 +15,22 @@ export function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/login', request.url));
     }
 
-    // In a real app we'd verify the JWT signature here using jose or similar edge-compatible JWT library
-    // For the sake of this implementation, presence of cookie is checked locally allowing API to handle strict auth
     return NextResponse.next();
 }
 
+/**
+ * Solo rutas de la app. Nunca `/_next/*` (CSS/JS/fuentes) → evita redirect a /login
+ * que rompe Tailwind (el navegador recibe HTML en lugar del .css).
+ */
 export const config = {
-    matcher: ['/((?!_next/static|_next/image|favicon.ico|api).*)'],
+    matcher: [
+        '/',
+        '/login',
+        '/dashboard/:path*',
+        '/conversations/:path*',
+        '/professionals/:path*',
+        '/jobs/:path*',
+        '/finance/:path*',
+        '/settings/:path*',
+    ],
 };

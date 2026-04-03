@@ -7,6 +7,8 @@
     "scripts": {
         "db:push": "prisma db push",
         "db:seed": "prisma db seed",
+        "create-admin": "ts-node scripts/create-admin.ts",
+        "create-professional": "ts-node scripts/create-professional.ts",
         "build": "tsc"
     },
     "dependencies": {

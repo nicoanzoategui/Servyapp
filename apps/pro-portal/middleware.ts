@@ -14,6 +14,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
 }
 
+/** Lista blanca: no tocar `/_next/*` (CSS/JS). */
 export const config = {
-    matcher: ['/((?!_next/static|_next/image|favicon.ico|api).*)'],
+    matcher: ['/login', '/dashboard/:path*', '/jobs/:path*', '/earnings/:path*', '/profile/:path*'],
 };
