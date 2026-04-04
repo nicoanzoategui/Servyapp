@@ -60,7 +60,14 @@ Mensaje del usuario: "${description}"`;
             const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
             console.log('[Gemini response]', text);
             const clean = text.replace(/```json|```/g, '').trim();
-            return JSON.parse(clean);
+
+            const jsonMatch = clean.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) {
+                console.error('[Gemini] No se encontró JSON en la respuesta:', clean);
+                return { category: null, urgency: 'media', understood: false, detected_problem: '' };
+            }
+
+            return JSON.parse(jsonMatch[0]);
         } catch (err) {
             console.error('Gemini error:', err);
             return { category: null, urgency: 'media', understood: false, detected_problem: '' };
