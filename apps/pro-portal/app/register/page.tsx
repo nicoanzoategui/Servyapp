@@ -2,64 +2,83 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { API_URL } from '@/lib/api';
+import Image from 'next/image';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
+function validatePassword(password: string) {
+    const errors = [];
+    if (password.length < 12) errors.push('Mínimo 12 caracteres');
+    if (!/[A-Z]/.test(password)) errors.push('Al menos una mayúscula');
+    if (!/[a-z]/.test(password)) errors.push('Al menos una minúscula');
+    if (!/[0-9]/.test(password)) errors.push('Al menos un número');
+    return errors;
+}
 
 export default function RegisterPage() {
     const [form, setForm] = useState({
-        name: '',
-        last_name: '',
+        full_name: '',
         email: '',
         phone: '',
         password: '',
-        confirm: '',
     });
-    const [error, setError] = useState('');
-    const [done, setDone] = useState(false);
+    const [errors, setErrors] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
+    const [success, setSuccess] = useState(false);
+    const [apiError, setApiError] = useState('');
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setForm({ ...form, [e.target.name]: e.target.value });
+        if (e.target.name === 'password') {
+            setErrors(validatePassword(e.target.value));
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
-        if (form.password !== form.confirm) {
-            setError('Las contraseñas no coinciden');
+        setApiError('');
+        const pwErrors = validatePassword(form.password);
+        if (pwErrors.length > 0) {
+            setErrors(pwErrors);
             return;
         }
-        if (form.password.length < 12) {
-            setError('La contraseña debe tener al menos 12 caracteres');
-            return;
-        }
+        const parts = form.full_name.trim().split(' ');
+        const name = parts[0];
+        const last_name = parts.slice(1).join(' ') || '-';
+
         setLoading(true);
         try {
             const res = await fetch(`${API_URL}/auth/professional/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: form.name,
-                    last_name: form.last_name,
-                    email: form.email,
-                    phone: form.phone,
-                    password: form.password,
-                }),
+                body: JSON.stringify({ name, last_name, email: form.email, phone: form.phone, password: form.password }),
             });
-            const data = await res.json().catch(() => ({}));
+            const data = await res.json();
             if (!res.ok) {
-                throw new Error(data.error?.message || 'No se pudo registrar');
+                setApiError(data.error?.message || 'Error al registrarse');
+                return;
             }
-            setDone(true);
-        } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Error');
+            setSuccess(true);
+        } catch {
+            setApiError('No se pudo conectar con el servidor');
         } finally {
             setLoading(false);
         }
     };
 
-    if (done) {
+    if (success) {
         return (
-            <div className="flex min-h-screen flex-col justify-center px-6 py-12 lg:px-8 bg-white">
-                <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-                    <p className="text-slate-800 font-medium">Cuenta creada. Revisá tu email para verificar.</p>
-                    <Link href="/login" className="mt-6 inline-block text-servy-600 font-semibold">
-                        Ir al inicio de sesión
+            <div className="min-h-screen flex items-center justify-center bg-slate-50 px-6">
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-10 max-w-md w-full text-center">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-900 mb-3">¡Cuenta creada!</h2>
+                    <p className="text-slate-500 mb-8">Tu cuenta fue creada exitosamente. Ya podés ingresar al portal.</p>
+                    <Link href="/login" className="bg-servy-600 text-white px-8 py-3 rounded-full font-bold hover:bg-servy-500 transition-all">
+                        Ir al login
                     </Link>
                 </div>
             </div>
@@ -67,93 +86,125 @@ export default function RegisterPage() {
     }
 
     return (
-        <div className="flex min-h-screen flex-col justify-center px-6 py-12 lg:px-8 bg-white">
-            <div className="sm:mx-auto sm:w-full sm:max-w-sm">
-                <h2 className="text-center text-3xl font-extrabold text-servy-600">Crear cuenta</h2>
-                <p className="mt-2 text-center text-sm text-slate-600">Registrate como profesional en Servy</p>
+        <div className="min-h-screen flex">
+            {/* Formulario */}
+            <div className="flex-1 flex items-center justify-center px-8 py-12 bg-white">
+                <div className="w-full max-w-sm">
+                    <div className="mb-8">
+                        <div className="text-2xl font-black text-servy-600 tracking-tighter mb-6">Servy.</div>
+                        <h1 className="text-3xl font-bold text-slate-900 mb-2">Crear cuenta</h1>
+                        <p className="text-slate-500">Empezá a recibir trabajos hoy.</p>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                        <div>
+                            <label className="text-sm font-medium text-slate-700 mb-1 block">Nombre y apellido</label>
+                            <input
+                                name="full_name"
+                                type="text"
+                                placeholder="Juan Pérez"
+                                value={form.full_name}
+                                onChange={handleChange}
+                                required
+                                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-servy-400 transition"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-sm font-medium text-slate-700 mb-1 block">Email</label>
+                            <input
+                                name="email"
+                                type="email"
+                                placeholder="juan@email.com"
+                                value={form.email}
+                                onChange={handleChange}
+                                required
+                                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-servy-400 transition"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-sm font-medium text-slate-700 mb-1 block">Teléfono</label>
+                            <input
+                                name="phone"
+                                type="tel"
+                                placeholder="11 1234 5678"
+                                value={form.phone}
+                                onChange={handleChange}
+                                required
+                                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-servy-400 transition"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-sm font-medium text-slate-700 mb-1 block">Contraseña</label>
+                            <input
+                                name="password"
+                                type="password"
+                                placeholder="Mínimo 12 caracteres"
+                                value={form.password}
+                                onChange={handleChange}
+                                required
+                                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-servy-400 transition"
+                            />
+                            {form.password.length > 0 && (
+                                <div className="mt-2 flex flex-col gap-1">
+                                    {[
+                                        { label: 'Mínimo 12 caracteres', ok: form.password.length >= 12 },
+                                        { label: 'Una mayúscula', ok: /[A-Z]/.test(form.password) },
+                                        { label: 'Una minúscula', ok: /[a-z]/.test(form.password) },
+                                        { label: 'Un número', ok: /[0-9]/.test(form.password) },
+                                    ].map((r) => (
+                                        <div key={r.label} className="flex items-center gap-2">
+                                            <div className={`w-4 h-4 rounded-full flex items-center justify-center ${r.ok ? 'bg-green-100' : 'bg-slate-100'}`}>
+                                                {r.ok && <svg className="w-2.5 h-2.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>}
+                                            </div>
+                                            <span className={`text-xs ${r.ok ? 'text-green-600' : 'text-slate-400'}`}>{r.label}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {apiError && (
+                            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">
+                                {apiError}
+                            </div>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={loading || errors.length > 0}
+                            className="bg-servy-600 text-white py-3 rounded-full font-bold hover:bg-servy-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                        >
+                            {loading ? 'Creando cuenta...' : 'Crear cuenta'}
+                        </button>
+                    </form>
+
+                    <p className="text-center text-slate-500 text-sm mt-6">
+                        ¿Ya tenés cuenta?{' '}
+                        <Link href="/login" className="text-servy-600 font-semibold hover:underline">
+                            Iniciá sesión
+                        </Link>
+                    </p>
+                </div>
             </div>
-            <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-sm">
-                {error && (
-                    <div className="mb-4 rounded-xl bg-red-50 p-4 text-sm text-red-600 border border-red-200">{error}</div>
-                )}
-                <form className="space-y-4" onSubmit={handleSubmit}>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-900">Nombre</label>
-                        <input
-                            required
-                            className="mt-2 block w-full rounded-xl border-0 py-3 px-4 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300"
-                            value={form.name}
-                            onChange={(e) => setForm({ ...form, name: e.target.value })}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-900">Apellido</label>
-                        <input
-                            required
-                            className="mt-2 block w-full rounded-xl border-0 py-3 px-4 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300"
-                            value={form.last_name}
-                            onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-900">Email</label>
-                        <input
-                            required
-                            type="email"
-                            autoComplete="email"
-                            className="mt-2 block w-full rounded-xl border-0 py-3 px-4 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300"
-                            value={form.email}
-                            onChange={(e) => setForm({ ...form, email: e.target.value })}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-900">Teléfono</label>
-                        <input
-                            required
-                            type="tel"
-                            autoComplete="tel"
-                            placeholder="5491112345678"
-                            className="mt-2 block w-full rounded-xl border-0 py-3 px-4 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300"
-                            value={form.phone}
-                            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-900">Contraseña (mín. 12)</label>
-                        <input
-                            required
-                            type="password"
-                            autoComplete="new-password"
-                            className="mt-2 block w-full rounded-xl border-0 py-3 px-4 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300"
-                            value={form.password}
-                            onChange={(e) => setForm({ ...form, password: e.target.value })}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-900">Confirmar contraseña</label>
-                        <input
-                            required
-                            type="password"
-                            autoComplete="new-password"
-                            className="mt-2 block w-full rounded-xl border-0 py-3 px-4 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300"
-                            value={form.confirm}
-                            onChange={(e) => setForm({ ...form, confirm: e.target.value })}
-                        />
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full rounded-xl bg-servy-600 py-3 text-sm font-semibold text-white hover:bg-servy-500 disabled:opacity-70"
-                    >
-                        {loading ? 'Registrando...' : 'Registrarme'}
-                    </button>
-                </form>
-                <p className="mt-6 text-center text-sm text-slate-600">
-                    ¿Ya tenés cuenta?{' '}
-                    <Link href="/login" className="font-semibold text-servy-600">
-                        Iniciá sesión
-                    </Link>
-                </p>
+
+            {/* Imagen lateral */}
+            <div className="hidden lg:block flex-1 relative">
+                <Image
+                    src="/images/register-hero.jpg"
+                    alt="Profesional Servy"
+                    fill
+                    className="object-cover"
+                    priority
+                />
+                <div className="absolute inset-0 bg-servy-900/30" />
+                <div className="absolute bottom-12 left-12 right-12">
+                    <p className="text-white text-3xl font-bold leading-snug">
+                        Más trabajo.<br />Cobro garantizado.<br />Sin complicaciones.
+                    </p>
+                </div>
             </div>
         </div>
     );
