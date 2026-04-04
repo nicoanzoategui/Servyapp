@@ -18,17 +18,123 @@ export default function Home() {
             </header>
 
             {/* Hero Section */}
-            <section className="w-full flex-1 pt-32 pb-20 px-6 md:px-12 flex flex-col items-center justify-center text-center bg-gradient-to-br from-servy-50 via-white to-servy-100/50 mt-10">
-                <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-slate-900 max-w-4xl animate-slide-up">
-                    Arreglá tu hogar en minutos. <span className="text-transparent bg-clip-text bg-gradient-to-r from-servy-500 to-servy-700">Por WhatsApp.</span>
-                </h1>
-                <p className="mt-6 text-lg md:text-xl text-slate-600 max-w-2xl animate-fade-in delay-150">
-                    Describí el problema de tu hogar por WhatsApp y en minutos tenés un profesional verificado camino a tu casa. Sin apps, sin llamadas, sin vueltas.
-                </p>
-                <div className="mt-10 flex flex-col sm:flex-row gap-4 animate-slide-up delay-300">
-                    <a href={WA_LINK} target="_blank" rel="noopener noreferrer" className="bg-servy-600 text-white px-8 py-4 rounded-full font-bold shadow-xl shadow-servy-500/30 hover:shadow-2xl hover:bg-servy-500 hover:-translate-y-1 transition-all duration-300">
-                        Hablar con Servy
-                    </a>
+            <section className="w-full pt-32 pb-20 px-6 md:px-12 bg-gradient-to-br from-servy-50 via-white to-servy-100/50 mt-10">
+                <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12">
+                    {/* Texto */}
+                    <div className="flex-1 flex flex-col items-start text-left">
+                        <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 max-w-xl animate-slide-up">
+                            Arreglá tu hogar en minutos.{' '}
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-servy-500 to-servy-700">
+                                Por WhatsApp.
+                            </span>
+                        </h1>
+                        <p className="mt-6 text-lg md:text-xl text-slate-600 max-w-lg animate-fade-in delay-150">
+                            Describí el problema de tu hogar por WhatsApp y en minutos tenés un profesional verificado camino a tu casa. Sin apps, sin llamadas, sin vueltas.
+                        </p>
+                        <div className="mt-10 animate-slide-up delay-300">
+                            <a
+                                href={WA_LINK}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-servy-600 text-white px-8 py-4 rounded-full font-bold shadow-xl shadow-servy-500/30 hover:shadow-2xl hover:bg-servy-500 hover:-translate-y-1 transition-all duration-300"
+                            >
+                                Hablar con Servy
+                            </a>
+                        </div>
+                    </div>
+
+                    {/* iPhone Mockup */}
+                    <div className="shrink-0 hidden md:flex justify-center items-center">
+                        <div className="relative w-[272px]">
+                            {/* Cuerpo iPhone */}
+                            <div
+                                className="bg-[#1a1a1a] rounded-[44px] p-[14px] shadow-2xl"
+                                style={{ boxShadow: '0 0 0 2px #3a3a3a, 0 30px 80px rgba(0,0,0,0.35)' }}
+                            >
+                                {/* Botones laterales izquierda */}
+                                <div className="absolute left-[-3px] top-[80px] w-[3px] h-[28px] bg-[#2a2a2a] rounded-l-sm"></div>
+                                <div className="absolute left-[-3px] top-[118px] w-[3px] h-[44px] bg-[#2a2a2a] rounded-l-sm"></div>
+                                <div className="absolute left-[-3px] top-[172px] w-[3px] h-[44px] bg-[#2a2a2a] rounded-l-sm"></div>
+                                {/* Botón derecha */}
+                                <div className="absolute right-[-3px] top-[130px] w-[3px] h-[64px] bg-[#2a2a2a] rounded-r-sm"></div>
+
+                                {/* Pantalla */}
+                                <div className="bg-white rounded-[32px] overflow-hidden">
+                                    {/* Status bar */}
+                                    <div className="bg-[#075E54] px-5 pt-2 pb-0 flex justify-between items-start">
+                                        <span className="text-white text-[11px] font-bold pt-1">9:41</span>
+                                        <div className="w-[80px] h-[20px] bg-[#1a1a1a] rounded-b-[12px]"></div>
+                                        <div className="flex gap-1 items-center pt-1">
+                                            <div className="flex gap-[1px] items-end">
+                                                <div className="w-[3px] h-[5px] bg-white rounded-sm"></div>
+                                                <div className="w-[3px] h-[8px] bg-white rounded-sm"></div>
+                                                <div className="w-[3px] h-[11px] bg-white rounded-sm"></div>
+                                                <div className="w-[3px] h-[14px] bg-white rounded-sm"></div>
+                                            </div>
+                                            <div className="w-[14px] h-[8px] border-[1.5px] border-white rounded-sm relative ml-1">
+                                                <div className="absolute right-[-4px] top-1/2 -translate-y-1/2 w-[2px] h-[5px] bg-white rounded-r-sm"></div>
+                                                <div className="w-[9px] h-[4px] bg-white rounded-sm m-[1px]"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* WhatsApp header */}
+                                    <div className="bg-[#075E54] px-3 pb-3 flex items-center gap-2">
+                                        <span className="text-white text-lg">←</span>
+                                        <div className="w-8 h-8 rounded-full bg-[#25D366] flex items-center justify-center font-black text-xs text-white shrink-0">
+                                            S
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-white font-bold text-[13px] m-0">Servy</p>
+                                            <p className="text-green-200 text-[11px] m-0">en línea</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Chat body */}
+                                    <div className="bg-[#ECE5DD] px-3 py-3 flex flex-col gap-3 min-h-[360px]">
+                                        {/* Mensaje usuario */}
+                                        <div className="self-end bg-[#DCF8C6] rounded-2xl rounded-tr-sm px-3 py-2 max-w-[85%] shadow-sm">
+                                            <p className="text-slate-800 text-[13px] m-0">Se me rompió la canilla del baño</p>
+                                            <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:24 ✓✓</p>
+                                        </div>
+
+                                        {/* Respuesta Servy */}
+                                        <div className="self-start bg-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
+                                            <p className="text-slate-800 text-[13px] m-0 mb-1">Encontré 2 plomeros disponibles</p>
+                                            <p className="text-slate-600 text-[12px] m-0">
+                                                1 <strong>Urgente</strong> — hoy en 2hs
+                                            </p>
+                                            <p className="text-slate-600 text-[12px] m-0">
+                                                2 <strong>Programado</strong> — mañana
+                                            </p>
+                                            <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:24</p>
+                                        </div>
+
+                                        {/* Respuesta usuario */}
+                                        <div className="self-end bg-[#DCF8C6] rounded-2xl rounded-tr-sm px-3 py-2 max-w-[85%] shadow-sm">
+                                            <p className="text-slate-800 text-[13px] m-0">1</p>
+                                            <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:25 ✓✓</p>
+                                        </div>
+
+                                        {/* Respuesta Servy */}
+                                        <div className="self-start bg-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
+                                            <p className="text-slate-800 text-[13px] m-0">
+                                                Genial! La cotización está en camino. Te avisamos enseguida
+                                            </p>
+                                            <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:25</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Input bar */}
+                                    <div className="bg-[#F0F0F0] px-3 py-2 flex items-center gap-2 border-t border-slate-200">
+                                        <div className="flex-1 bg-white rounded-full px-4 py-2 text-slate-400 text-xs">
+                                            Escribí un mensaje...
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
