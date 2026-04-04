@@ -593,11 +593,11 @@ export class ConversationService {
 
         if (matchRes.urgent) {
             const p = matchRes.urgent;
-            text += `⚡ *OPCIÓN 1 — Urgente*\n👤 ${p.name} ${p.last_name}\n⭐ ${p.rating} · servicios realizados\n🕐 Disponible hoy en menos de 24hs\n\n`;
+            text += `⚡ *OPCIÓN 1 — Urgente*\n👤 ${p.name} ${p.last_name}\n⭐ ${p.rating} · servicios realizados\n🕐 Disponible hoy en menos de 24hs\n💰 Tarifa urgente (precio mayor por rapidez)\n\n`;
         }
         if (matchRes.scheduled) {
             const p = matchRes.scheduled;
-            text += `📅 *OPCIÓN 2 — Programado*\n👤 ${p.name} ${p.last_name}\n⭐ ${p.rating} · servicios realizados\n🕐 Disponible en hasta 72hs\n\n`;
+            text += `📅 *OPCIÓN 2 — Programado*\n👤 ${p.name} ${p.last_name}\n⭐ ${p.rating} · servicios realizados\n🕐 Disponible en hasta 72hs\n💰 Tarifa estándar (precio más económico)\n\n`;
         }
 
         text += '¿Con cuál preferís continuar?';
