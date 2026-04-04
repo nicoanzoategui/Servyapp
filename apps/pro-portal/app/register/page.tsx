@@ -86,7 +86,7 @@ export default function RegisterPage() {
     }
 
     return (
-        <div className="min-h-screen flex">
+        <div className="min-h-screen flex flex-row-reverse">
             {/* Imagen lateral */}
             <div className="hidden lg:block flex-1 relative">
                 <Image
