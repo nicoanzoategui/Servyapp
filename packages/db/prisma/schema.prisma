@@ -13,6 +13,7 @@ model User {
   name                 String?
   last_name            String?
   address              String?
+  postal_code          String?
   onboarding_completed Boolean          @default(false)
   created_at           DateTime         @default(now())
   last_active_at       DateTime         @default(now())

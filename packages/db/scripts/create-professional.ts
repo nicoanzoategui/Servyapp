@@ -6,7 +6,7 @@
  *
  * Opcionales (env):
  *   PRO_CATEGORIES=Plomería,Electricidad
- *   PRO_ZONES=Capital Federal,GBA Norte
+ *   PRO_ZONES=códigos postales o zonas, separados por coma (ej. 1000,1414,1425 o Capital Federal,GBA Norte)
  *   PRO_STATUS=active|pending  (default active)
  *
  * Para enviar el email de “crear contraseña”, definí también (misma API que en apps/api/.env):
@@ -43,7 +43,7 @@ Faltan variables obligatorias:
 
 Opcionales:
   PRO_CATEGORIES=Plomería,Electricidad
-  PRO_ZONES=Capital Federal
+  PRO_ZONES=1000,1414  (CPs o nombres de zona, separados por coma; el matching usa CP del usuario y/o la dirección)
   PRO_STATUS=active|pending
 
 Ejemplo:

@@ -521,9 +521,17 @@ export class ConversationService {
         }
 
         if (session.state === 'ONBOARDING_POSTAL') {
-            const address = `${session.data.street}, ${session.data.city} (${content})`;
+            const postalCode = content.trim();
+            const address = `${session.data.street}, ${session.data.city} (${postalCode})`;
             const userName = session.data.name as string;
-            await prisma.user.update({ where: { phone }, data: { address, onboarding_completed: true } });
+            await prisma.user.update({
+                where: { phone },
+                data: {
+                    address,
+                    onboarding_completed: true,
+                    postal_code: postalCode,
+                },
+            });
             await this.saveSession(phone, 'AWAITING_PROBLEM_DESCRIPTION', {});
             await WhatsAppService.sendTextMessage(
                 phone,
