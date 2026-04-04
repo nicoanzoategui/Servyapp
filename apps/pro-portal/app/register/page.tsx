@@ -90,7 +90,7 @@ export default function RegisterPage() {
             {/* Imagen lateral */}
             <div className="hidden lg:block flex-1 relative">
                 <Image
-                    src="/images/register-hero.jpg"
+                    src="/images/register-hero.png"
                     alt="Profesional Servy"
                     fill
                     className="object-cover"
