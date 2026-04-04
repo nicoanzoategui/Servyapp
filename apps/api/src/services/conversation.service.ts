@@ -235,14 +235,38 @@ export class ConversationService {
                 const requestId = session.data.requestId as string;
                 if (content === 'btn_urgent' || content === '1') {
                     session.data.selection = 'urgent';
-                    await prisma.jobOffer.updateMany({ where: { request_id: requestId, priority: 'scheduled' }, data: { status: 'cancelled' } });
+                    await prisma.jobOffer.updateMany({
+                        where: { request_id: requestId, priority: 'scheduled' },
+                        data: { status: 'cancelled' },
+                    });
                     await this.saveSession(phone, 'AWAITING_SCHEDULE', session.data);
-                    await WhatsAppService.sendButtonMessage(phone, '¿En qué horario preferís que vaya hoy?', [
-                        { id: 'sch_9_12', title: '9 a 12hs' },
-                        { id: 'sch_12_15', title: '12 a 15hs' },
-                        { id: 'sch_15_18', title: '15 a 18hs' },
-                        { id: 'sch_asap', title: 'Lo antes posible' },
-                    ]);
+
+                    const now = new Date();
+                    const hour = parseInt(
+                        new Intl.DateTimeFormat('es-AR', {
+                            hour: 'numeric',
+                            hour12: false,
+                            timeZone: 'America/Argentina/Buenos_Aires',
+                        }).format(now)
+                    );
+
+                    const slots: { id: string; title: string }[] = [];
+
+                    if (hour < 12) slots.push({ id: 'sch_9_12', title: '9 a 12hs' });
+                    if (hour < 15) slots.push({ id: 'sch_12_15', title: '12 a 15hs' });
+                    if (hour < 18) slots.push({ id: 'sch_15_18', title: '15 a 18hs' });
+
+                    if (slots.length === 0) {
+                        slots.push({ id: 'sch_tomorrow', title: 'Mañana a primera hora' });
+                        await WhatsAppService.sendButtonMessage(
+                            phone,
+                            'Ya no quedan franjas disponibles para hoy. ¿Querés agendar para mañana a primera hora?',
+                            slots
+                        );
+                    } else {
+                        slots.push({ id: 'sch_asap', title: 'Lo antes posible' });
+                        await WhatsAppService.sendButtonMessage(phone, '¿En qué horario preferís que vaya hoy?', slots);
+                    }
                 } else if (content === 'btn_sched' || content === '2') {
                     session.data.selection = 'scheduled';
                     await prisma.jobOffer.updateMany({ where: { request_id: requestId, priority: 'urgent' }, data: { status: 'cancelled' } });
@@ -264,6 +288,7 @@ export class ConversationService {
                     sch_12_15: '12 a 15hs',
                     sch_15_18: '15 a 18hs',
                     sch_asap: 'Lo antes posible',
+                    sch_tomorrow: 'Mañana a primera hora',
                 };
                 session.data.schedule = scheduleMap[content] || content;
                 await this.saveSession(phone, 'AWAITING_QUOTATION', session.data);
