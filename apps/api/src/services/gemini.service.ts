@@ -67,6 +67,7 @@ Mensaje del usuario: "${safeUserSnippet(description)}"`;
             const result = await model.generateContent(prompt);
             const text = result.response.text().trim();
             const clean = text.replace(/```json|```/g, '').trim();
+            console.log('[Gemini response]', clean);
             const parsed = JSON.parse(clean) as Partial<GeminiClassification>;
             const dp = parsed.detected_problem;
             return {
