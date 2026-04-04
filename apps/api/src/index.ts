@@ -12,19 +12,26 @@ import { env } from './utils/env';
 import { errorHandler } from './middlewares/errorHandler';
 import { startCronJobs } from './workers/cron';
 
-/** CORS_ORIGIN: `*`, una URL, o varias separadas por coma. */
-function resolveCorsOrigin(raw: string): boolean | string | string[] {
-    const v = raw.trim();
-    if (v === '*') return true;
-    if (v.includes(',')) {
-        return v.split(',').map((s) => s.trim()).filter(Boolean);
-    }
-    return v;
-}
-
 const app = express();
 
-app.use(cors({ origin: resolveCorsOrigin(env.CORS_ORIGIN) }));
+app.use(
+    cors({
+        origin: (origin, callback) => {
+            const raw = (env.CORS_ORIGIN || '').trim();
+            if (raw === '*') {
+                callback(null, true);
+                return;
+            }
+            const allowed = raw.split(',').map((o) => o.trim()).filter(Boolean);
+            if (!origin || allowed.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
+        credentials: true,
+    })
+);
 app.use(morgan('dev'));
 
 app.get('/health', (req, res) => {
