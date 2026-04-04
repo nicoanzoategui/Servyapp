@@ -5,6 +5,7 @@ import { prisma } from '@servy/db';
 import { ConversationService } from '../services/conversation.service';
 import { WhatsAppService } from '../services/whatsapp.service';
 import { MercadoPagoService } from '../services/mercadopago.service';
+import { QRService } from '../services/qr.service';
 
 export const verifyWebhook = (req: Request, res: Response) => {
     const mode = req.query['hub.mode'];
@@ -120,10 +121,21 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
                 include: { quotation: { include: { job_offer: { include: { professional: true } } } } },
             });
 
+            const userPhone = String(metadata.user_phone);
+            let qrUrl: string | null = null;
+            try {
+                qrUrl = await QRService.generateAndUpload(job.id);
+            } catch (e) {
+                console.error('[MP webhook] QR generation failed:', e);
+            }
+
             await WhatsAppService.sendTextMessage(
-                String(metadata.user_phone),
-                '¡Pago aprobado! El trabajo está confirmado. El profesional se pondrá en contacto pronto.'
+                userPhone,
+                `✅ ¡Pago confirmado!\n\nTu servicio quedó agendado.${qrUrl ? ' Guardá este código QR — cuando el profesional termine el trabajo te lo va a pedir para liberar el pago final. 🔒' : ' El profesional se pondrá en contacto pronto.'}`
             );
+            if (qrUrl) {
+                await WhatsAppService.sendImageMessage(userPhone, qrUrl);
+            }
 
             await WhatsAppService.sendTextMessage(
                 job.quotation.job_offer.professional.phone,

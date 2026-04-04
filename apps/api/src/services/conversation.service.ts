@@ -3,67 +3,84 @@ import { prisma } from '@servy/db';
 import { WhatsAppService } from './whatsapp.service';
 import { ProfessionalMatchingService } from './matching.service';
 import { StorageService } from './storage.service';
-import { env } from '../utils/env';
 import { MercadoPagoService } from './mercadopago.service';
+import { GeminiService } from './gemini.service';
 
-const SESSION_TTL = 60 * 60 * 24; // 24 hours
+const SESSION_TTL = 60 * 60 * 24;
 const REDIS_OP_TIMEOUT_MS = 500;
 
-/** IDs de lista de WhatsApp → valor en `professionals.categories` / matching */
-const CATEGORY_MAP: Record<string, string> = {
-    cat_plomeria: 'Plomería',
-    cat_electricidad: 'Electricidad',
-    cat_cerrajeria: 'Cerrajería',
+const CATEGORY_EMOJIS: Record<string, string> = {
+    Plomería: '🔧',
+    Electricidad: '⚡',
+    Cerrajería: '🔑',
+    Gas: '🔥',
+    'Aires acondicionados': '❄️',
 };
 
-function normalizeCategory(raw: string): string {
-    const t = raw.trim();
-    if (CATEGORY_MAP[t]) return CATEGORY_MAP[t];
-    return t;
+const EMPATHY_MESSAGES: Record<string, string[]> = {
+    alta: [
+        'Entiendo, no te preocupes. Estas situaciones son estresantes pero las resolvemos rápido. 💪',
+        'Sabemos que no es el mejor momento, pero estamos acá para ayudarte. Ya buscamos el profesional ideal.',
+        'Tranquilo/a, esto tiene solución. Estamos en eso.',
+        'Qué día difícil debés estar teniendo. No te preocupes, lo resolvemos juntos.',
+    ],
+    media: [
+        'Entendido, lo resolvemos.',
+        'Perfecto, ya buscamos quién puede ayudarte.',
+        'No te preocupes, tenemos el profesional indicado.',
+        'Recibido. Ya estamos buscando la mejor opción para vos.',
+    ],
+    baja: [
+        'Genial, te conseguimos el mejor para el trabajo.',
+        'Perfecto, lo coordinamos para que salga impecable.',
+        'Buenísimo, ya buscamos el profesional ideal.',
+    ],
+};
+
+function randomEmpathy(urgency: string): string {
+    const u = urgency.toLowerCase();
+    const key = u.includes('alta') ? 'alta' : u.includes('baja') ? 'baja' : 'media';
+    const msgs = EMPATHY_MESSAGES[key] || EMPATHY_MESSAGES.media;
+    return msgs[Math.floor(Math.random() * msgs.length)];
+}
+
+function displayName(user: { name: string | null } | null): string {
+    return user?.name?.trim() ? `${user.name.trim()}, ` : '';
 }
 
 export class ConversationService {
-    private static async withRedisTimeout<T>(p: Promise<T>, ms: number = REDIS_OP_TIMEOUT_MS): Promise<T> {
-        let timeoutId: any;
-        const timeoutPromise = new Promise<T>((_, reject) => {
-            timeoutId = setTimeout(() => reject(new Error(`Redis op timeout after ${ms}ms`)), ms);
+    private static async withRedisTimeout<T>(p: Promise<T>, ms = REDIS_OP_TIMEOUT_MS): Promise<T> {
+        let id: ReturnType<typeof setTimeout> | undefined;
+        const t = new Promise<T>((_, r) => {
+            id = setTimeout(() => r(new Error('timeout')), ms);
         });
-
-        return Promise.race([p, timeoutPromise]).finally(() => clearTimeout(timeoutId));
+        return Promise.race([p, t]).finally(() => {
+            if (id) clearTimeout(id);
+        });
     }
 
     private static async getSession(phone: string) {
-        // Redis es "memoria rápida" del bot. Si no está disponible (dev/errores),
-        // fallamos hacia Postgres (`whatsapp_sessions`) para que el flujo siga funcionando.
         try {
             const cached = await this.withRedisTimeout(redis.get(`session:${phone}`));
             if (cached) {
-                const parsed = JSON.parse(cached) as { state: string; data: Record<string, unknown> };
-                const normalizedState = String(parsed.state).trim().toUpperCase();
-                return { state: normalizedState, data: parsed.data };
+                const p = JSON.parse(cached);
+                return { state: String(p.state).trim().toUpperCase(), data: p.data };
             }
-        } catch (err) {
-            console.warn('[ConversationService] Redis no disponible, usando Postgres como fallback.');
+        } catch {
+            /* fallback DB */
         }
-
         const row = await prisma.whatsappSession.findUnique({ where: { phone } });
-        if (!row) {
-            return { state: 'UNKNOWN', data: {} as Record<string, unknown> };
-        }
+        if (!row) return { state: 'UNKNOWN', data: {} as Record<string, unknown> };
         if (row.expires_at < new Date()) {
             await prisma.whatsappSession.delete({ where: { phone } }).catch(() => {});
             return { state: 'EXPIRED', data: {} as Record<string, unknown> };
         }
-
-        const session = {
-            state: String(row.step).trim().toUpperCase(),
-            data: (row.data_json as Record<string, unknown>) || {},
-        };
-        const ttlSec = Math.max(60, Math.floor((row.expires_at.getTime() - Date.now()) / 1000));
+        const session = { state: String(row.step).trim().toUpperCase(), data: (row.data_json as Record<string, unknown>) || {} };
+        const ttl = Math.max(60, Math.floor((row.expires_at.getTime() - Date.now()) / 1000));
         try {
-            await this.withRedisTimeout(redis.set(`session:${phone}`, JSON.stringify(session), 'EX', ttlSec));
+            await this.withRedisTimeout(redis.set(`session:${phone}`, JSON.stringify(session), 'EX', ttl));
         } catch {
-            // ignorar (fallback ya cargó desde DB)
+            /* ignore */
         }
         return session;
     }
@@ -72,9 +89,8 @@ export class ConversationService {
         try {
             await this.withRedisTimeout(redis.set(`session:${phone}`, JSON.stringify({ state, data }), 'EX', SESSION_TTL));
         } catch {
-            // ignorar (persistimos igual en DB)
+            /* ignore */
         }
-
         await prisma.whatsappSession.upsert({
             where: { phone },
             update: { step: state, data_json: data as object, expires_at: new Date(Date.now() + SESSION_TTL * 1000) },
@@ -86,24 +102,21 @@ export class ConversationService {
         try {
             await this.withRedisTimeout(redis.del(`session:${phone}`));
         } catch {
-            // ignorar
+            /* ignore */
         }
         await prisma.whatsappSession.delete({ where: { phone } }).catch(() => {});
     }
 
-    /**
-     * Llamar desde API al enviar cotización: alinea sesión del usuario para Aceptar/Rechazar.
-     */
     static async afterQuotationSent(
         userPhone: string,
         payload: { quotationId: string; jobOfferId: string; requestId: string; totalPrice: number }
     ) {
-        await this.saveSession(userPhone, 'AWAITING_PAYMENT_DECISION', {
-            quotationId: payload.quotationId,
-            jobOfferId: payload.jobOfferId,
-            requestId: payload.requestId,
-            totalPrice: payload.totalPrice,
-        });
+        await this.saveSession(userPhone, 'AWAITING_PAYMENT_DECISION', payload as unknown as Record<string, unknown>);
+    }
+
+    /** Tras marcar el trabajo completado (manual o por QR), el usuario puede responder con estrellas. */
+    static async beginReviewPrompt(userPhone: string, jobId: string) {
+        await this.saveSession(userPhone, 'AWAITING_REVIEW', { jobId });
     }
 
     static async processMessage(phone: string, messageType: string, content: string) {
@@ -128,58 +141,46 @@ export class ConversationService {
         let session = await this.getSession(phone);
         if (session.state === 'EXPIRED') {
             await this.clearSession(phone);
-            await WhatsAppService.sendTextMessage(
-                phone,
-                'Tu conversación anterior expiró por inactividad. Continuamos desde el inicio.'
-            );
             session = { state: 'IDLE', data: {} };
         }
-        if (session.state === 'UNKNOWN') {
-            session = { state: 'IDLE', data: {} };
-        }
+        if (session.state === 'UNKNOWN') session = { state: 'IDLE', data: {} };
 
         switch (session.state) {
             case 'IDLE':
-                await this.saveSession(phone, 'AWAITING_CATEGORY');
-                await WhatsAppService.sendListMessage(phone, 'Hola! Soy Servy 👋 ¿En qué te puedo ayudar hoy?', [
-                    {
-                        title: 'Servicios',
-                        rows: [
-                            { id: 'cat_plomeria', title: 'Plomería' },
-                            { id: 'cat_electricidad', title: 'Electricidad' },
-                            { id: 'cat_cerrajeria', title: 'Cerrajería' },
-                        ],
-                    },
-                ]);
+                await this.saveSession(phone, 'AWAITING_PROBLEM_DESCRIPTION', {});
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    `${displayName(user)}contame ¿en qué te puedo ayudar hoy?\n\n_(Describime el problema como puedas, nosotros entendemos todo — cuanto más detalle, mejor puede cotizar el profesional)_`
+                );
                 break;
 
-            case 'AWAITING_CATEGORY': {
-                session.data.category = normalizeCategory(content);
-                await this.saveSession(phone, 'AWAITING_DESCRIPTION', session.data);
-                await WhatsAppService.sendTextMessage(phone, 'Perfecto. Contame un poco más detallado cuál es el problema.');
+            case 'AWAITING_PROBLEM_DESCRIPTION': {
+                if (messageType === 'image') {
+                    await WhatsAppService.sendTextMessage(phone, 'Recibí la imagen. Contame también con palabras ¿qué está pasando?');
+                    return;
+                }
+                const classification = await GeminiService.classifyProblem(content);
+                if (!classification.understood || !classification.category) {
+                    await WhatsAppService.sendTextMessage(phone, 'No entendí bien el problema. ¿Podés contarme con más detalle qué está pasando?');
+                    return;
+                }
+                session.data.description = content;
+                session.data.category = classification.category;
+                session.data.urgency = classification.urgency;
+                await this.saveSession(phone, 'AWAITING_PHOTOS', session.data);
+                const empathy = randomEmpathy(String(classification.urgency));
+                const emoji = CATEGORY_EMOJIS[classification.category] || '🔧';
+                await WhatsAppService.sendTextMessage(phone, empathy);
+                await WhatsAppService.sendButtonMessage(
+                    phone,
+                    `${emoji} Entiendo que necesitás ayuda con *${classification.category}*.\n\n¿Querés adjuntar una foto del problema? Le ayuda al profesional a entender mejor y cotizar con más precisión.`,
+                    [
+                        { id: 'btn_yes_photos', title: 'Sí, adjuntar foto' },
+                        { id: 'btn_no_photos', title: 'No, continuar' },
+                    ]
+                );
                 break;
             }
-
-            case 'AWAITING_DESCRIPTION':
-                if (messageType === 'image') {
-                    session.data.photos = (session.data.photos as string[] | undefined) || [];
-                    const buffer = await WhatsAppService.downloadMedia(content);
-                    if (buffer) {
-                        const key = `requests/temp_${phone}_${Date.now()}.jpg`;
-                        await StorageService.uploadFile(key, buffer);
-                        const url = await StorageService.getSignedUrl(key);
-                        (session.data.photos as string[]).push(url);
-                    }
-                } else {
-                    session.data.description = content;
-                }
-
-                await this.saveSession(phone, 'AWAITING_PHOTOS', session.data);
-                await WhatsAppService.sendButtonMessage(phone, '¿Querés agregar fotos del problema?', [
-                    { id: 'btn_yes_photos', title: 'Sí, enviar foto' },
-                    { id: 'btn_no_photos', title: 'No, continuar' },
-                ]);
-                break;
 
             case 'AWAITING_PHOTOS':
                 if (messageType === 'image') {
@@ -191,87 +192,132 @@ export class ConversationService {
                         const url = await StorageService.getSignedUrl(key);
                         (session.data.photos as string[]).push(url);
                     }
-                    await WhatsAppService.sendTextMessage(phone, 'Foto recibida. Podés enviar otra, o escribir "listo" para continuar.');
+                    await this.saveSession(phone, 'AWAITING_PHOTOS', session.data);
+                    await WhatsAppService.sendTextMessage(phone, 'Foto recibida. Podés enviar otra o escribir *listo* para continuar.');
                     return;
                 }
-
                 if (content.toLowerCase() === 'listo' || content === 'btn_no_photos') {
-                    if (user.address) {
-                        session.data.address = user.address;
-                        await this.createRequestAndMatch(phone, session.data);
-                    } else {
-                        await this.saveSession(phone, 'AWAITING_ADDRESS', session.data);
-                        await WhatsAppService.sendTextMessage(phone, '¿Cuál es la dirección para el servicio? (calle, número y ciudad)');
-                    }
+                    await this.createRequestAndMatch(phone, session.data, user);
                 } else if (content === 'btn_yes_photos') {
-                    await WhatsAppService.sendTextMessage(phone, 'Por favor, enviá la foto ahora.');
+                    await WhatsAppService.sendTextMessage(phone, 'Mandá las fotos cuando quieras. Cuando termines escribí *listo*.');
                 } else {
-                    await WhatsAppService.sendTextMessage(phone, 'No entendí. Respondé "listo" para continuar.');
+                    await WhatsAppService.sendTextMessage(phone, 'Respondé con los botones o escribí *listo* para continuar.');
                 }
                 break;
 
-            case 'AWAITING_ADDRESS':
-                session.data.address = content;
-                await this.createRequestAndMatch(phone, session.data);
+            case 'AWAITING_ADDRESS_FOR_SERVICE':
+                session.data.serviceAddress = content;
+                await this.createRequestAndMatch(phone, session.data, user);
                 break;
 
             case 'AWAITING_PROFESSIONAL_SELECTION': {
                 const requestId = session.data.requestId as string;
-                if (content === 'btn_urgent' || content === '1' || content.toLowerCase() === 'urgente') {
+                if (content === 'btn_urgent' || content === '1') {
                     session.data.selection = 'urgent';
-                    await prisma.jobOffer.updateMany({
-                        where: { request_id: requestId, priority: 'scheduled' },
-                        data: { status: 'cancelled' },
-                    });
-                    await this.saveSession(phone, 'AWAITING_QUOTATION', session.data);
-                    await WhatsAppService.sendTextMessage(
-                        phone,
-                        'Genial. Solicitamos la cotización urgente. Te avisaremos en cuanto el profesional responda.'
-                    );
-                } else if (content === 'btn_sched' || content === '2' || content.toLowerCase() === 'programado') {
+                    await prisma.jobOffer.updateMany({ where: { request_id: requestId, priority: 'scheduled' }, data: { status: 'cancelled' } });
+                    await this.saveSession(phone, 'AWAITING_SCHEDULE', session.data);
+                    await WhatsAppService.sendButtonMessage(phone, '¿En qué horario preferís que vaya hoy?', [
+                        { id: 'sch_9_12', title: '9 a 12hs' },
+                        { id: 'sch_12_15', title: '12 a 15hs' },
+                        { id: 'sch_15_18', title: '15 a 18hs' },
+                        { id: 'sch_asap', title: 'Lo antes posible' },
+                    ]);
+                } else if (content === 'btn_sched' || content === '2') {
                     session.data.selection = 'scheduled';
-                    await prisma.jobOffer.updateMany({
-                        where: { request_id: requestId, priority: 'urgent' },
-                        data: { status: 'cancelled' },
-                    });
-                    await this.saveSession(phone, 'AWAITING_QUOTATION', session.data);
-                    await WhatsAppService.sendTextMessage(
-                        phone,
-                        'Genial. Solicitamos la cotización de forma programada. Te avisaremos en cuanto el profesional responda.'
-                    );
+                    await prisma.jobOffer.updateMany({ where: { request_id: requestId, priority: 'urgent' }, data: { status: 'cancelled' } });
+                    await this.saveSession(phone, 'AWAITING_SCHEDULE_DAY', session.data);
+                    await WhatsAppService.sendButtonMessage(phone, '¿Qué día preferís?', [
+                        { id: 'day_tomorrow', title: 'Mañana' },
+                        { id: 'day_after', title: 'Pasado mañana' },
+                        { id: 'day_3', title: 'En 3 días' },
+                    ]);
                 } else {
-                    await WhatsAppService.sendTextMessage(phone, 'Por favor, seleccioná una opción válida (1 o 2).');
+                    await WhatsAppService.sendTextMessage(phone, 'Por favor seleccioná una de las opciones.');
                 }
                 break;
             }
 
+            case 'AWAITING_SCHEDULE': {
+                const scheduleMap: Record<string, string> = {
+                    sch_9_12: '9 a 12hs',
+                    sch_12_15: '12 a 15hs',
+                    sch_15_18: '15 a 18hs',
+                    sch_asap: 'Lo antes posible',
+                };
+                session.data.schedule = scheduleMap[content] || content;
+                await this.saveSession(phone, 'AWAITING_QUOTATION', session.data);
+                await WhatsAppService.sendTextMessage(phone, `Perfecto. Le avisamos al profesional. En breve te manda su cotización.`);
+                break;
+            }
+
+            case 'AWAITING_SCHEDULE_DAY': {
+                const dayMap: Record<string, string> = {
+                    day_tomorrow: 'Mañana',
+                    day_after: 'Pasado mañana',
+                    day_3: 'En 3 días',
+                };
+                session.data.scheduleDay = dayMap[content] || content;
+                await this.saveSession(phone, 'AWAITING_SCHEDULE_TIME', session.data);
+                await WhatsAppService.sendButtonMessage(phone, '¿En qué horario?', [
+                    { id: 'sch_9_12', title: '9 a 12hs' },
+                    { id: 'sch_12_15', title: '12 a 15hs' },
+                    { id: 'sch_15_18', title: '15 a 18hs' },
+                ]);
+                break;
+            }
+
+            case 'AWAITING_SCHEDULE_TIME': {
+                const timeMap: Record<string, string> = {
+                    sch_9_12: '9 a 12hs',
+                    sch_12_15: '12 a 15hs',
+                    sch_15_18: '15 a 18hs',
+                };
+                session.data.schedule = `${session.data.scheduleDay} ${timeMap[content] || content}`;
+                await this.saveSession(phone, 'AWAITING_QUOTATION', session.data);
+                await WhatsAppService.sendTextMessage(phone, `Perfecto. Le avisamos al profesional. En breve te manda su cotización.`);
+                break;
+            }
+
             case 'AWAITING_QUOTATION':
-                await WhatsAppService.sendTextMessage(phone, 'Aún estamos esperando la cotización del profesional. En breve te contactamos.');
+                await WhatsAppService.sendTextMessage(phone, 'Todavía estamos esperando la cotización del profesional. En breve te avisamos.');
                 break;
 
             case 'AWAITING_PAYMENT_DECISION':
                 if (content === 'btn_accept') {
-                    await this.handleAcceptQuotation(phone, session.data);
+                    await this.handleAcceptQuotation(phone, session.data, user);
                 } else if (content === 'btn_reject') {
                     await this.handleRejectQuotation(phone, session.data);
                 } else {
-                    await WhatsAppService.sendTextMessage(phone, 'Respondé con los botones Aceptar o Rechazar en el mensaje de la cotización.');
+                    await WhatsAppService.sendTextMessage(phone, 'Respondé con los botones Aceptar o Rechazar.');
                 }
                 break;
 
             case 'PAYMENT_PENDING':
-                await WhatsAppService.sendTextMessage(phone, 'Tu pago está pendiente. Si ya pagaste, en breve recibirás la confirmación.');
+                await WhatsAppService.sendTextMessage(phone, 'Tu pago está pendiente. Si ya pagaste, en breve recibís la confirmación.');
+                break;
+
+            case 'AWAITING_REVIEW':
+                await this.handleReview(phone, content, session.data);
+                break;
+
+            case 'REVIEW_COMMENT':
+                await prisma.job.update({
+                    where: { id: session.data.jobId as string },
+                    data: { review: content },
+                });
+                await this.clearSession(phone);
+                await WhatsAppService.sendTextMessage(phone, 'Gracias por tu comentario. Lo tendremos en cuenta para mejorar.');
                 break;
 
             case 'COMPLETED':
-                await WhatsAppService.sendTextMessage(phone, 'Este servicio ya está completado.');
                 await this.clearSession(phone);
+                await this.saveSession(phone, 'IDLE', {});
+                await WhatsAppService.sendTextMessage(phone, `${displayName(user)}contame ¿en qué te puedo ayudar hoy?`);
                 break;
 
             default:
-                await this.saveSession(phone, 'IDLE');
-                await WhatsAppService.sendTextMessage(phone, 'No entendí tu mensaje. ¿Empezamos de nuevo? Escribí algo para comenzar.');
-                break;
+                await this.saveSession(phone, 'IDLE', {});
+                await WhatsAppService.sendTextMessage(phone, 'No entendí tu mensaje. Escribí algo para comenzar.');
         }
     }
 
@@ -280,7 +326,7 @@ export class ConversationService {
         if (t === 'ayuda' || t === '?') {
             await WhatsAppService.sendTextMessage(
                 phone,
-                'Servy: podés pedir Plomería, Electricidad o Cerrajería desde el menú. Comandos: *Estado* (tu pedido), *Cancelar* (reiniciar), *Cambiar dirección*.'
+                `Servy: podés pedir Plomería, Electricidad, Cerrajería, Gas o Aires acondicionados.\n\nComandos:\n• *Estado* — tu pedido actual\n• *Cancelar* — cancelar pedido\n• *Cambiar dirección* — actualizar dirección`
             );
             return true;
         }
@@ -288,7 +334,7 @@ export class ConversationService {
             const session = await this.getSession(phone);
             await WhatsAppService.sendTextMessage(
                 phone,
-                `Estado actual: ${session.state}. ${user.name ? `${user.name}, ` : ''}si necesitás algo más escribí *Ayuda*.`
+                `Estado actual: ${session.state}.${user.name ? ` ${user.name.trim()},` : ''} si necesitás algo más escribí *Ayuda*.`
             );
             return true;
         }
@@ -300,33 +346,31 @@ export class ConversationService {
         return false;
     }
 
-    private static async handleAcceptQuotation(phone: string, data: Record<string, unknown>) {
+    private static async handleAcceptQuotation(phone: string, data: Record<string, unknown>, user: { name: string | null } | null) {
         const quotationId = data.quotationId as string;
         await this.saveSession(phone, 'PAYMENT_PENDING', data);
 
-        if (!env.PAYMENTS_ENABLED) {
-            await WhatsAppService.sendTextMessage(
-                phone,
-                'Aceptaste la cotización. Los pagos con Mercado Pago se habilitan próximamente; un operador te contactará para coordinar el pago.'
-            );
-            return;
-        }
-
         const quotation = await prisma.quotation.findUnique({
             where: { id: quotationId },
-            include: { job_offer: true },
+            include: { job_offer: { include: { professional: true } } },
         });
-        const user = await prisma.user.findUnique({ where: { phone } });
         if (!quotation || !user) {
             await WhatsAppService.sendTextMessage(phone, 'No pudimos generar el pago. Escribí *Ayuda* para soporte.');
             return;
         }
 
+        const proName = quotation.job_offer.professional.name;
+
+        await WhatsAppService.sendTextMessage(
+            phone,
+            `Genial ${user.name || 'vos'}! Para confirmar el servicio con ${proName} necesitamos el pago total.\n\n💳 Total a pagar: $${quotation.total_price.toLocaleString('es-AR')}\n\n🔒 Tu dinero está protegido:\n• La seña se libera a ${proName} al confirmar\n• El resto se libera cuando termina el trabajo\n• Si ${proName} no aparece, te devolvemos todo`
+        );
+
         try {
             const initPoint = await MercadoPagoService.createPreference(quotation, user);
-            await WhatsAppService.sendTextMessage(phone, `Podés abonar aquí: ${initPoint}`);
+            await WhatsAppService.sendTextMessage(phone, `Pagá acá:\n👉 ${initPoint}`);
         } catch {
-            await WhatsAppService.sendTextMessage(phone, 'Hubo un error al generar el link de pago. Intentá de nuevo en unos minutos o escribí *Ayuda*.');
+            await WhatsAppService.sendTextMessage(phone, 'Hubo un error al generar el link de pago. Intentá de nuevo o escribí *Ayuda*.');
         }
     }
 
@@ -345,92 +389,168 @@ export class ConversationService {
 
         if (sibling) {
             await prisma.jobOffer.update({ where: { id: sibling.id }, data: { status: 'pending' } });
-            await WhatsAppService.sendTextMessage(
-                sibling.professional.phone,
-                'El cliente pidió otra opción. Entrá al portal y enviá tu cotización si aún podés tomar el trabajo.'
-            );
+            await WhatsAppService.sendTextMessage(sibling.professional.phone, 'El cliente pidió otra opción. Entrá al portal y enviá tu cotización.');
             await this.saveSession(phone, 'AWAITING_QUOTATION', { requestId });
-            await WhatsAppService.sendTextMessage(phone, 'Entendido. Le pedimos cotización al otro profesional disponible. Te avisamos cuando la tengamos.');
+            await WhatsAppService.sendTextMessage(phone, 'Entendido. Le pedimos cotización al otro profesional. Te avisamos cuando la tengamos.');
         } else {
             await this.clearSession(phone);
-            await WhatsAppService.sendTextMessage(phone, 'No hay otra opción disponible para este pedido. Escribí un mensaje cuando quieras iniciar uno nuevo.');
+            await WhatsAppService.sendTextMessage(phone, 'No hay otra opción disponible. Escribí cuando quieras iniciar un nuevo pedido.');
         }
     }
 
-    private static async handleOnboardingFlow(phone: string, messageType: string, content: string, user: { id?: string } | null) {
+    private static async handleReview(phone: string, content: string, data: Record<string, unknown>) {
+        const ratingMap: Record<string, number> = { '⭐': 1, '⭐⭐': 2, '⭐⭐⭐': 3, '⭐⭐⭐⭐': 4, '⭐⭐⭐⭐⭐': 5 };
+        const numMap: Record<string, number> = { '1': 1, '2': 2, '3': 3, '4': 4, '5': 5 };
+        const rating = ratingMap[content] || numMap[content];
+        if (!rating) return;
+
+        const jobId = data.jobId as string;
+        const job = await prisma.job.update({
+            where: { id: jobId },
+            data: { rating },
+            include: { quotation: { include: { job_offer: { include: { professional: true } } } } },
+        });
+
+        const proId = job.quotation.job_offer.professional_id;
+        const allJobs = await prisma.job.findMany({
+            where: { quotation: { job_offer: { professional_id: proId } }, rating: { not: null } },
+        });
+        const avg = allJobs.reduce((s, j) => s + (j.rating || 0), 0) / allJobs.length;
+        await prisma.professional.update({ where: { id: proId }, data: { rating: Math.round(avg * 10) / 10 } });
+
+        if (rating >= 4) {
+            await this.clearSession(phone);
+            await WhatsAppService.sendTextMessage(phone, `¡Gracias! Nos alegra que haya salido bien. Cuando necesités otro servicio, acá estamos. 🙌`);
+        } else {
+            await this.saveSession(phone, 'REVIEW_COMMENT', data);
+            await WhatsAppService.sendTextMessage(
+                phone,
+                `Gracias por contarnos. Lamentamos que no haya sido la mejor experiencia. ¿Querés contarnos qué pasó?`
+            );
+        }
+    }
+
+    private static async handleOnboardingFlow(phone: string, messageType: string, content: string, user: { phone: string } | null) {
         const session = await this.getSession(phone);
-        if (!user) {
-            await prisma.user.create({ data: { phone } });
+        if (!user) await prisma.user.create({ data: { phone } });
+
+        if (session.state === 'ONBOARDING_ADDRESS') {
+            await prisma.user.update({ where: { phone }, data: { address: content.trim() } });
+            await this.clearSession(phone);
+            await this.saveSession(phone, 'IDLE', {});
+            await WhatsAppService.sendTextMessage(phone, 'Listo, actualicé tu dirección. Escribí cuando quieras pedir un servicio.');
+            return;
         }
 
         if (session.state === 'UNKNOWN' || session.state === 'IDLE') {
-            await this.saveSession(phone, 'ONBOARDING_NAME');
-            await WhatsAppService.sendTextMessage(phone, 'Hola! Soy Servy 👋 Primero necesito un par de datos. ¿Cuál es tu nombre y apellido?');
+            await this.saveSession(phone, 'ONBOARDING_NAME', {});
+            await WhatsAppService.sendTextMessage(phone, 'Hola! Soy Servy 👋 Primero necesito un par de datos.\n¿Cuál es tu nombre y apellido?');
             return;
         }
 
         if (session.state === 'ONBOARDING_NAME') {
             const parts = content.split(' ');
-            const name = parts[0];
-            const last_name = parts.slice(1).join(' ');
-
             await prisma.user.update({
                 where: { phone },
-                data: { name, last_name },
+                data: { name: parts[0], last_name: parts.slice(1).join(' ') || '-' },
             });
-
-            await this.saveSession(phone, 'ONBOARDING_ADDRESS');
-            await WhatsAppService.sendTextMessage(phone, '¿Cuál es tu dirección? (calle, número y ciudad)');
+            await this.saveSession(phone, 'ONBOARDING_DOMICILE_TYPE', { name: parts[0] });
+            await WhatsAppService.sendButtonMessage(phone, `Hola ${parts[0]}! ¿Dónde vas a necesitar el servicio?`, [
+                { id: 'dom_casa', title: 'Casa' },
+                { id: 'dom_depto', title: 'Departamento' },
+                { id: 'dom_barrio', title: 'Barrio cerrado' },
+                { id: 'dom_empresa', title: 'Empresa' },
+            ]);
             return;
         }
 
-        if (session.state === 'ONBOARDING_ADDRESS') {
-            await prisma.user.update({
-                where: { phone },
-                data: { address: content, onboarding_completed: true },
-            });
+        if (session.state === 'ONBOARDING_DOMICILE_TYPE') {
+            const typeMap: Record<string, string> = {
+                dom_casa: 'casa',
+                dom_depto: 'departamento',
+                dom_barrio: 'barrio_cerrado',
+                dom_empresa: 'empresa',
+            };
+            const domType = typeMap[content] || content;
+            session.data.domicileType = domType;
+            await this.saveSession(phone, 'ONBOARDING_STREET', session.data);
 
-            if (session.data?.isChange) {
-                await this.saveSession(phone, 'IDLE');
-                await WhatsAppService.sendTextMessage(phone, '¡Dirección actualizada!');
+            if (domType === 'barrio_cerrado') {
+                await WhatsAppService.sendTextMessage(phone, '¿Cuál es el nombre del barrio y tu lote? (ej: Los Pinos, Lote 42)');
+            } else if (domType === 'departamento') {
+                await WhatsAppService.sendTextMessage(phone, '¿Cuál es tu calle, número y piso/depto? (ej: Av. Santa Fe 1234, Piso 3 Depto B)');
             } else {
-                await this.saveSession(phone, 'IDLE');
-                await WhatsAppService.sendTextMessage(phone, '¡Gracias! Perfil completado. Mandame un mensaje cuando necesites un servicio.');
+                await WhatsAppService.sendTextMessage(phone, '¿Cuál es tu calle y número?');
             }
+            return;
+        }
+
+        if (session.state === 'ONBOARDING_STREET') {
+            session.data.street = content;
+            await this.saveSession(phone, 'ONBOARDING_CITY', session.data);
+            await WhatsAppService.sendTextMessage(phone, '¿En qué ciudad?');
+            return;
+        }
+
+        if (session.state === 'ONBOARDING_CITY') {
+            session.data.city = content;
+            await this.saveSession(phone, 'ONBOARDING_POSTAL', session.data);
+            await WhatsAppService.sendTextMessage(phone, '¿Cuál es tu código postal?');
+            return;
+        }
+
+        if (session.state === 'ONBOARDING_POSTAL') {
+            const address = `${session.data.street}, ${session.data.city} (${content})`;
+            const userName = session.data.name as string;
+            await prisma.user.update({ where: { phone }, data: { address, onboarding_completed: true } });
+            await this.saveSession(phone, 'AWAITING_PROBLEM_DESCRIPTION', {});
+            await WhatsAppService.sendTextMessage(
+                phone,
+                `¡Perfecto ${userName}! Ya tenés tu perfil completo.\n\nContame ¿en qué te puedo ayudar hoy?\n\n_(Describime el problema como puedas, nosotros entendemos todo — cuanto más detalle, mejor puede cotizar el profesional)_`
+            );
+            return;
         }
     }
 
-    private static async createRequestAndMatch(phone: string, sessionData: Record<string, unknown>) {
+    private static async createRequestAndMatch(phone: string, sessionData: Record<string, unknown>, user: { name: string | null; address: string | null }) {
+        const address = (sessionData.serviceAddress as string) || user.address || '';
+
         const request = await prisma.serviceRequest.create({
             data: {
                 user_phone: phone,
                 category: sessionData.category as string,
                 description: sessionData.description as string,
                 photos: (sessionData.photos as string[]) || [],
-                address: sessionData.address as string,
+                address,
             },
         });
 
         const matchRes = await ProfessionalMatchingService.findProfessionalsAndCreateOffers(request.id);
 
         if (!matchRes.urgent && !matchRes.scheduled) {
-            await WhatsAppService.sendTextMessage(
-                phone,
-                'No encontramos profesionales disponibles en tu zona para esa categoría en este momento. Lo sentimos.'
-            );
+            await WhatsAppService.sendTextMessage(phone, 'No encontramos profesionales disponibles en tu zona en este momento. Lo sentimos.');
             await this.clearSession(phone);
             return;
         }
 
-        await this.saveSession(phone, 'AWAITING_PROFESSIONAL_SELECTION', { requestId: request.id });
+        await this.saveSession(phone, 'AWAITING_PROFESSIONAL_SELECTION', { requestId: request.id, ...sessionData });
 
-        let text = `Encontramos profesionales disponibles. Elegí una opción:\n\n`;
-        if (matchRes.urgent) text += `1) Urgente (más caro, rating: ${matchRes.urgent.rating}⭐)\n`;
-        if (matchRes.scheduled) text += `2) Programado (rating: ${matchRes.scheduled.rating}⭐)\n`;
+        let text = `${displayName(user)}encontré estas opciones para vos:\n\n`;
+
+        if (matchRes.urgent) {
+            const p = matchRes.urgent;
+            text += `⚡ *OPCIÓN 1 — Urgente*\n👤 ${p.name} ${p.last_name}\n⭐ ${p.rating} · servicios realizados\n🕐 Disponible hoy en menos de 24hs\n\n`;
+        }
+        if (matchRes.scheduled) {
+            const p = matchRes.scheduled;
+            text += `📅 *OPCIÓN 2 — Programado*\n👤 ${p.name} ${p.last_name}\n⭐ ${p.rating} · servicios realizados\n🕐 Disponible en hasta 72hs\n\n`;
+        }
+
+        text += '¿Con cuál preferís continuar?';
 
         await WhatsAppService.sendButtonMessage(phone, text, [
-            ...(matchRes.urgent ? [{ id: 'btn_urgent', title: '1' }] : []),
-            ...(matchRes.scheduled ? [{ id: 'btn_sched', title: '2' }] : []),
+            ...(matchRes.urgent ? [{ id: 'btn_urgent', title: 'Opción urgente' }] : []),
+            ...(matchRes.scheduled ? [{ id: 'btn_sched', title: 'Opción programada' }] : []),
         ]);
     }
 }

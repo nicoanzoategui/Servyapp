@@ -42,4 +42,5 @@ jobs:
           RESEND_API_KEY: re_test_dummy
           RESEND_FROM_EMAIL: noreply@example.com
           FRONTEND_PRO_URL: http://localhost:3003
+          GEMINI_API_KEY: dummy-gemini-key-for-ci
         run: pnpm test

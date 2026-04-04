@@ -13,6 +13,7 @@ import {
     getEarningsSummary,
     generateReceipt,
     completeJob,
+    completeJobByQr,
 } from '../controllers/professional.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth.middleware';
 
@@ -36,6 +37,7 @@ router.put('/profile', updateProfile);
 router.get('/earnings', getEarnings);
 router.get('/earnings/summary', getEarningsSummary);
 router.get('/earnings/:earningId/receipt', generateReceipt);
+router.post('/jobs/:jobId/complete-qr', completeJobByQr);
 router.put('/jobs/:jobId/complete', completeJob);
 
 export default router;

@@ -3,6 +3,7 @@ import { prisma } from '@servy/db';
 import { StorageService } from '../services/storage.service';
 import { WhatsAppService } from '../services/whatsapp.service';
 import { ConversationService } from '../services/conversation.service';
+import { QRService } from '../services/qr.service';
 
 function normalizeQuoteBody(body: any) {
     let items = body.items;
@@ -487,6 +488,55 @@ export const generateReceipt = async (req: Request, res: Response) => {
     }
 };
 
+export const completeJobByQr = async (req: Request, res: Response) => {
+    try {
+        const professionalId = req.user!.userId;
+        const { jobId } = req.params;
+        const { qrData } = req.body as { qrData?: string };
+        if (!qrData || typeof qrData !== 'string') {
+            return res.status(400).json({ success: false, error: { message: 'qrData requerido' } });
+        }
+        const scannedJobId = QRService.parseQR(qrData.trim());
+        if (!scannedJobId || scannedJobId !== jobId) {
+            return res.status(400).json({ success: false, error: { message: 'QR inválido' } });
+        }
+        const existing = await prisma.job.findUnique({
+            where: { id: jobId },
+            include: {
+                quotation: {
+                    include: { job_offer: { include: { professional: true, service_request: true } } },
+                },
+            },
+        });
+        if (!existing || existing.quotation.job_offer.professional_id !== professionalId) {
+            return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Job not found' } });
+        }
+        if (existing.status === 'completed') {
+            return res.status(400).json({ success: false, error: { message: 'El trabajo ya estaba completado' } });
+        }
+        await prisma.job.update({
+            where: { id: jobId },
+            data: { status: 'completed', completed_at: new Date() },
+        });
+        const userPhone = existing.quotation.job_offer.service_request.user_phone;
+        const proPhone = existing.quotation.job_offer.professional.phone;
+        await WhatsAppService.sendTextMessage(
+            proPhone,
+            '✅ QR del cliente validado. Trabajo marcado como completado. ¡Gracias por usar Servy!'
+        );
+        const endUser = await prisma.user.findUnique({ where: { phone: userPhone } });
+        const nm = endUser?.name?.trim();
+        await WhatsAppService.sendTextMessage(
+            userPhone,
+            `✅${nm ? ` ${nm},` : ''} el servicio quedó completado.\n\n¡Gracias por usar Servy!\n\n¿Cómo calificarías el servicio?\n\n⭐ ⭐⭐ ⭐⭐⭐ ⭐⭐⭐⭐ ⭐⭐⭐⭐⭐`
+        );
+        await ConversationService.beginReviewPrompt(userPhone, jobId);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: { message: 'Error al completar' } });
+    }
+};
+
 export const completeJob = async (req: Request, res: Response) => {
     try {
         const professionalId = req.user!.userId;
@@ -513,8 +563,9 @@ export const completeJob = async (req: Request, res: Response) => {
         const userPhone = job.quotation.job_offer.service_request.user_phone;
         await WhatsAppService.sendTextMessage(
             userPhone,
-            `El trabajo ha sido marcado como completado. ¡Gracias por usar Servy! Pronto te pediremos que dejes una calificación.`
+            `El trabajo ha sido marcado como completado. ¡Gracias por usar Servy!\n\n¿Cómo calificarías el servicio?\n\n⭐ ⭐⭐ ⭐⭐⭐ ⭐⭐⭐⭐ ⭐⭐⭐⭐⭐`
         );
+        await ConversationService.beginReviewPrompt(userPhone, jobId);
 
         res.json({ success: true, data: updated });
     } catch (error) {

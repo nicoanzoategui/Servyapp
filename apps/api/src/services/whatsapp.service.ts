@@ -29,6 +29,18 @@ export class WhatsAppService {
         return this.sendTextMessage(phone, body);
     }
 
+    static async sendImageMessage(phone: string, imageUrl: string) {
+        try {
+            await twilioClient.messages.create({
+                from: toTwilioWhatsappAddress(env.TWILIO_PHONE_NUMBER),
+                to: toTwilioWhatsappAddress(phone),
+                mediaUrl: [imageUrl],
+            });
+        } catch (err) {
+            console.error('Error sending image:', err);
+        }
+    }
+
     static async sendListMessage(
         phone: string,
         text: string,
