@@ -23,21 +23,18 @@ export default function Home() {
                     Arreglá tu hogar en minutos. <span className="text-transparent bg-clip-text bg-gradient-to-r from-servy-500 to-servy-700">Por WhatsApp.</span>
                 </h1>
                 <p className="mt-6 text-lg md:text-xl text-slate-600 max-w-2xl animate-fade-in delay-150">
-                    Plomeros, electricistas y cerrajeros de confianza a la puerta de tu casa. Sin apps pesadas, sin complicaciones.
+                    Describí el problema de tu hogar por WhatsApp y en minutos tenés un profesional verificado camino a tu casa. Sin apps, sin llamadas, sin vueltas.
                 </p>
                 <div className="mt-10 flex flex-col sm:flex-row gap-4 animate-slide-up delay-300">
                     <a href={WA_LINK} target="_blank" rel="noopener noreferrer" className="bg-servy-600 text-white px-8 py-4 rounded-full font-bold shadow-xl shadow-servy-500/30 hover:shadow-2xl hover:bg-servy-500 hover:-translate-y-1 transition-all duration-300">
-                        Pedir servicio ahora
+                        Hablar con Servy
                     </a>
-                    <Link href="/profesionales" className="bg-white text-slate-700 border border-slate-200 px-8 py-4 rounded-full font-bold hover:bg-slate-50 transition-all duration-300">
-                        Quiero ofrecer mis servicios
-                    </Link>
                 </div>
             </section>
 
             {/* Cómo Funciona */}
             <section id="como-funciona" className="w-full py-24 px-6 md:px-12 bg-white flex flex-col items-center relative">
-                <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-16">Tan simple como mensajear</h2>
+                <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-16">Como escribirle a un amigo que sabe de todo</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full">
                     {/* Step 1 */}
                     <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
@@ -45,8 +42,8 @@ export default function Home() {
                             {/* Un icono de chat / telefono mock */}
                             <span className="text-2xl font-black">1</span>
                         </div>
-                        <h3 className="text-xl font-bold mb-3">Describí</h3>
-                        <p className="text-slate-600">Escribile a nuestro número por WhatsApp qué necesitas arreglar.</p>
+                        <h3 className="text-xl font-bold mb-3">Contale</h3>
+                        <p className="text-slate-600">Contale a Servy qué pasó en tu casa. Texto, fotos, lo que tengas.</p>
                     </div>
                     {/* Step 2 */}
                     <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
@@ -54,7 +51,7 @@ export default function Home() {
                             <span className="text-2xl font-black">2</span>
                         </div>
                         <h3 className="text-xl font-bold mb-3">Elegí</h3>
-                        <p className="text-slate-600">Recibí presupuestos de profesionales verificados y elegí el mejor.</p>
+                        <p className="text-slate-600">Te mostramos dos opciones: urgente para hoy o programado más económico. Vos decidís.</p>
                     </div>
                     {/* Step 3 */}
                     <div className="relative p-8 rounded-3xl bg-servy-600 text-white shadow-lg hover:shadow-xl transition-all hover:-translate-y-2 group flex flex-col items-center text-center">
@@ -62,7 +59,7 @@ export default function Home() {
                             <span className="text-2xl font-black">3</span>
                         </div>
                         <h3 className="text-xl font-bold mb-3">Pagá seguro</h3>
-                        <p className="text-white/80">Aprobá el pago con MercadoPago y el profesional irá en camino.</p>
+                        <p className="text-white/80">Aceptás la cotización, pagás por Mercado Pago y el profesional ya sabe que va.</p>
                     </div>
                 </div>
             </section>
@@ -93,29 +90,29 @@ export default function Home() {
                     <div className="flex gap-6 p-6">
                         <ShieldCheck className="text-green-500 shrink-0" size={40} />
                         <div>
-                            <h3 className="font-bold text-xl mb-2">Identidad Verificada</h3>
-                            <p className="text-slate-600">Revisamos DNI y antecedentes de cada uno de los profesionales.</p>
+                            <h3 className="font-bold text-xl mb-2">Profesionales verificados</h3>
+                            <p className="text-slate-600">Cada profesional pasa por un proceso de verificación antes de entrar a Servy. Vos no arriesgás.</p>
                         </div>
                     </div>
                     <div className="flex gap-6 p-6">
                         <Clock className="text-servy-500 shrink-0" size={40} />
                         <div>
-                            <h3 className="font-bold text-xl mb-2">Rápido como un chat</h3>
-                            <p className="text-slate-600">Al trabajar desde WhatsApp te saltás el problema de descargar apps.</p>
+                            <h3 className="font-bold text-xl mb-2">Sin descargar nada</h3>
+                            <p className="text-slate-600">Todo pasa en WhatsApp, donde ya estás. Cero apps nuevas, cero registros.</p>
                         </div>
                     </div>
                     <div className="flex gap-6 p-6">
                         <Star className="text-yellow-400 shrink-0" size={40} />
                         <div>
-                            <h3 className="font-bold text-xl mb-2">Comunidad que califica</h3>
-                            <p className="text-slate-600">Te mostramos el rating real otorgado por personas que ya los contrataron.</p>
+                            <h3 className="font-bold text-xl mb-2">Calificaciones reales</h3>
+                            <p className="text-slate-600">Cada trabajo se califica. El rating que ves lo pusieron personas como vos, no nosotros.</p>
                         </div>
                     </div>
                     <div className="flex gap-6 p-6">
                         <HeartHandshake className="text-purple-500 shrink-0" size={40} />
                         <div>
-                            <h3 className="font-bold text-xl mb-2">Transparente y Seguro</h3>
-                            <p className="text-slate-600">Sin sorpresas en los precios. El pago se retiene con MercadoPago.</p>
+                            <h3 className="font-bold text-xl mb-2">Precio cerrado antes de arrancar</h3>
+                            <p className="text-slate-600">Sabés cuánto vas a pagar antes de que llegue el profesional. Sin sorpresas.</p>
                         </div>
                     </div>
                 </div>
@@ -125,7 +122,7 @@ export default function Home() {
             <section className="w-full py-24 px-6 md:px-12 bg-slate-900 text-white flex flex-col items-center text-center relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-servy-500/20 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2"></div>
                 <h2 className="text-4xl md:text-5xl font-bold mb-6 relative z-10">¿Sos profesional del hogar?</h2>
-                <p className="text-xl text-slate-300 max-w-2xl mb-10 relative z-10">Suma clientes nuevos y organizá tu agenda cobrando seguro y todo manejado desde tu bolsillo.</p>
+                <p className="text-xl text-slate-300 max-w-2xl mb-10 relative z-10">Recibí trabajos sin salir a buscarlos. Cotizá desde tu celular, cobrá antes de arrancar y manejá todo desde tu portal.</p>
                 <Link href="/profesionales" className="relative z-10 bg-servy-500 hover:bg-servy-400 text-white px-8 py-4 rounded-full font-bold shadow-xl transition-all">
                     Unirme a Servy
                 </Link>
