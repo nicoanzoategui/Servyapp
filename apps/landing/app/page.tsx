@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Wrench, Zap, Key, ShieldCheck, Clock, Star, HeartHandshake } from 'lucide-react';
+import { Wrench, Zap, Key, ShieldCheck, Clock, Star, HeartHandshake, Flame, Wind } from 'lucide-react';
 
 const NEXT_PUBLIC_WA_NUMBER = process.env.NEXT_PUBLIC_WA_NUMBER || '5491100000000';
 const WA_LINK = `https://wa.me/${NEXT_PUBLIC_WA_NUMBER}?text=Hola,%20necesito%20ayuda`;
@@ -67,18 +67,55 @@ export default function Home() {
             {/* Categorías */}
             <section id="categorias" className="w-full py-24 px-6 md:px-12 bg-slate-50 flex flex-col items-center">
                 <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-16">Servicios Disponibles</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-5xl w-full">
-                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-servy-300 flex items-center gap-4 transition-colors cursor-default">
-                        <div className="bg-blue-50 text-blue-600 p-4 rounded-xl"><Wrench size={28} /></div>
-                        <h3 className="text-lg font-bold">Plomería</h3>
+                <div className="max-w-5xl w-full">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-6">
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-servy-300 flex items-start gap-4 transition-colors cursor-default">
+                            <div className="bg-blue-50 text-blue-600 p-4 rounded-xl shrink-0">
+                                <Wrench size={28} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold mb-1">Plomería</h3>
+                                <p className="text-sm text-slate-500">Canillas, cañerías, pérdidas de agua e inodoros.</p>
+                            </div>
+                        </div>
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-servy-300 flex items-start gap-4 transition-colors cursor-default">
+                            <div className="bg-yellow-50 text-yellow-500 p-4 rounded-xl shrink-0">
+                                <Zap size={28} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold mb-1">Electricidad</h3>
+                                <p className="text-sm text-slate-500">Cortocircuitos, enchufes, tableros e instalaciones.</p>
+                            </div>
+                        </div>
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-servy-300 flex items-start gap-4 transition-colors cursor-default">
+                            <div className="bg-slate-100 text-slate-700 p-4 rounded-xl shrink-0">
+                                <Key size={28} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold mb-1">Cerrajería</h3>
+                                <p className="text-sm text-slate-500">Puertas trabadas, cambio de cerradura y aperturas de emergencia.</p>
+                            </div>
+                        </div>
                     </div>
-                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-servy-300 flex items-center gap-4 transition-colors cursor-default">
-                        <div className="bg-yellow-50 text-yellow-500 p-4 rounded-xl"><Zap size={28} /></div>
-                        <h3 className="text-lg font-bold">Electricidad</h3>
-                    </div>
-                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-servy-300 flex items-center gap-4 transition-colors cursor-default">
-                        <div className="bg-slate-100 text-slate-700 p-4 rounded-xl"><Key size={28} /></div>
-                        <h3 className="text-lg font-bold">Cerrajería</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-servy-300 flex items-start gap-4 transition-colors cursor-default">
+                            <div className="bg-orange-50 text-orange-500 p-4 rounded-xl shrink-0">
+                                <Flame size={28} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold mb-1">Gas</h3>
+                                <p className="text-sm text-slate-500">Pérdidas de gas, calefones, cocinas y estufas.</p>
+                            </div>
+                        </div>
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-servy-300 flex items-start gap-4 transition-colors cursor-default">
+                            <div className="bg-cyan-50 text-cyan-500 p-4 rounded-xl shrink-0">
+                                <Wind size={28} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold mb-1">Aires acondicionados</h3>
+                                <p className="text-sm text-slate-500">Instalación, reparación y limpieza de filtros.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
