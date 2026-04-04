@@ -24,9 +24,7 @@ export default function Home() {
                     <div className="flex-1 max-w-md flex flex-col items-start text-left">
                         <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 max-w-xl animate-slide-up">
                             Arreglá tu hogar en minutos.{' '}
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-servy-500 to-servy-700">
-                                Por WhatsApp.
-                            </span>
+                            <span className="text-servy-600">Por WhatsApp.</span>
                         </h1>
                         <p className="mt-6 text-lg md:text-xl text-slate-600 max-w-lg animate-fade-in delay-150">
                             Describí el problema de tu hogar por WhatsApp y en minutos tenés un profesional verificado camino a tu casa. Sin apps, sin llamadas, sin vueltas.
