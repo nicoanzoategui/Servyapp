@@ -1,8 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { env } from '../utils/env';
-
-const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
 const CATEGORIES = ['Plomería', 'Electricidad', 'Cerrajería', 'Gas', 'Aires acondicionados'];
 
@@ -12,35 +8,13 @@ export interface GeminiClassification {
     category: string | null;
     urgency: UrgencyLevel;
     understood: boolean;
-    detected_problem: string | null;
-}
-
-function normalizeUrgency(raw: unknown): UrgencyLevel {
-    const s = String(raw ?? 'media')
-        .toLowerCase()
-        .trim()
-        .replace(/^["']|["']$/g, '');
-    const parts = s.split('|').map((t) => t.trim());
-    if (parts.length === 3 && parts[0] === 'alta' && parts[1] === 'media' && parts[2] === 'baja') {
-        return 'media';
-    }
-    for (const t of parts) {
-        if (t === 'alta' || t === 'media' || t === 'baja') return t;
-    }
-    if (s.startsWith('alta')) return 'alta';
-    if (s.startsWith('baja')) return 'baja';
-    if (s.startsWith('media')) return 'media';
-    return 'media';
-}
-
-function safeUserSnippet(text: string, maxLen = 2000): string {
-    return text.replace(/"/g, '\\"').replace(/\r?\n/g, ' ').slice(0, maxLen);
+    detected_problem: string;
 }
 
 export class GeminiService {
     static async classifyProblem(description: string): Promise<GeminiClassification> {
         try {
-            const prompt = `Sos un asistente de servicios del hogar argentino. 
+            const prompt = `Sos un asistente de servicios del hogar argentino.
 Tu trabajo es identificar el problema principal que describe el usuario.
 
 Si el usuario describe múltiples problemas, elegí el MÁS URGENTE.
@@ -59,27 +33,37 @@ Respondé SOLO con JSON válido sin markdown ni texto extra:
   "category": "la categoría que mejor aplica",
   "urgency": "alta | media | baja",
   "understood": true,
-  "detected_problem": "descripción breve del problema principal en una línea"
+  "detected_problem": "descripción breve del problema en una línea"
 }
 
-Mensaje del usuario: "${safeUserSnippet(description)}"`;
+Mensaje del usuario: "${description}"`;
 
-            const result = await model.generateContent(prompt);
-            const text = result.response.text().trim();
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${env.GEMINI_API_KEY}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { temperature: 0.1, maxOutputTokens: 256 },
+                    }),
+                }
+            );
+
+            if (!response.ok) {
+                const err = await response.text();
+                console.error('[Gemini HTTP error]', response.status, err);
+                return { category: null, urgency: 'media', understood: false, detected_problem: '' };
+            }
+
+            const data = await response.json();
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            console.log('[Gemini response]', text);
             const clean = text.replace(/```json|```/g, '').trim();
-            console.log('[Gemini response]', clean);
-            const parsed = JSON.parse(clean) as Partial<GeminiClassification>;
-            const dp = parsed.detected_problem;
-            return {
-                category: parsed.category != null && String(parsed.category).trim() !== '' ? String(parsed.category).trim() : null,
-                urgency: normalizeUrgency(parsed.urgency),
-                understood: Boolean(parsed.understood),
-                detected_problem:
-                    dp != null && String(dp).trim() !== '' ? String(dp).trim().slice(0, 500) : null,
-            };
+            return JSON.parse(clean);
         } catch (err) {
             console.error('Gemini error:', err);
-            return { category: null, urgency: 'media', understood: false, detected_problem: null };
+            return { category: null, urgency: 'media', understood: false, detected_problem: '' };
         }
     }
 }
