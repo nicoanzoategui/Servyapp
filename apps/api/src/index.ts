@@ -38,6 +38,19 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+/** Temporal: listar modelos disponibles en la API de Gemini (quitar en producción). */
+app.get('/debug/gemini-models', async (_req, res) => {
+    try {
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models?key=${env.GEMINI_API_KEY}`
+        );
+        const data = await response.json();
+        res.json(data);
+    } catch (err) {
+        res.json({ error: String(err) });
+    }
+});
+
 // WhatsApp primero: POST usa body crudo en la ruta (firma Meta). No pasar por express.json().
 app.use('/webhook', webhookRoutes);
 
