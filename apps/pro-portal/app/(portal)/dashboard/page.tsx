@@ -29,9 +29,35 @@ export default function ProDashboard() {
     const monthNet = data?.month_earnings?.net ?? 0;
     const rating = data?.rating ?? 0;
 
+    const zones = data?.zones as string[] | undefined;
+    const cbu = data?.cbu_alias as string | null | undefined;
+    const urgent = data?.is_urgent as boolean | undefined;
+    const scheduled = data?.is_scheduled as boolean | undefined;
+    const onboardingDone = data?.onboarding_completed === true;
+    const profileIncomplete =
+        onboardingDone &&
+        ((!zones || zones.length === 0) ||
+            !String(cbu || '').trim() ||
+            (!urgent && !scheduled));
+
     return (
         <div className="p-6 md:p-10 flex flex-col gap-6 w-full animate-fade-in">
             <h1 className="text-2xl font-bold text-slate-900">Hola de nuevo 👋</h1>
+
+            {profileIncomplete && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+                    <div>
+                        <p className="font-semibold text-amber-800">Completá tu perfil para recibir más trabajos</p>
+                        <p className="text-amber-600 text-sm">Agregá tus zonas, disponibilidad y datos de cobro.</p>
+                    </div>
+                    <Link
+                        href="/profile"
+                        className="shrink-0 bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-bold text-center"
+                    >
+                        Completar ahora
+                    </Link>
+                </div>
+            )}
 
             {pendingQuotes > 0 && (
                 <Link

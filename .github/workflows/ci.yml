@@ -39,4 +39,7 @@ jobs:
           MP_ACCESS_TOKEN: dummy
           MP_WEBHOOK_SECRET: dummy
           WA_SKIP_SIGNATURE: 'true'
+          RESEND_API_KEY: re_test_dummy
+          RESEND_FROM_EMAIL: noreply@example.com
+          FRONTEND_PRO_URL: http://localhost:3003
         run: pnpm test

@@ -31,8 +31,9 @@ export const professionalLogin = async (req: Request, res: Response) => {
             });
         }
 
+        const emailNorm = String(email).trim().toLowerCase();
         const professional = await prisma.professional.findUnique({
-            where: { email },
+            where: { email: emailNorm },
         });
 
         if (!professional) {

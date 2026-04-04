@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import authRoutes from './routes/auth.routes';
+import authProfessionalRoutes from './routes/auth.professional.routes';
 import webhookRoutes from './routes/webhook.routes';
 import leadsRoutes from './routes/leads.routes';
 import professionalRoutes from './routes/professional.routes';
@@ -35,6 +36,8 @@ app.use('/webhook', webhookRoutes);
 
 app.use(express.json());
 
+/** Rutas públicas del portal (register / forgot / set password) antes del router /auth genérico. */
+app.use('/auth/professional', authProfessionalRoutes);
 app.use('/auth', authRoutes);
 
 app.post('/webhook/mercadopago', handleMPWebhook);

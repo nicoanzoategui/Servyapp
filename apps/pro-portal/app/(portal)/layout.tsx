@@ -1,13 +1,39 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import Providers from '../../components/Providers';
 import { LayoutDashboard, Briefcase, DollarSign, UserCog, LogOut } from 'lucide-react';
 import Cookies from 'js-cookie';
+import { API_URL } from '@/lib/api';
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
+    const router = useRouter();
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            const token = Cookies.get('token');
+            if (!token) return;
+            try {
+                const res = await fetch(`${API_URL}/professional/profile`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                const json = await res.json();
+                if (cancelled || !json?.data) return;
+                if (json.data.onboarding_completed === false) {
+                    router.replace('/onboarding');
+                }
+            } catch {
+                /* ignore */
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [pathname, router]);
 
     const navLinks = [
         { href: '/dashboard', label: 'Inicio', icon: LayoutDashboard },

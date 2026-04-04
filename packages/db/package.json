@@ -12,7 +12,8 @@
         "build": "tsc"
     },
     "dependencies": {
-        "@prisma/client": "^5.10.2"
+        "@prisma/client": "^5.10.2",
+        "resend": "^6.10.0"
     },
     "devDependencies": {
         "@types/bcrypt": "^6.0.0",

@@ -36,6 +36,10 @@ const envSchema = z.object({
         .string()
         .optional()
         .transform((v) => v === 'true'),
+    RESEND_API_KEY: z.string().min(1),
+    RESEND_FROM_EMAIL: z.string().min(1),
+    /** URL del portal profesional (links en emails set/reset password). */
+    FRONTEND_PRO_URL: z.string().url(),
 });
 
 const _env = envSchema.safeParse(process.env);

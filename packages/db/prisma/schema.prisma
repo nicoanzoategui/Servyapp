@@ -180,3 +180,15 @@ model ProfessionalLead {
 
   @@map("professional_leads")
 }
+
+model PasswordToken {
+  id         String   @id @default(uuid())
+  token      String   @unique
+  email      String
+  type       String
+  expires_at DateTime
+  used       Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  @@map("password_tokens")
+}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import Cookies from 'js-cookie';
 import { API_URL } from '@/lib/api';
 
@@ -99,6 +100,17 @@ export default function LoginPage() {
                         </button>
                     </div>
                 </form>
+                <p className="mt-6 text-center text-sm text-slate-600">
+                    ¿No tenés cuenta?{' '}
+                    <Link href="/register" className="font-semibold text-servy-600">
+                        Registrate
+                    </Link>
+                </p>
+                <p className="mt-2 text-center text-sm text-slate-600">
+                    <Link href="/forgot-password" className="font-semibold text-servy-600">
+                        ¿Olvidaste tu contraseña?
+                    </Link>
+                </p>
             </div>
         </div>
     );

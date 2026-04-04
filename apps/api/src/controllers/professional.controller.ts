@@ -56,7 +56,14 @@ export const getDashboard = async (req: Request, res: Response) => {
 
         const professional = await prisma.professional.findUnique({
             where: { id: professionalId },
-            select: { rating: true },
+            select: {
+                rating: true,
+                onboarding_completed: true,
+                zones: true,
+                cbu_alias: true,
+                is_urgent: true,
+                is_scheduled: true,
+            },
         });
 
         res.json({
@@ -70,6 +77,11 @@ export const getDashboard = async (req: Request, res: Response) => {
                     commission: (earningsAgg._sum.gross_amount || 0) - (earningsAgg._sum.net_amount || 0),
                 },
                 rating: professional?.rating || 0,
+                onboarding_completed: professional?.onboarding_completed ?? false,
+                zones: professional?.zones ?? [],
+                cbu_alias: professional?.cbu_alias ?? null,
+                is_urgent: professional?.is_urgent ?? false,
+                is_scheduled: professional?.is_scheduled ?? false,
             },
         });
     } catch (error) {
@@ -307,6 +319,60 @@ export const createQuote = async (req: Request, res: Response) => {
         res.json({ success: true, data: quotation });
     } catch (error: any) {
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } });
+    }
+};
+
+export const getProfile = async (req: Request, res: Response) => {
+    try {
+        const professionalId = req.user!.userId;
+        const pro = await prisma.professional.findUnique({
+            where: { id: professionalId },
+            select: {
+                name: true,
+                last_name: true,
+                email: true,
+                phone: true,
+                categories: true,
+                zones: true,
+                onboarding_completed: true,
+                cbu_alias: true,
+                is_urgent: true,
+                is_scheduled: true,
+                status: true,
+            },
+        });
+        if (!pro) {
+            return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Profesional no encontrado' } });
+        }
+        res.json({ success: true, data: pro });
+    } catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Error al cargar perfil' } });
+    }
+};
+
+export const completeOnboarding = async (req: Request, res: Response) => {
+    try {
+        const professionalId = req.user!.userId;
+        const { name, last_name, categories } = req.body;
+        if (!name || !last_name || !Array.isArray(categories) || categories.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: { message: 'Nombre, apellido y al menos un oficio son requeridos' },
+            });
+        }
+        await prisma.professional.update({
+            where: { id: professionalId },
+            data: {
+                name: String(name).trim(),
+                last_name: String(last_name).trim(),
+                categories: categories.map((c: unknown) => String(c).trim()).filter(Boolean),
+                onboarding_completed: true,
+                onboarding_step: 1,
+            },
+        });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: { message: 'Error al completar onboarding' } });
     }
 };
 

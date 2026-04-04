@@ -6,11 +6,13 @@ import {
     getJobOffers,
     getJobOfferDetail,
     createQuote,
+    getProfile,
+    completeOnboarding,
     updateProfile,
     getEarnings,
     getEarningsSummary,
     generateReceipt,
-    completeJob
+    completeJob,
 } from '../controllers/professional.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth.middleware';
 
@@ -21,6 +23,8 @@ router.use(authenticateJWT);
 router.use(requireRole('professional'));
 
 router.get('/dashboard', getDashboard);
+router.get('/profile', getProfile);
+router.put('/onboarding/complete', completeOnboarding);
 router.get('/offers', getJobOffers);
 router.get('/offers/:offerId', getJobOfferDetail);
 router.post('/offers/:jobOfferId/quote', createQuote);

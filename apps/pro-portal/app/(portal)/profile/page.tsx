@@ -10,6 +10,7 @@ export default function ProfilePage() {
     const [formData, setFormData] = useState({
         zones: '',
         categories: '',
+        cbu_alias: '',
     });
 
     const handleUpdate = async (e: React.FormEvent) => {
@@ -23,8 +24,11 @@ export default function ProfilePage() {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                 body: JSON.stringify({
-                    zones: formData.zones.split(',').map(s => s.trim()),
-                    categories: formData.categories.split(',').map(s => s.trim())
+                    zones: formData.zones.split(',').map((s) => s.trim()).filter(Boolean),
+                    categories: formData.categories.split(',').map((s) => s.trim()).filter(Boolean),
+                    cbu_alias: formData.cbu_alias.trim() || undefined,
+                    is_urgent: true,
+                    is_scheduled: true,
                 })
             });
             if (res.ok) setSuccess(true);
@@ -66,12 +70,13 @@ export default function ProfilePage() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">CBU / Alias (Para cobros MercadoPago)</label>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">CBU / Alias (cobros)</label>
                         <input
                             type="text"
-                            disabled
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none bg-slate-50 text-slate-500"
-                            placeholder="A gestionar desde módulo financiero"
+                            value={formData.cbu_alias}
+                            onChange={(e) => setFormData({ ...formData, cbu_alias: e.target.value })}
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-servy-500"
+                            placeholder="CBU o alias de cobro"
                         />
                     </div>
 
