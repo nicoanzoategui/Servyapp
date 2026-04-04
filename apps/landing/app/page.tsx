@@ -19,9 +19,9 @@ export default function Home() {
 
             {/* Hero Section */}
             <section className="w-full pt-32 pb-20 px-6 md:px-12 bg-gradient-to-br from-servy-50 via-white to-servy-100/50 mt-10">
-                <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12">
+                <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-center gap-16">
                     {/* Texto */}
-                    <div className="flex-1 flex flex-col items-start text-left">
+                    <div className="flex-1 max-w-md flex flex-col items-start text-left">
                         <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 max-w-xl animate-slide-up">
                             Arreglá tu hogar en minutos.{' '}
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-servy-500 to-servy-700">
