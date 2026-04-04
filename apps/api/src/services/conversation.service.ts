@@ -196,12 +196,33 @@ export class ConversationService {
                     await WhatsAppService.sendTextMessage(phone, 'Foto recibida. Podés enviar otra o escribir *listo* para continuar.');
                     return;
                 }
-                if (content.toLowerCase() === 'listo' || content === 'btn_no_photos') {
-                    await this.createRequestAndMatch(phone, session.data, user);
-                } else if (content === 'btn_yes_photos') {
-                    await WhatsAppService.sendTextMessage(phone, 'Mandá las fotos cuando quieras. Cuando termines escribí *listo*.');
-                } else {
-                    await WhatsAppService.sendTextMessage(phone, 'Respondé con los botones o escribí *listo* para continuar.');
+                {
+                    const normalized = content.toLowerCase().trim();
+                    const noPhotos = ['btn_no_photos', 'no', 'no continuar', '2', 'no,continuar', 'no continúar'].includes(normalized);
+                    const yesPhotos = ['btn_yes_photos', 'si', 'sí', '1', 'si adjuntar', 'sí adjuntar'].includes(normalized);
+
+                    if (normalized === 'listo' || noPhotos) {
+                        if (user.address) {
+                            session.data.address = user.address;
+                            await this.createRequestAndMatch(phone, session.data, user);
+                        } else {
+                            await this.saveSession(phone, 'AWAITING_ADDRESS_FOR_SERVICE', session.data);
+                            await WhatsAppService.sendTextMessage(
+                                phone,
+                                '¿Cuál es la dirección para el servicio? (calle, número y ciudad)'
+                            );
+                        }
+                    } else if (yesPhotos) {
+                        await WhatsAppService.sendTextMessage(
+                            phone,
+                            'Mandá las fotos cuando quieras. Cuando termines escribí *listo*.'
+                        );
+                    } else {
+                        await WhatsAppService.sendTextMessage(
+                            phone,
+                            'Respondé *1* para adjuntar foto o *2* para continuar sin foto.'
+                        );
+                    }
                 }
                 break;
 
