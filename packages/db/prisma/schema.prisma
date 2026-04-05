@@ -80,6 +80,7 @@ model JobOffer {
   professional_id String
   priority        String   @default("normal")
   status          String   @default("pending") // pending, accepted, rejected, quoted
+  schedule        String?
   created_at      DateTime @default(now())
 
   service_request ServiceRequest @relation(fields: [request_id], references: [id])

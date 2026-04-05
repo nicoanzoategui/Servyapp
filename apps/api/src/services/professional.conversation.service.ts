@@ -72,7 +72,8 @@ export class ProfessionalConversationService {
                 `👤 Cliente: ${user.name ?? ''} ${user.last_name || ''}\n` +
                 `📍 Dirección: ${request.address ?? ''}\n` +
                 `🔧 Categoría: ${request.category ?? ''}\n` +
-                `📋 Problema: ${request.description ?? ''}\n\n` +
+                `📋 Problema: ${request.description ?? ''}\n` +
+                `🕐 Horario solicitado: ${jobOffer.schedule ?? 'A coordinar'}\n\n` +
                 `${urgencyText}\n\n` +
                 `¿Podés tomarlo?`
         );

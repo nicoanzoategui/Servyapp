@@ -252,20 +252,21 @@ export class ConversationService {
 
                     const slots: { id: string; title: string }[] = [];
 
-                    if (hour < 12) slots.push({ id: 'sch_9_12', title: '9 a 12hs' });
-                    if (hour < 15) slots.push({ id: 'sch_12_15', title: '12 a 15hs' });
-                    if (hour < 18) slots.push({ id: 'sch_15_18', title: '15 a 18hs' });
-
-                    if (slots.length === 0) {
-                        slots.push({ id: 'sch_tomorrow', title: 'Mañana a primera hora' });
-                        await WhatsAppService.sendButtonMessage(
-                            phone,
-                            'Ya no quedan franjas disponibles para hoy. ¿Querés agendar para mañana a primera hora?',
-                            slots
-                        );
-                    } else {
+                    if (hour < 18) {
+                        if (hour < 12) slots.push({ id: 'sch_9_12', title: '9 a 12hs' });
+                        if (hour < 15) slots.push({ id: 'sch_12_15', title: '12 a 15hs' });
+                        if (hour < 18) slots.push({ id: 'sch_15_18', title: '15 a 18hs' });
                         slots.push({ id: 'sch_asap', title: 'Lo antes posible' });
                         await WhatsAppService.sendButtonMessage(phone, '¿En qué horario preferís que vaya hoy?', slots);
+                    } else {
+                        slots.push({ id: 'sch_tomorrow_morning', title: 'Mañana a primera hora (8-10hs)' });
+                        slots.push({ id: 'sch_tomorrow_mid', title: 'Mañana a la mañana (10-12hs)' });
+                        slots.push({ id: 'sch_tomorrow_afternoon', title: 'Mañana a la tarde (14-18hs)' });
+                        await WhatsAppService.sendButtonMessage(
+                            phone,
+                            'Ya no quedan franjas para hoy. ¿Cuándo preferís que vaya mañana?',
+                            slots
+                        );
                     }
                 } else if (content === 'btn_sched' || content === '2') {
                     session.data.selection = 'scheduled';
@@ -284,13 +285,20 @@ export class ConversationService {
 
             case 'AWAITING_SCHEDULE': {
                 const scheduleMap: Record<string, string> = {
-                    sch_9_12: '9 a 12hs',
-                    sch_12_15: '12 a 15hs',
-                    sch_15_18: '15 a 18hs',
-                    sch_asap: 'Lo antes posible',
+                    sch_9_12: 'Hoy 9 a 12hs',
+                    sch_12_15: 'Hoy 12 a 15hs',
+                    sch_15_18: 'Hoy 15 a 18hs',
+                    sch_asap: 'Hoy lo antes posible',
                     sch_tomorrow: 'Mañana a primera hora',
+                    sch_tomorrow_morning: 'Mañana 8 a 10hs',
+                    sch_tomorrow_mid: 'Mañana 10 a 12hs',
+                    sch_tomorrow_afternoon: 'Mañana 14 a 18hs',
                 };
                 session.data.schedule = scheduleMap[content] || content;
+                await prisma.jobOffer.updateMany({
+                    where: { request_id: session.data.requestId as string },
+                    data: { schedule: session.data.schedule as string },
+                });
                 await this.saveSession(phone, 'AWAITING_QUOTATION', session.data);
                 await WhatsAppService.sendTextMessage(phone, `Perfecto. Le avisamos al profesional. En breve te manda su cotización.`);
                 break;
@@ -319,6 +327,10 @@ export class ConversationService {
                     sch_15_18: '15 a 18hs',
                 };
                 session.data.schedule = `${session.data.scheduleDay} ${timeMap[content] || content}`;
+                await prisma.jobOffer.updateMany({
+                    where: { request_id: session.data.requestId as string },
+                    data: { schedule: session.data.schedule as string },
+                });
                 await this.saveSession(phone, 'AWAITING_QUOTATION', session.data);
                 await WhatsAppService.sendTextMessage(phone, `Perfecto. Le avisamos al profesional. En breve te manda su cotización.`);
                 break;
