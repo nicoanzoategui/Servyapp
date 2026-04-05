@@ -3,7 +3,11 @@
 @tailwind utilities;
 
 @layer base {
+    html {
+        scroll-behavior: smooth;
+    }
     body {
         @apply bg-slate-50 text-slate-900 antialiased;
+        font-family: 'Inter', sans-serif;
     }
 }
