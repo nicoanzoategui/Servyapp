@@ -66,22 +66,27 @@ export class ProfessionalConversationService {
                 ? '⚡ Tipo: URGENTE (tarifa alta)'
                 : '📅 Tipo: PROGRAMADO (tarifa estándar)';
 
+        // 1. Primero el mensaje con los detalles
         await WhatsAppService.sendTextMessage(
             professional.phone,
             `🔧 Nuevo trabajo disponible, ${professional.name}!\n\n` +
-                `👤 Cliente: ${user.name ?? ''} ${user.last_name || ''}\n` +
-                `📍 Dirección: ${request.address ?? ''}\n` +
-                `🔧 Categoría: ${request.category ?? ''}\n` +
-                `📋 Problema: ${request.description ?? ''}\n` +
-                `🕐 Horario solicitado: ${jobOffer.schedule ?? 'A coordinar'}\n\n` +
-                `${urgencyText}\n\n` +
-                `¿Podés tomarlo?`
+                `👤 Cliente: ${user.name} ${user.last_name || ''}\n` +
+                `📍 Dirección: ${request.address}\n` +
+                `🔧 Categoría: ${request.category}\n` +
+                `📋 Problema: ${request.description}\n` +
+                `🕐 Horario solicitado: ${jobOffer.schedule || 'A coordinar'}\n\n` +
+                `${urgencyText}`
         );
 
-        await WhatsAppService.sendButtonMessage(professional.phone, '¿Aceptás el trabajo?', [
-            { id: `job_accept_${jobOffer.id}`, title: 'Sí, acepto' },
-            { id: `job_reject_${jobOffer.id}`, title: 'No, paso' },
-        ]);
+        // 2. Después los botones
+        await WhatsAppService.sendButtonMessage(
+            professional.phone,
+            '¿Aceptás el trabajo?',
+            [
+                { id: `job_accept_${jobOffer.id}`, title: 'Sí, acepto' },
+                { id: `job_reject_${jobOffer.id}`, title: 'No, paso' },
+            ]
+        );
 
         await this.saveSession(professional.phone, 'AWAITING_JOB_RESPONSE', {
             jobOfferId: jobOffer.id,
