@@ -6,7 +6,7 @@ const client = new MercadoPagoConfig({ accessToken: env.MP_ACCESS_TOKEN });
 
 export class MercadoPagoService {
     static async createPreference(quotation: any, user: any) {
-        const preference = new Preference(client);
+        const preferenceClient = new Preference(client);
 
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + 48);
@@ -44,18 +44,31 @@ export class MercadoPagoService {
         };
 
         try {
-            const response = await preference.create({ body });
+            const preference = await preferenceClient.create({ body });
 
             await prisma.payment.create({
                 data: {
                     quotation_id: quotation.id,
-                    mp_preference_id: response.id,
+                    mp_preference_id: preference.id,
                     amount: quotation.total_price,
                     status: 'pending',
                 },
             });
 
-            return response.init_point;
+            console.log(
+                '[MP Preference]',
+                JSON.stringify(
+                    {
+                        items: preference.items,
+                        payer: preference.payer,
+                        back_urls: preference.back_urls,
+                    },
+                    null,
+                    2
+                )
+            );
+
+            return preference.init_point;
         } catch (error) {
             console.error('Error creating MP preference:', error);
             throw new Error('Could not create preference');
