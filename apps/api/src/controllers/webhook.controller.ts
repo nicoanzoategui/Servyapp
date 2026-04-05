@@ -164,21 +164,22 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
     res.send('<Response></Response>');
 
     try {
-        const phone = (req.body.From as string)?.replace(/^whatsapp:/i, '')?.trim();
-        const numMedia = parseInt(String(req.body.NumMedia ?? '0'), 10);
-        const messageType = numMedia > 0 ? 'image' : 'text';
-        const content =
-            messageType === 'image' ? (req.body.MediaUrl0 as string) : (req.body.Body as string);
+        const phone = (req.body.From as string)?.replace('whatsapp:', '');
+        const messageType = req.body.NumMedia && parseInt(req.body.NumMedia) > 0 ? 'image' : 'text';
+        const content = messageType === 'image' ? req.body.MediaUrl0 : req.body.Body;
 
-        if (phone && content) {
-            const professional = await prisma.professional.findUnique({ where: { phone } });
-            if (professional) {
-                const { ProfessionalConversationService } = await import('../services/professional.conversation.service');
-                await ProfessionalConversationService.processMessage(phone, content).catch(console.error);
-                return;
-            }
-            await ConversationService.processMessage(phone, messageType, content).catch(console.error);
+        if (!phone || !content) return;
+
+        // Verificar primero si es un profesional
+        const professional = await prisma.professional.findUnique({ where: { phone } });
+        if (professional) {
+            const { ProfessionalConversationService } = await import('../services/professional.conversation.service');
+            await ProfessionalConversationService.processMessage(phone, content).catch(console.error);
+            return;
         }
+
+        // Si no es profesional, procesar como usuario
+        await ConversationService.processMessage(phone, messageType, content).catch(console.error);
     } catch (error) {
         console.error('Twilio webhook error:', error);
     }
