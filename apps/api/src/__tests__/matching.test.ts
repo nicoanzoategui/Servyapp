@@ -12,7 +12,6 @@ vi.mock('@servy/db', () => ({
         },
         jobOffer: {
             create: vi.fn(),
-            findFirst: vi.fn().mockResolvedValue(null),
         },
     },
 }));

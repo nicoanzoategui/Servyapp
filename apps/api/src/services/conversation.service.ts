@@ -256,6 +256,30 @@ export class ConversationService {
                         where: { request_id: requestId, priority: 'scheduled' },
                         data: { status: 'cancelled' },
                     });
+
+                    // Notificar al profesional seleccionado
+                    const selectedOffer = await prisma.jobOffer.findFirst({
+                        where: {
+                            request_id: requestId,
+                            priority: 'urgent',
+                            status: { not: 'cancelled' },
+                        },
+                        include: {
+                            professional: true,
+                            service_request: { include: { user: true } },
+                        },
+                    });
+
+                    if (selectedOffer?.service_request?.user) {
+                        const { ProfessionalConversationService } = await import('./professional.conversation.service');
+                        await ProfessionalConversationService.notifyNewJob(
+                            selectedOffer.professional,
+                            selectedOffer,
+                            selectedOffer.service_request,
+                            selectedOffer.service_request.user
+                        );
+                    }
+
                     await this.saveSession(phone, 'AWAITING_SCHEDULE', session.data);
 
                     const now = new Date();
@@ -288,6 +312,30 @@ export class ConversationService {
                 } else if (content === 'btn_sched' || content === '2') {
                     session.data.selection = 'scheduled';
                     await prisma.jobOffer.updateMany({ where: { request_id: requestId, priority: 'urgent' }, data: { status: 'cancelled' } });
+
+                    // Notificar al profesional seleccionado
+                    const selectedOffer = await prisma.jobOffer.findFirst({
+                        where: {
+                            request_id: requestId,
+                            priority: 'scheduled',
+                            status: { not: 'cancelled' },
+                        },
+                        include: {
+                            professional: true,
+                            service_request: { include: { user: true } },
+                        },
+                    });
+
+                    if (selectedOffer?.service_request?.user) {
+                        const { ProfessionalConversationService } = await import('./professional.conversation.service');
+                        await ProfessionalConversationService.notifyNewJob(
+                            selectedOffer.professional,
+                            selectedOffer,
+                            selectedOffer.service_request,
+                            selectedOffer.service_request.user
+                        );
+                    }
+
                     await this.saveSession(phone, 'AWAITING_SCHEDULE_DAY', session.data);
                     await WhatsAppService.sendButtonMessage(phone, '¿Qué día preferís?', [
                         { id: 'day_tomorrow', title: 'Mañana' },
