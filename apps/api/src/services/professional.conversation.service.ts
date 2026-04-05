@@ -96,6 +96,15 @@ export class ProfessionalConversationService {
     }
 
     static async processMessage(phone: string, content: string) {
+        if (content.toLowerCase() === 'cancelar') {
+            await this.clearSession(phone);
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'Sesión cancelada. Te avisamos cuando haya un nuevo trabajo disponible.'
+            );
+            return;
+        }
+
         const professional = await prisma.professional.findUnique({ where: { phone } });
         if (!professional) return;
 
