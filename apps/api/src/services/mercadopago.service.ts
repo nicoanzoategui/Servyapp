@@ -21,10 +21,10 @@ export class MercadoPagoService {
                 },
             ],
             payer: {
-                email: user.email || 'comprador@servy.lat',
+                email: `usuario_${user.phone}@servy.lat`,
                 phone: {
                     area_code: '54',
-                    number: user.phone || '',
+                    number: String(user.phone || ''),
                 },
             },
             back_urls: {
