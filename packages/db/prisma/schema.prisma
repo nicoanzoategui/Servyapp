@@ -170,6 +170,15 @@ model WhatsappSession {
   @@map("whatsapp_sessions")
 }
 
+model ProfessionalSession {
+  phone      String   @id
+  step       String
+  data_json  Json     @default("{}")
+  expires_at DateTime
+
+  @@map("professional_sessions")
+}
+
 model ProfessionalLead {
   id          String   @id @default(cuid())
   name        String

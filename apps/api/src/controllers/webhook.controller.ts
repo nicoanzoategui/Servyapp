@@ -171,6 +171,12 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
             messageType === 'image' ? (req.body.MediaUrl0 as string) : (req.body.Body as string);
 
         if (phone && content) {
+            const professional = await prisma.professional.findUnique({ where: { phone } });
+            if (professional) {
+                const { ProfessionalConversationService } = await import('../services/professional.conversation.service');
+                await ProfessionalConversationService.processMessage(phone, content).catch(console.error);
+                return;
+            }
             await ConversationService.processMessage(phone, messageType, content).catch(console.error);
         }
     } catch (error) {

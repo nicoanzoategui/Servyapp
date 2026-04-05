@@ -49,6 +49,28 @@ export class ProfessionalMatchingService {
             });
         }
 
+        const { ProfessionalConversationService } = await import('./professional.conversation.service');
+
+        if (urgent && request.user) {
+            const urgentOffer = await prisma.jobOffer.findFirst({
+                where: { request_id: requestId, priority: 'urgent' },
+                orderBy: { created_at: 'desc' },
+            });
+            if (urgentOffer) {
+                await ProfessionalConversationService.notifyNewJob(urgent, urgentOffer, request, request.user);
+            }
+        }
+
+        if (scheduled && request.user) {
+            const scheduledOffer = await prisma.jobOffer.findFirst({
+                where: { request_id: requestId, priority: 'scheduled' },
+                orderBy: { created_at: 'desc' },
+            });
+            if (scheduledOffer) {
+                await ProfessionalConversationService.notifyNewJob(scheduled, scheduledOffer, request, request.user);
+            }
+        }
+
         return { urgent, scheduled };
     }
 }
