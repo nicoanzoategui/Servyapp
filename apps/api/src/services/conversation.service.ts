@@ -357,15 +357,24 @@ export class ConversationService {
                 await WhatsAppService.sendTextMessage(phone, 'Todavía estamos esperando la cotización del profesional. En breve te avisamos.');
                 break;
 
-            case 'AWAITING_PAYMENT_DECISION':
-                if (content === 'btn_accept') {
+            case 'AWAITING_PAYMENT_DECISION': {
+                const acceptWords = ['btn_accept', 'aceptar', 'acepto', 'si', 'sí', '1', 'ok', 'dale'];
+                const rejectWords = ['btn_reject', 'rechazar', 'rechazo', 'no', '2', 'cancelar'];
+
+                const lc = content.toLowerCase().trim();
+
+                if (acceptWords.includes(lc)) {
                     await this.handleAcceptQuotation(phone, session.data, user);
-                } else if (content === 'btn_reject') {
+                } else if (rejectWords.includes(lc)) {
                     await this.handleRejectQuotation(phone, session.data);
                 } else {
-                    await WhatsAppService.sendTextMessage(phone, 'Respondé con los botones Aceptar o Rechazar.');
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'Respondé *1* para aceptar o *2* para rechazar la cotización.'
+                    );
                 }
                 break;
+            }
 
             case 'PAYMENT_PENDING':
                 await WhatsAppService.sendTextMessage(phone, 'Tu pago está pendiente. Si ya pagaste, en breve recibís la confirmación.');
