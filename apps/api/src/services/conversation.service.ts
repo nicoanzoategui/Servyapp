@@ -159,6 +159,23 @@ export class ConversationService {
                     await WhatsAppService.sendTextMessage(phone, 'Recibí la imagen. Contame también con palabras ¿qué está pasando?');
                     return;
                 }
+                const greetings = [
+                    'hola',
+                    'hi',
+                    'hello',
+                    'buenas',
+                    'buen dia',
+                    'buenas tardes',
+                    'buenas noches',
+                    'hey',
+                ];
+                if (greetings.includes(content.toLowerCase().trim())) {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        `Hola ${user.name}! 👋 Contame ¿en qué te puedo ayudar hoy?\n\n_(Describime el problema como puedas, nosotros entendemos todo — cuanto más detalle, mejor puede cotizar el profesional)_`
+                    );
+                    return;
+                }
                 const classification = await GeminiService.classifyProblem(content);
                 if (!classification.understood || !classification.category) {
                     await WhatsAppService.sendTextMessage(phone, 'No entendí bien el problema. ¿Podés contarme con más detalle qué está pasando?');
