@@ -6,6 +6,7 @@ import { ConversationService } from '../services/conversation.service';
 import { WhatsAppService } from '../services/whatsapp.service';
 import { MercadoPagoService } from '../services/mercadopago.service';
 import { QRService } from '../services/qr.service';
+import { redis } from '../utils/redis';
 
 export const verifyWebhook = (req: Request, res: Response) => {
     const mode = req.query['hub.mode'];
@@ -169,6 +170,26 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
         const content = messageType === 'image' ? req.body.MediaUrl0 : req.body.Body;
 
         if (!phone || !content) return;
+
+        // Comando global cancelar para ambos flujos
+        if (content.toLowerCase().trim() === 'cancelar') {
+            // Limpiar sesión de usuario
+            try {
+                await redis.del(`session:${phone}`);
+                await prisma.whatsappSession.delete({ where: { phone } }).catch(() => {});
+            } catch {
+                /* ignore */
+            }
+            // Limpiar sesión de profesional
+            try {
+                await redis.del(`pro_session:${phone}`);
+                await prisma.professionalSession.delete({ where: { phone } }).catch(() => {});
+            } catch {
+                /* ignore */
+            }
+            await WhatsAppService.sendTextMessage(phone, 'Listo, sesión cancelada. Escribí cuando quieras empezar de nuevo.');
+            return;
+        }
 
         // Verificar primero si es un profesional
         const professional = await prisma.professional.findUnique({ where: { phone } });
