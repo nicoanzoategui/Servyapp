@@ -164,7 +164,7 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
     res.send('<Response></Response>');
 
     try {
-        const phone = (req.body.From as string)?.replace('whatsapp:', '');
+        const phone = (req.body.From as string)?.replace(/whatsapp:/i, '').replace('+', '').trim();
         const messageType = req.body.NumMedia && parseInt(req.body.NumMedia) > 0 ? 'image' : 'text';
         const content = messageType === 'image' ? req.body.MediaUrl0 : req.body.Body;
 
