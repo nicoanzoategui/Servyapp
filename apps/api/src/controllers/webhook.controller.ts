@@ -7,6 +7,9 @@ import { WhatsAppService } from '../services/whatsapp.service';
 import { MercadoPagoService } from '../services/mercadopago.service';
 import { QRService } from '../services/qr.service';
 import { redis } from '../utils/redis';
+import { processAvailabilityMessage } from '../agents/availability-agent';
+import { processQualityUserReply } from '../agents/quality-agent';
+import { tryExperimentWaitlist } from '../agents/experiments-agent';
 
 export const verifyWebhook = (req: Request, res: Response) => {
     const mode = req.query['hub.mode'];
@@ -167,7 +170,25 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
     try {
         const phone = (req.body.From as string)?.replace(/whatsapp:/i, '').replace('+', '').trim();
         const messageType = req.body.NumMedia && parseInt(req.body.NumMedia) > 0 ? 'image' : 'text';
-        const content = messageType === 'image' ? req.body.MediaUrl0 : req.body.Body;
+        const latRaw = req.body.Latitude;
+        const lngRaw = req.body.Longitude;
+        const lat =
+            latRaw != null && String(latRaw).trim() !== '' && !Number.isNaN(parseFloat(String(latRaw)))
+                ? parseFloat(String(latRaw))
+                : undefined;
+        const lng =
+            lngRaw != null && String(lngRaw).trim() !== '' && !Number.isNaN(parseFloat(String(lngRaw)))
+                ? parseFloat(String(lngRaw))
+                : undefined;
+
+        let content =
+            messageType === 'image'
+                ? String(req.body.MediaUrl0 || '')
+                : String(req.body.Body || '').trim();
+
+        if (!content && lat != null && lng != null) {
+            content = '__LOCATION__';
+        }
 
         if (!phone || !content) return;
 
@@ -194,12 +215,27 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
         // Verificar primero si es un profesional
         const professional = await prisma.professional.findUnique({ where: { phone } });
         if (professional) {
+            const handledAvail = await processAvailabilityMessage({
+                professional,
+                body: content,
+                messageType,
+                lat,
+                lng,
+            }).catch(() => false);
+            if (handledAvail) return;
+
             const { ProfessionalConversationService } = await import('../services/professional.conversation.service');
             await ProfessionalConversationService.processMessage(phone, content).catch(console.error);
             return;
         }
 
-        // Si no es profesional, procesar como usuario
+        const userRow = await prisma.user.findUnique({ where: { phone } });
+        const qHandled = await processQualityUserReply(phone, content).catch(() => false);
+        if (qHandled) return;
+
+        const expHandled = await tryExperimentWaitlist(phone, content, userRow?.name).catch(() => false);
+        if (expHandled) return;
+
         await ConversationService.processMessage(phone, messageType, content).catch(console.error);
     } catch (error) {
         console.error('Twilio webhook error:', error);

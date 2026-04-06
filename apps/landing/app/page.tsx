@@ -229,7 +229,7 @@ export default function Home() {
                 <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-16">Por qué elegir Servy</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-5xl w-full">
                     <div className="flex gap-6 p-6">
-                        <ShieldCheck className="text-green-500 shrink-0" size={40} />
+                        <ShieldCheck className="text-servy-600 shrink-0" size={40} />
                         <div>
                             <h3 className="font-bold text-xl mb-2">Profesionales verificados</h3>
                             <p className="text-slate-600">Cada profesional pasa por un proceso de verificación antes de entrar a Servy. Vos no arriesgás.</p>
@@ -250,7 +250,7 @@ export default function Home() {
                         </div>
                     </div>
                     <div className="flex gap-6 p-6">
-                        <HeartHandshake className="text-purple-500 shrink-0" size={40} />
+                        <HeartHandshake className="text-servy-600 shrink-0" size={40} />
                         <div>
                             <h3 className="font-bold text-xl mb-2">Precio cerrado antes de arrancar</h3>
                             <p className="text-slate-600">Sabés cuánto vas a pagar antes de que llegue el profesional. Sin sorpresas.</p>

@@ -2,7 +2,24 @@
 
 import Link from 'next/link';
 import Providers from '../../components/Providers';
-import { Home, MessageCircle, Users, Briefcase, DollarSign, Settings, LogOut } from 'lucide-react';
+import {
+    Home,
+    MessageCircle,
+    Users,
+    Briefcase,
+    DollarSign,
+    Settings,
+    LogOut,
+    Tag,
+    MapPin,
+    Star,
+    HeartHandshake,
+    Shield,
+    TrendingUp,
+    Megaphone,
+    FlaskConical,
+    ScrollText,
+} from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     return (
@@ -31,6 +48,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         </Link>
                         <Link href="/settings" className="flex items-center gap-3 px-3 py-2 rounded flex-1 hover:bg-slate-800 transition">
                             <Settings size={20} /> Configuración
+                        </Link>
+                        <div className="pt-4 pb-1 text-xs uppercase tracking-wide text-slate-500 px-3">Agentes</div>
+                        <Link href="/pricing" className="flex items-center gap-3 px-3 py-2 rounded flex-1 hover:bg-slate-800 transition">
+                            <Tag size={20} /> Pricing
+                        </Link>
+                        <Link href="/operations-map" className="flex items-center gap-3 px-3 py-2 rounded flex-1 hover:bg-slate-800 transition">
+                            <MapPin size={20} /> Operaciones
+                        </Link>
+                        <Link href="/quality" className="flex items-center gap-3 px-3 py-2 rounded flex-1 hover:bg-slate-800 transition">
+                            <Star size={20} /> Calidad
+                        </Link>
+                        <Link href="/provider-retention" className="flex items-center gap-3 px-3 py-2 rounded flex-1 hover:bg-slate-800 transition">
+                            <HeartHandshake size={20} /> Retención
+                        </Link>
+                        <Link href="/fraud" className="flex items-center gap-3 px-3 py-2 rounded flex-1 hover:bg-slate-800 transition">
+                            <Shield size={20} /> Fraude
+                        </Link>
+                        <Link href="/forecast" className="flex items-center gap-3 px-3 py-2 rounded flex-1 hover:bg-slate-800 transition">
+                            <TrendingUp size={20} /> Forecast
+                        </Link>
+                        <Link href="/recruitment" className="flex items-center gap-3 px-3 py-2 rounded flex-1 hover:bg-slate-800 transition">
+                            <Megaphone size={20} /> Reclutamiento
+                        </Link>
+                        <Link href="/experiments" className="flex items-center gap-3 px-3 py-2 rounded flex-1 hover:bg-slate-800 transition">
+                            <FlaskConical size={20} /> Experimentos
+                        </Link>
+                        <Link href="/agent-logs" className="flex items-center gap-3 px-3 py-2 rounded flex-1 hover:bg-slate-800 transition">
+                            <ScrollText size={20} /> Logs agentes
                         </Link>
                     </nav>
                     <div className="p-4 border-t border-slate-700">
