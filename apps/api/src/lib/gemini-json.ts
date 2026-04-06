@@ -52,3 +52,50 @@ export async function geminiGenerateJson<T>(systemHint: string, userText: string
         return { ok: false, error: String(e) };
     }
 }
+
+export interface GeminiTextResult {
+    ok: boolean;
+    text?: string;
+    tokensUsed?: number;
+    error?: string;
+}
+
+/** POST generateContent; devuelve texto plano (sin parsear JSON). */
+export async function geminiGenerateText(
+    systemHint: string,
+    userText: string,
+    opts?: { temperature?: number; maxOutputTokens?: number }
+): Promise<GeminiTextResult> {
+    const prompt = `${systemHint}\n\n---\n${userText}`;
+    try {
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${geminiApiKey()}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        temperature: opts?.temperature ?? 0.4,
+                        maxOutputTokens: opts?.maxOutputTokens ?? 2048,
+                    },
+                }),
+            }
+        );
+
+        if (!response.ok) {
+            const err = await response.text();
+            return { ok: false, error: `${response.status} ${err}` };
+        }
+
+        const data = (await response.json()) as {
+            candidates?: { content?: { parts?: { text?: string }[] } }[];
+            usageMetadata?: { totalTokenCount?: number };
+        };
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const tokensUsed = data?.usageMetadata?.totalTokenCount;
+        return { ok: true, text: text.trim(), tokensUsed };
+    } catch (e) {
+        return { ok: false, error: String(e) };
+    }
+}
