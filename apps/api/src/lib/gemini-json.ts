@@ -1,4 +1,6 @@
 import { env } from '../utils/env';
+import { redis } from '../utils/redis';
+import { GEMINI_CACHE_TTL_SEC, geminiCacheKey } from './cache-keys';
 
 const MODEL = 'gemini-2.5-flash';
 
@@ -18,6 +20,15 @@ export interface GeminiJsonResult<T> {
 /** POST generateContent y parsea el primer objeto JSON del texto. */
 export async function geminiGenerateJson<T>(systemHint: string, userText: string): Promise<GeminiJsonResult<T>> {
     const prompt = `${systemHint}\n\n---\n${userText}`;
+    const cacheKey = geminiCacheKey(systemHint, userText);
+    try {
+        const hit = await redis.get(cacheKey);
+        if (hit) {
+            return JSON.parse(hit) as GeminiJsonResult<T>;
+        }
+    } catch {
+        /* */
+    }
     try {
         const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${geminiApiKey()}`,
@@ -47,7 +58,13 @@ export async function geminiGenerateJson<T>(systemHint: string, userText: string
         if (!jsonMatch) {
             return { ok: false, raw: text, error: 'No JSON in response', tokensUsed };
         }
-        return { ok: true, data: JSON.parse(jsonMatch[0]) as T, raw: text, tokensUsed };
+        const result: GeminiJsonResult<T> = { ok: true, data: JSON.parse(jsonMatch[0]) as T, raw: text, tokensUsed };
+        try {
+            await redis.set(cacheKey, JSON.stringify(result), 'EX', GEMINI_CACHE_TTL_SEC);
+        } catch {
+            /* */
+        }
+        return result;
     } catch (e) {
         return { ok: false, error: String(e) };
     }
