@@ -35,6 +35,7 @@ export function middleware(request: NextRequest) {
 /** Lista blanca: no tocar `/_next/*` (CSS/JS). */
 export const config = {
     matcher: [
+        '/',
         '/login',
         '/register',
         '/forgot-password',
