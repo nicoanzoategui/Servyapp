@@ -17,6 +17,9 @@ import { env } from './utils/env';
 import { errorHandler } from './middlewares/errorHandler';
 import { startCronJobs } from './workers/cron';
 import { startCrons } from './crons';
+import { initSentry } from './lib/sentry';
+
+initSentry();
 
 const app = express();
 

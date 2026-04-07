@@ -2,6 +2,7 @@ import { ApifyClient } from 'apify-client';
 import { env } from '../utils/env';
 import { prisma } from '@servy/db';
 import { insertAgentLog } from '../lib/agent-log';
+import { captureException } from '../lib/sentry';
 import { geminiGenerateJson } from '../lib/gemini-json';
 import { recruitmentAdPrompt, RECRUITMENT_SCORE_PROMPT } from './prompts/recruitment';
 
@@ -135,6 +136,7 @@ export async function runRecruitmentCycle(): Promise<void> {
                 },
             });
         } catch (err: any) {
+            captureException(err, { tags: { agent: 'recruitment' } });
             await insertAgentLog({
                 agent: 'recruitment',
                 event: 'scrape_error',

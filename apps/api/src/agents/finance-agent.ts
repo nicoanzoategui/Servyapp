@@ -9,6 +9,7 @@ import { env } from '../utils/env';
 import { redis } from '../utils/redis';
 import { prisma, type Prisma } from '@servy/db';
 import { insertAgentLog } from '../lib/agent-log';
+import { captureException } from '../lib/sentry';
 import { geminiGenerateJson, geminiGenerateText } from '../lib/gemini-json';
 import { WhatsAppService } from '../services/whatsapp.service';
 import { buildProjectionSystemPrompt, buildWeeklyExecutiveSummaryPrompt } from './prompts/finance';
@@ -41,6 +42,7 @@ export async function logAgent(
     });
   } catch (e) {
     console.error('[finance-agent] logAgent failed', e);
+    captureException(e, { tags: { agent: 'finance' } });
   }
 }
 

@@ -11,6 +11,7 @@ import { processAvailabilityMessage } from '../agents/availability-agent';
 import { processQualityUserReply } from '../agents/quality-agent';
 import { tryExperimentWaitlist } from '../agents/experiments-agent';
 import { enqueuePostPaymentMessaging } from '../lib/queue';
+import { captureException } from '../lib/sentry';
 
 export const verifyWebhook = (req: Request, res: Response) => {
     const mode = req.query['hub.mode'];
@@ -89,6 +90,7 @@ export const handleWhatsAppMessage = async (req: Request, res: Response) => {
         }
     } catch (error) {
         console.error('Webhook error:', error);
+        captureException(error, { tags: { area: 'whatsapp-webhook' } });
     }
 };
 
@@ -132,6 +134,7 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
                 qrUrl = await QRService.generateAndUpload(job.id);
             } catch (e) {
                 console.error('[MP webhook] QR generation failed:', e);
+                captureException(e, { tags: { area: 'mp-webhook', step: 'qr' } });
             }
 
             const proJob = job.quotation.job_offer;
@@ -169,6 +172,7 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
         }
     } catch (error) {
         console.error('MP Webhook Error:', error);
+        captureException(error, { tags: { area: 'mp-webhook' } });
     }
 };
 
@@ -256,5 +260,6 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
         await ConversationService.processMessage(phone, messageType, content).catch(console.error);
     } catch (error) {
         console.error('Twilio webhook error:', error);
+        captureException(error, { tags: { area: 'twilio-webhook' } });
     }
 };
