@@ -98,7 +98,7 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
     res.sendStatus(200);
 
     try {
-        void req.headers['x-signature'];
+        void req.headers?.['x-signature'];
 
         const { type, data } = req.body || {};
         if (type !== 'payment' || !data?.id) return;
