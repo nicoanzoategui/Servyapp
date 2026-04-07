@@ -5,7 +5,7 @@ import { runCheckinScheduler } from './checkin-scheduler';
 import { collectMetrics } from './metrics-collector';
 import { runQualityFollowup } from './quality-followup';
 import { runRetentionCheck } from './retention-check';
-import { runFraudScan } from './fraud-scan';
+import { enqueueDailyFinanceSnapshot, enqueueFraudScan } from '../lib/queue';
 import { runForecast } from './forecast-generator';
 import { runRecruitmentCron } from './recruitment-cycle';
 import { runExperimentsDaily, runExperimentsMonthly } from './experiments-cron';
@@ -46,7 +46,13 @@ export function startCrons(): void {
     });
 
     cron.schedule('0 3 * * *', () => {
-        void runFraudScan().catch((err) => console.error('[cron runFraudScan]', err));
+        void enqueueFraudScan().catch((err) => console.error('[cron enqueueFraudScan]', err));
+    });
+
+    cron.schedule('0 7 * * *', () => {
+        void enqueueDailyFinanceSnapshot().catch((err) =>
+            console.error('[cron enqueueDailyFinanceSnapshot]', err)
+        );
     });
 
     cron.schedule('0 8 * * 0', () => {

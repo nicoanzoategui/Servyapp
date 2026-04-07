@@ -99,3 +99,25 @@ export async function geminiGenerateText(
         return { ok: false, error: String(e) };
     }
 }
+
+/**
+ * Misma API que `geminiGenerateJson` pero ejecutada vía cola BullMQ (reintentos/backoff en Redis).
+ * No reemplaza la versión síncrona; usar donde el spec pida resiliencia ante reinicios.
+ */
+export async function geminiGenerateJsonViaQueue<T>(
+    systemHint: string,
+    userText: string
+): Promise<GeminiJsonResult<T>> {
+    const { agentQueue, agentsQueueEvents } = await import('./queue');
+    const job = await agentQueue.add(
+        'gemini-json',
+        { systemHint, userText },
+        {
+            attempts: 4,
+            backoff: { type: 'fixed', delay: 2 * 60_000 },
+            removeOnComplete: 200,
+            removeOnFail: 50,
+        }
+    );
+    return job.waitUntilFinished(agentsQueueEvents) as Promise<GeminiJsonResult<T>>;
+}

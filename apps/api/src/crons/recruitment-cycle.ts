@@ -1,5 +1,5 @@
-import { runRecruitmentCycle } from '../agents/recruitment-agent';
+import { enqueueRunRecruitmentCycle } from '../lib/queue';
 
 export async function runRecruitmentCron(): Promise<void> {
-    await runRecruitmentCycle();
+    await enqueueRunRecruitmentCycle();
 }

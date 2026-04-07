@@ -10,6 +10,7 @@ import { redis } from '../utils/redis';
 import { processAvailabilityMessage } from '../agents/availability-agent';
 import { processQualityUserReply } from '../agents/quality-agent';
 import { tryExperimentWaitlist } from '../agents/experiments-agent';
+import { enqueuePostPaymentMessaging } from '../lib/queue';
 
 export const verifyWebhook = (req: Request, res: Response) => {
     const mode = req.query['hub.mode'];
@@ -133,14 +134,6 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
                 console.error('[MP webhook] QR generation failed:', e);
             }
 
-            await WhatsAppService.sendTextMessage(
-                userPhone,
-                `✅ ¡Pago confirmado!\n\nTu técnico *${job.quotation.job_offer.professional.name}* está confirmado para tu servicio.\n\nCualquier consulta escribí acá y te lo hacemos llegar.${qrUrl ? '\n\n🔒 Guardá este QR — el técnico lo va a escanear al terminar para liberar el pago.' : ''}`
-            );
-            if (qrUrl) {
-                await WhatsAppService.sendImageMessage(userPhone, qrUrl);
-            }
-
             const proJob = job.quotation.job_offer;
             const serviceRequest = await prisma.serviceRequest.findUnique({
                 where: { id: proJob.request_id },
@@ -151,10 +144,16 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
                 ? new Date(serviceRequest.scheduled_date).toLocaleDateString('es-AR')
                 : 'a confirmar';
 
-            await WhatsAppService.sendTextMessage(
-                job.quotation.job_offer.professional.phone,
-                `✅ Nuevo trabajo confirmado.\n\n📍 ${serviceRequest?.address ?? 'Ver portal'}\n🔧 ${serviceRequest?.description?.slice(0, 80) ?? 'Ver portal'}\n📅 ${fecha}, turno ${franja}\n💰 $${job.quotation.total_price} (se libera con QR del cliente)\n\nVer detalles: portal.servy.lat/jobs/${job.id}\n\nComandos:\n→ *estoy yendo* — le avisamos al cliente\n→ *llego en X minutos* — se lo reenviamos\n→ *no encuentro la dirección* — le pedimos info al cliente\n→ *tuve un imprevisto* — notificamos al cliente y al admin`
-            );
+            const userText = `✅ ¡Pago confirmado!\n\nTu técnico *${job.quotation.job_offer.professional.name}* está confirmado para tu servicio.\n\nCualquier consulta escribí acá y te lo hacemos llegar.${qrUrl ? '\n\n🔒 Guardá este QR — el técnico lo va a escanear al terminar para liberar el pago.' : ''}`;
+            const proText = `✅ Nuevo trabajo confirmado.\n\n📍 ${serviceRequest?.address ?? 'Ver portal'}\n🔧 ${serviceRequest?.description?.slice(0, 80) ?? 'Ver portal'}\n📅 ${fecha}, turno ${franja}\n💰 $${job.quotation.total_price} (se libera con QR del cliente)\n\nVer detalles: portal.servy.lat/jobs/${job.id}\n\nComandos:\n→ *estoy yendo* — le avisamos al cliente\n→ *llego en X minutos* — se lo reenviamos\n→ *no encuentro la dirección* — le pedimos info al cliente\n→ *tuve un imprevisto* — notificamos al cliente y al admin`;
+
+            await enqueuePostPaymentMessaging({
+                userPhone,
+                proPhone: job.quotation.job_offer.professional.phone,
+                userText,
+                proText,
+                qrUrl,
+            });
         } else if (status === 'rejected' || status === 'cancelled') {
             await prisma.payment.updateMany({
                 where: { quotation_id: quotationId },

@@ -1,6 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
+import { getBullBoardRouter } from './lib/bull-board-setup';
+import { authenticateJWT, requireRole } from './middlewares/auth.middleware';
+import { startBullmqWorkers } from './workers/start-bullmq';
 import authRoutes from './routes/auth.routes';
 import authProfessionalRoutes from './routes/auth.professional.routes';
 import webhookRoutes from './routes/webhook.routes';
@@ -67,6 +70,7 @@ app.post('/webhook/mercadopago', handleMPWebhook);
 
 app.use('/leads', leadsRoutes);
 app.use('/professional', professionalRoutes);
+app.use('/admin/queues', authenticateJWT, requireRole('admin'), getBullBoardRouter());
 app.use('/admin', adminRoutes);
 app.use('/api', operationalApiRoutes);
 app.use('/api/finance', financeRouter);
@@ -74,6 +78,7 @@ app.use('/api/finance', financeRouter);
 // Apply global error handler middleware
 app.use(errorHandler);
 
+startBullmqWorkers();
 startCronJobs();
 startCrons();
 

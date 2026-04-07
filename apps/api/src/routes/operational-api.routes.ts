@@ -5,12 +5,12 @@ import { listRecentMaterialPrices, listRecentQuotes } from '../lib/agents-querie
 import { redis } from '../utils/redis';
 import { prisma } from '@servy/db';
 import {
-    runRecruitmentCycle,
     scoreCandidateText,
     uploadCustomAudience,
     syncAudienceMembers,
     launchCampaign,
 } from '../agents/recruitment-agent';
+import { enqueueRunRecruitmentCycle } from '../lib/queue';
 import { insertAgentLog } from '../lib/agent-log';
 
 const router = Router();
@@ -494,7 +494,7 @@ router.post('/recruitment/campaigns/:id/pause', async (req: Request, res: Respon
 
 router.post('/recruitment/scrape', async (_req: Request, res: Response) => {
     try {
-        await runRecruitmentCycle();
+        await enqueueRunRecruitmentCycle();
         res.json({ success: true });
     } catch (e) {
         res.status(500).json({ success: false, error: String(e) });
