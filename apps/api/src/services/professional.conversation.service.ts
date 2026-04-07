@@ -117,6 +117,8 @@ export class ProfessionalConversationService {
 
             if (content === `job_accept_${jobOfferId}` || content.toLowerCase().includes('acepto') || content === '1') {
                 await prisma.jobOffer.update({ where: { id: jobOfferId }, data: { status: 'accepted' } });
+                const { markProfessionalBusy } = await import('../agents/availability-agent');
+                await markProfessionalBusy(professional.id).catch(() => {});
                 await this.saveSession(phone, 'AWAITING_QUOTATION', session.data);
                 await WhatsAppService.sendTextMessage(
                     phone,
@@ -128,6 +130,8 @@ export class ProfessionalConversationService {
                 );
             } else if (content === `job_reject_${jobOfferId}` || content.toLowerCase().includes('paso') || content === '2') {
                 await prisma.jobOffer.update({ where: { id: jobOfferId }, data: { status: 'rejected' } });
+                const { clearProfessionalBusyIfNeeded } = await import('../agents/availability-agent');
+                await clearProfessionalBusyIfNeeded(professional.id).catch(() => {});
                 await this.clearSession(phone);
                 await WhatsAppService.sendTextMessage(
                     phone,

@@ -41,6 +41,22 @@ const envSchema = z.object({
     /** URL del portal profesional (links en emails set/reset password). */
     FRONTEND_PRO_URL: z.string().url(),
     GEMINI_API_KEY: z.string().min(1),
+    /** Alias opcional del spec; si viene, sobreescribe GEMINI_API_KEY para Gemini. */
+    GOOGLE_AI_API_KEY: z.string().optional().default(''),
+    MERCADOLIBRE_API_URL: z.string().url().optional().default('https://api.mercadolibre.com'),
+    APIFY_API_TOKEN: z.string().optional().default(''),
+    META_AD_ACCOUNT_ID: z.string().optional().default(''),
+    META_SYSTEM_USER_TOKEN: z.string().optional().default(''),
+    /** ID numérico de la página de Facebook (requerido para link ads / creatives). */
+    META_PAGE_ID: z.string().optional().default(''),
+    /**
+     * Si true, ante `payment_anomaly` high se intenta reembolso total en Mercado Pago (peligroso en prod).
+     * Por defecto solo se marca `fraud_hold` en DB y se registra alerta.
+     */
+    MP_AUTO_REFUND_FRAUD: z
+        .string()
+        .optional()
+        .transform((v) => v === 'true'),
 });
 
 const _env = envSchema.safeParse(process.env);

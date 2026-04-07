@@ -2,8 +2,8 @@ import type { Config } from 'tailwindcss';
 
 const config: Config = {
     content: [
-        './app/**/*.{js,ts,jsx,tsx}',
-        './components/**/*.{js,ts,jsx,tsx}',
+        './app/**/*.{js,ts,jsx,tsx,mdx}',
+        './components/**/*.{js,ts,jsx,tsx,mdx}',
     ],
     theme: {
         extend: {
@@ -23,6 +23,10 @@ const config: Config = {
             },
             fontFamily: {
                 sans: ['Inter', 'sans-serif'],
+            },
+            letterSpacing: {
+                tighter: '-0.05em',
+                tight: '-0.025em',
             },
         },
     },

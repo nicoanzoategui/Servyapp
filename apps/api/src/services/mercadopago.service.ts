@@ -80,6 +80,15 @@ export class MercadoPagoService {
         return payment.get({ id: paymentId });
     }
 
+    /** Reembolso total por id de pago en Mercado Pago (API). */
+    static async refundByMpPaymentId(mpPaymentId: string, amount?: number): Promise<void> {
+        const refund = new PaymentRefund(client);
+        await refund.create({
+            payment_id: mpPaymentId,
+            body: amount != null ? { amount } : {},
+        });
+    }
+
     static async processRefund(paymentId: string, amount?: number) {
         const refund = new PaymentRefund(client);
 

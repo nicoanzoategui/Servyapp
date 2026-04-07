@@ -4,6 +4,7 @@ import { StorageService } from '../services/storage.service';
 import { WhatsAppService } from '../services/whatsapp.service';
 import { ConversationService } from '../services/conversation.service';
 import { QRService } from '../services/qr.service';
+import { availabilityAgent } from '../agents/availability-agent';
 
 function normalizeQuoteBody(body: any) {
     let items = body.items;
@@ -518,6 +519,7 @@ export const completeJobByQr = async (req: Request, res: Response) => {
             where: { id: jobId },
             data: { status: 'completed', completed_at: new Date() },
         });
+        await availabilityAgent.clearProfessionalBusyIfNeeded(professionalId);
         const userPhone = existing.quotation.job_offer.service_request.user_phone;
         const proPhone = existing.quotation.job_offer.professional.phone;
         await WhatsAppService.sendTextMessage(
@@ -559,6 +561,7 @@ export const completeJob = async (req: Request, res: Response) => {
             where: { id: jobId },
             data: { status: 'completed', completed_at: new Date() },
         });
+        await availabilityAgent.clearProfessionalBusyIfNeeded(professionalId);
 
         const userPhone = job.quotation.job_offer.service_request.user_phone;
         await WhatsAppService.sendTextMessage(

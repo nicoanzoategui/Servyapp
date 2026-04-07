@@ -7,10 +7,13 @@ import webhookRoutes from './routes/webhook.routes';
 import leadsRoutes from './routes/leads.routes';
 import professionalRoutes from './routes/professional.routes';
 import adminRoutes from './routes/admin.routes';
+import operationalApiRoutes from './routes/operational-api.routes';
+import { financeRouter } from './routes/finance';
 import { handleMPWebhook } from './controllers/webhook.controller';
 import { env } from './utils/env';
 import { errorHandler } from './middlewares/errorHandler';
 import { startCronJobs } from './workers/cron';
+import { startCrons } from './crons';
 
 const app = express();
 
@@ -65,11 +68,14 @@ app.post('/webhook/mercadopago', handleMPWebhook);
 app.use('/leads', leadsRoutes);
 app.use('/professional', professionalRoutes);
 app.use('/admin', adminRoutes);
+app.use('/api', operationalApiRoutes);
+app.use('/api/finance', financeRouter);
 
 // Apply global error handler middleware
 app.use(errorHandler);
 
 startCronJobs();
+startCrons();
 
 app.listen(env.PORT, () => {
     console.log(`Server is running on port ${env.PORT}`);
