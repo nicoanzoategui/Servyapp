@@ -2,45 +2,68 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, develop, master]
   pull_request:
-    branches: [main, master]
+    branches: [main]
+
+env:
+  JWT_SECRET: test-jwt-secret-min-32-chars-long!!
+  JWT_REFRESH_SECRET: test-refresh-secret-min-32-chars!!
+  WA_TOKEN: dummy
+  WA_PHONE_ID: dummy
+  WA_APP_SECRET: dummy
+  WA_VERIFY_TOKEN: dummy
+  TWILIO_ACCOUNT_SID: AC0000000000000000000000000000000
+  TWILIO_AUTH_TOKEN: dummy
+  TWILIO_PHONE_NUMBER: whatsapp:+10000000000
+  R2_ACCOUNT_ID: dummy
+  R2_ACCESS_KEY: dummy
+  R2_SECRET_KEY: dummy
+  R2_BUCKET: dummy
+  MP_ACCESS_TOKEN: dummy
+  MP_WEBHOOK_SECRET: dummy
+  WA_SKIP_SIGNATURE: 'true'
+  RESEND_API_KEY: re_test_dummy
+  RESEND_FROM_EMAIL: noreply@example.com
+  FRONTEND_PRO_URL: http://localhost:3003
+  GEMINI_API_KEY: dummy-gemini-key-for-ci
 
 jobs:
-  api-test:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v3
         with:
           version: 9
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
+          node-version: 20
+          cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Test API
-        working-directory: apps/api
-        env:
-          JWT_SECRET: test-jwt-secret-min-32-chars-long!!
-          JWT_REFRESH_SECRET: test-refresh-secret-min-32-chars!!
-          WA_TOKEN: dummy
-          WA_PHONE_ID: dummy
-          WA_APP_SECRET: dummy
-          WA_VERIFY_TOKEN: dummy
-          TWILIO_ACCOUNT_SID: AC0000000000000000000000000000000
-          TWILIO_AUTH_TOKEN: dummy
-          TWILIO_PHONE_NUMBER: whatsapp:+10000000000
-          R2_ACCOUNT_ID: dummy
-          R2_ACCESS_KEY: dummy
-          R2_SECRET_KEY: dummy
-          R2_BUCKET: dummy
-          MP_ACCESS_TOKEN: dummy
-          MP_WEBHOOK_SECRET: dummy
-          WA_SKIP_SIGNATURE: 'true'
-          RESEND_API_KEY: re_test_dummy
-          RESEND_FROM_EMAIL: noreply@example.com
-          FRONTEND_PRO_URL: http://localhost:3003
-          GEMINI_API_KEY: dummy-gemini-key-for-ci
-        run: pnpm test
+      - run: pnpm --filter @servy/api test
+      - run: pnpm --filter @servy/api exec tsc --noEmit
+
+  deploy-api:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: railwayapp/railway-github-action@v1
+        with:
+          railway-token: ${{ secrets.RAILWAY_TOKEN }}
+          service: api
+
+  deploy-frontends:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: --prod
