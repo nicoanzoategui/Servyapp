@@ -2,7 +2,7 @@ import { prisma } from '@servy/db';
 import type { AgentLogAgentName, AgentLogLevel } from '../agents/types';
 
 export async function insertAgentLog(input: {
-    agent: AgentLogAgentName | 'recruitment' | 'experiments' | 'system' | 'task-consumer' | 'finance';
+    agent: AgentLogAgentName | 'recruitment' | 'experiments' | 'system' | 'task-consumer' | 'finance' | 'messaging';
     event: string;
     level?: AgentLogLevel;
     entityType?: string | null;

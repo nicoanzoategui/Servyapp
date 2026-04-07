@@ -1,5 +1,7 @@
 import { redis } from '../utils/redis';
 import { prisma } from '@servy/db';
+import type { Professional } from '@servy/db';
+import { insertAgentLog } from '../lib/agent-log';
 import { WhatsAppService } from './whatsapp.service';
 import { ProfessionalMatchingService } from './matching.service';
 import { StorageService } from './storage.service';
@@ -8,6 +10,67 @@ import { GeminiService } from './gemini.service';
 
 const SESSION_TTL = 60 * 60 * 24;
 const REDIS_OP_TIMEOUT_MS = 500;
+
+const MEDIATION_DIRECTION_TTL_SEC = 86400;
+
+// Comandos del profesional con job activo (fuzzy Levenshtein ≤ 2, igual que availability-agent)
+const PROFESSIONAL_COMMANDS: { phrases: string[]; key: 'en_camino' | 'imprevisto' | 'direccion' }[] = [
+    {
+        phrases: ['estoy yendo', 'voy para alla', 'salgo ahora', 'estoy saliendo'],
+        key: 'en_camino',
+    },
+    {
+        phrases: ['tuve un imprevisto', 'no puedo ir', 'surgio algo', 'me surgio un problema'],
+        key: 'imprevisto',
+    },
+    {
+        phrases: [
+            'no encuentro la direccion',
+            'no encuentro el domicilio',
+            'donde es',
+            'cual es la direccion',
+        ],
+        key: 'direccion',
+    },
+];
+
+function levenshtein(a: string, b: string): number {
+    const m = a.length;
+    const n = b.length;
+    const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i]![0] = i;
+    for (let j = 0; j <= n; j++) dp[0]![j] = j;
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+            dp[i]![j] = Math.min(dp[i - 1]![j]! + 1, dp[i]![j - 1]! + 1, dp[i - 1]![j - 1]! + cost);
+        }
+    }
+    return dp[m]![n]!;
+}
+
+function fuzzyPhrase(text: string, phrase: string): boolean {
+    if (text.includes(phrase)) return true;
+    const words = text.split(/\s+/).filter(Boolean);
+    for (const w of words) {
+        if (w.length >= phrase.length - 2 && levenshtein(w, phrase) <= 2) return true;
+    }
+    if (text.length <= phrase.length + 6 && levenshtein(text, phrase) <= 2) return true;
+    return false;
+}
+
+function normalizeTextForCommands(s: string): string {
+    return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function matchProfessionalCommandKey(normalized: string): 'en_camino' | 'imprevisto' | 'direccion' | null {
+    for (const cmd of PROFESSIONAL_COMMANDS) {
+        for (const phrase of cmd.phrases) {
+            if (fuzzyPhrase(normalized, phrase)) return cmd.key;
+        }
+    }
+    return null;
+}
 
 const CATEGORY_EMOJIS: Record<string, string> = {
     Plomería: '🔧',
@@ -144,6 +207,34 @@ export class ConversationService {
             session = { state: 'IDLE', data: {} };
         }
         if (session.state === 'UNKNOWN') session = { state: 'IDLE', data: {} };
+
+        if (messageType === 'text' && user) {
+            const pendingDir = await redis.get(`mediation:await_direction:${phone}`);
+            if (pendingDir) {
+                try {
+                    const { proPhone, jobId } = JSON.parse(pendingDir) as { proPhone: string; jobId: string };
+                    await WhatsAppService.sendTextMessage(
+                        proPhone,
+                        `Referencia del cliente: ${content.trim()}`
+                    );
+                    await insertAgentLog({
+                        agent: 'messaging',
+                        event: 'user_direction_reply',
+                        level: 'info',
+                        details: { jobId, userPhone: phone, preview: content.trim().slice(0, 200) },
+                    });
+                } catch {
+                    /* ignore */
+                }
+                await redis.del(`mediation:await_direction:${phone}`);
+                return;
+            }
+        }
+
+        if (messageType === 'text' && user) {
+            const forwarded = await ConversationService.tryForwardUserMessageToProfessional(phone, content.trim(), session);
+            if (forwarded) return;
+        }
 
         switch (session.state) {
             case 'IDLE':
@@ -650,6 +741,146 @@ export class ConversationService {
             );
             return;
         }
+    }
+
+    private static async tryForwardUserMessageToProfessional(
+        phone: string,
+        text: string,
+        session: { state: string; data: Record<string, unknown> }
+    ): Promise<boolean> {
+        const forwardStates = new Set(['IDLE', 'AWAITING_PAYMENT_DECISION', 'PAYMENT_PENDING', 'COMPLETED']);
+        if (!forwardStates.has(session.state)) return false;
+        const job = await prisma.job.findFirst({
+            where: {
+                status: { in: ['confirmed', 'in_progress'] },
+                quotation: { job_offer: { service_request: { user_phone: phone } } },
+            },
+            include: {
+                quotation: {
+                    include: {
+                        job_offer: { include: { professional: true } },
+                    },
+                },
+            },
+            orderBy: { id: 'desc' },
+        });
+        if (!job) return false;
+        const proPhone = job.quotation.job_offer.professional.phone;
+        const safe = text.replace(/"/g, '“');
+        await WhatsAppService.sendTextMessage(proPhone, `Mensaje del cliente: "${safe}"`);
+        await insertAgentLog({
+            agent: 'messaging',
+            event: 'relay_user_to_pro',
+            level: 'info',
+            details: { jobId: job.id, preview: text.slice(0, 200) },
+        });
+        return true;
+    }
+
+    static async handleProfessionalMediatedMessaging(args: {
+        professional: Professional;
+        phone: string;
+        body: string;
+        messageType: string;
+    }): Promise<boolean> {
+        const { professional, body, messageType } = args;
+        if (messageType !== 'text' || !body.trim()) return false;
+
+        const job = await prisma.job.findFirst({
+            where: {
+                status: { in: ['confirmed', 'in_progress'] },
+                quotation: { job_offer: { professional_id: professional.id } },
+            },
+            include: {
+                quotation: {
+                    include: {
+                        job_offer: {
+                            include: {
+                                professional: true,
+                                service_request: { include: { user: true } },
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: { id: 'desc' },
+        });
+        if (!job) return false;
+
+        const userPhone = job.quotation.job_offer.service_request.user_phone;
+        const proName = job.quotation.job_offer.professional.name;
+        const trimmed = body.trim();
+
+        const llegoMatch = trimmed.match(/llego\s+en\s+(\d+)/i);
+        if (llegoMatch) {
+            const mins = llegoMatch[1];
+            await WhatsAppService.sendTextMessage(
+                userPhone,
+                `⏱️ Tu técnico te avisa que llega en ${mins} minutos.`
+            );
+            await insertAgentLog({
+                agent: 'messaging',
+                event: 'command_llego_minutos',
+                level: 'info',
+                details: { jobId: job.id, minutes: mins, direction: 'pro_to_user' },
+            });
+            return true;
+        }
+
+        const norm = normalizeTextForCommands(trimmed);
+        const cmd = matchProfessionalCommandKey(norm);
+        if (cmd === 'en_camino') {
+            await WhatsAppService.sendTextMessage(userPhone, `🚗 Tu técnico ${proName} está en camino.`);
+            await insertAgentLog({
+                agent: 'messaging',
+                event: 'command_en_camino',
+                level: 'info',
+                details: { jobId: job.id, direction: 'pro_to_user' },
+            });
+            return true;
+        }
+        if (cmd === 'imprevisto') {
+            await WhatsAppService.sendTextMessage(
+                userPhone,
+                '⚠️ Tu técnico tuvo un imprevisto. Un integrante de Servy se va a comunicar con vos pronto.'
+            );
+            await insertAgentLog({
+                agent: 'messaging',
+                event: 'command_imprevisto',
+                level: 'warn',
+                details: { jobId: job.id, direction: 'pro_to_user' },
+            });
+            return true;
+        }
+        if (cmd === 'direccion') {
+            await WhatsAppService.sendTextMessage(
+                userPhone,
+                '📍 Tu técnico necesita confirmar la dirección. ¿Podés agregar referencias o aclarar el domicilio?'
+            );
+            await redis.set(
+                `mediation:await_direction:${userPhone}`,
+                JSON.stringify({ proPhone: professional.phone, jobId: job.id }),
+                'EX',
+                MEDIATION_DIRECTION_TTL_SEC
+            );
+            await insertAgentLog({
+                agent: 'messaging',
+                event: 'command_direccion',
+                level: 'info',
+                details: { jobId: job.id, direction: 'pro_to_user' },
+            });
+            return true;
+        }
+
+        const safe = trimmed.replace(/"/g, '“');
+        await WhatsAppService.sendTextMessage(userPhone, `Mensaje de tu técnico: "${safe}"`);
+        await insertAgentLog({
+            agent: 'messaging',
+            event: 'relay_pro_to_user',
+            level: 'info',
+            details: { jobId: job.id, preview: trimmed.slice(0, 200), direction: 'pro_to_user' },
+        });
+        return true;
     }
 
     private static async createRequestAndMatch(phone: string, sessionData: Record<string, unknown>, user: { name: string | null; address: string | null }) {

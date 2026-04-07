@@ -135,15 +135,25 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
 
             await WhatsAppService.sendTextMessage(
                 userPhone,
-                `✅ ¡Pago confirmado!\n\nTu servicio quedó agendado.${qrUrl ? ' Guardá este código QR — cuando el profesional termine el trabajo te lo va a pedir para liberar el pago final. 🔒' : ' El profesional se pondrá en contacto pronto.'}`
+                `✅ ¡Pago confirmado!\n\nTu técnico *${job.quotation.job_offer.professional.name}* está confirmado para tu servicio.\n\nCualquier consulta escribí acá y te lo hacemos llegar.${qrUrl ? '\n\n🔒 Guardá este QR — el técnico lo va a escanear al terminar para liberar el pago.' : ''}`
             );
             if (qrUrl) {
                 await WhatsAppService.sendImageMessage(userPhone, qrUrl);
             }
 
+            const proJob = job.quotation.job_offer;
+            const serviceRequest = await prisma.serviceRequest.findUnique({
+                where: { id: proJob.request_id },
+                include: { user: true },
+            });
+            const franja = serviceRequest?.scheduled_slot ?? 'a confirmar';
+            const fecha = serviceRequest?.scheduled_date
+                ? new Date(serviceRequest.scheduled_date).toLocaleDateString('es-AR')
+                : 'a confirmar';
+
             await WhatsAppService.sendTextMessage(
                 job.quotation.job_offer.professional.phone,
-                '¡Pago aprobado! El trabajo ha sido confirmado. Revisá el portal para los detalles.'
+                `✅ Nuevo trabajo confirmado.\n\n📍 ${serviceRequest?.address ?? 'Ver portal'}\n🔧 ${serviceRequest?.description?.slice(0, 80) ?? 'Ver portal'}\n📅 ${fecha}, turno ${franja}\n💰 $${job.quotation.total_price} (se libera con QR del cliente)\n\nVer detalles: portal.servy.lat/jobs/${job.id}\n\nComandos:\n→ *estoy yendo* — le avisamos al cliente\n→ *llego en X minutos* — se lo reenviamos\n→ *no encuentro la dirección* — le pedimos info al cliente\n→ *tuve un imprevisto* — notificamos al cliente y al admin`
             );
         } else if (status === 'rejected' || status === 'cancelled') {
             await prisma.payment.updateMany({
@@ -223,6 +233,14 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
                 lng,
             }).catch(() => false);
             if (handledAvail) return;
+
+            const mediated = await ConversationService.handleProfessionalMediatedMessaging({
+                professional,
+                phone,
+                body: content,
+                messageType,
+            }).catch(() => false);
+            if (mediated) return;
 
             const { ProfessionalConversationService } = await import('../services/professional.conversation.service');
             await ProfessionalConversationService.processMessage(phone, content).catch(console.error);

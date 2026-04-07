@@ -67,6 +67,8 @@ model ServiceRequest {
   longitude   Float?
   status      String   @default("pending")
   created_at  DateTime @default(now())
+  scheduled_slot   String?
+  scheduled_date   DateTime?
 
   user        User       @relation(fields: [user_phone], references: [phone])
   job_offers  JobOffer[]
