@@ -173,11 +173,20 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
     }
 };
 
+function maskPhoneTail(phone: string | undefined): string {
+    if (!phone || phone.length < 4) return phone ? '****' : '(none)';
+    return `***${phone.slice(-4)}`;
+}
+
 export const handleTwilioMessage = async (req: Request, res: Response) => {
     res.set('Content-Type', 'text/xml');
     res.send('<Response></Response>');
 
     try {
+        if (env.TWILIO_WEBHOOK_DEBUG) {
+            console.log('[twilio] DEBUG body:', JSON.stringify(req.body));
+        }
+
         const phone = (req.body.From as string)?.replace(/whatsapp:/i, '').replace('+', '').trim();
         const messageType = req.body.NumMedia && parseInt(req.body.NumMedia) > 0 ? 'image' : 'text';
         const latRaw = req.body.Latitude;
@@ -200,7 +209,21 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
             content = '__LOCATION__';
         }
 
-        if (!phone || !content) return;
+        if (!phone || !content) {
+            console.warn('[twilio] skip: falta phone o content', {
+                phoneMask: maskPhoneTail(phone),
+                contentLen: content?.length ?? 0,
+                bodyKeys: Object.keys(req.body || {}),
+                messageType,
+            });
+            return;
+        }
+
+        console.log('[twilio] mensaje', {
+            phoneMask: maskPhoneTail(phone),
+            messageType,
+            contentPreview: content.slice(0, 120),
+        });
 
         // Comando global cancelar para ambos flujos
         if (content.toLowerCase().trim() === 'cancelar') {
@@ -225,6 +248,7 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
         // Verificar primero si es un profesional
         const professional = await prisma.professional.findUnique({ where: { phone } });
         if (professional) {
+            console.log('[twilio] flujo profesional', { phoneMask: maskPhoneTail(phone) });
             const handledAvail = await processAvailabilityMessage({
                 professional,
                 body: content,
@@ -232,7 +256,10 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
                 lat,
                 lng,
             }).catch(() => false);
-            if (handledAvail) return;
+            if (handledAvail) {
+                console.log('[twilio] availability agent handled');
+                return;
+            }
 
             const mediated = await ConversationService.handleProfessionalMediatedMessaging({
                 professional,
@@ -240,21 +267,36 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
                 body: content,
                 messageType,
             }).catch(() => false);
-            if (mediated) return;
+            if (mediated) {
+                console.log('[twilio] mediación pro↔cliente handled');
+                return;
+            }
 
             const { ProfessionalConversationService } = await import('../services/professional.conversation.service');
             await ProfessionalConversationService.processMessage(phone, content).catch(console.error);
+            console.log('[twilio] ProfessionalConversationService.processMessage fin');
             return;
         }
 
+        console.log('[twilio] flujo usuario', { phoneMask: maskPhoneTail(phone) });
         const userRow = await prisma.user.findUnique({ where: { phone } });
         const qHandled = await processQualityUserReply(phone, content).catch(() => false);
-        if (qHandled) return;
+        if (qHandled) {
+            console.log('[twilio] quality agent handled');
+            return;
+        }
 
         const expHandled = await tryExperimentWaitlist(phone, content, userRow?.name).catch(() => false);
-        if (expHandled) return;
+        if (expHandled) {
+            console.log('[twilio] experiment/waitlist handled');
+            return;
+        }
 
-        await ConversationService.processMessage(phone, messageType, content).catch(console.error);
+        console.log('[twilio] ConversationService.processMessage…', { messageType });
+        await ConversationService.processMessage(phone, messageType, content).catch((err) => {
+            console.error('[twilio] ConversationService.processMessage error:', err);
+        });
+        console.log('[twilio] ConversationService.processMessage hecho');
     } catch (error) {
         console.error('Twilio webhook error:', error);
     }

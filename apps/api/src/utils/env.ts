@@ -19,6 +19,11 @@ const envSchema = z.object({
     TWILIO_ACCOUNT_SID: z.string().min(1),
     TWILIO_AUTH_TOKEN: z.string().min(1),
     TWILIO_PHONE_NUMBER: z.string().min(1),
+    /** true = loguea payload Twilio completo en webhook (solo debugging). */
+    TWILIO_WEBHOOK_DEBUG: z
+        .string()
+        .optional()
+        .transform((v) => v === 'true'),
     REDIS_URL: z.string().url().default('redis://localhost:6379'),
     R2_ACCOUNT_ID: z.string().min(1),
     R2_ACCESS_KEY: z.string().min(1),
