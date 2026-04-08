@@ -1,14 +1,14 @@
 import { Queue, QueueEvents } from 'bullmq';
-import { redis } from '../utils/redis';
+import { bullRedis } from '../utils/redis';
 
-/** Conexión dedicada para BullMQ (duplicate del cliente ioredis). */
-export const bullConnection = redis.duplicate();
+/** Conexión dedicada para BullMQ (duplicate del cliente bullRedis). */
+export const bullConnection = bullRedis.duplicate();
 
 export const agentQueue = new Queue('agents', { connection: bullConnection });
 export const messagingQueue = new Queue('messaging', { connection: bullConnection });
 export const scrapingQueue = new Queue('scraping', { connection: bullConnection });
 
-const queueEventsConnection = redis.duplicate();
+const queueEventsConnection = bullRedis.duplicate();
 export const agentsQueueEvents = new QueueEvents('agents', { connection: queueEventsConnection });
 
 /** Post-pago: mensajes WhatsApp al usuario y al profesional (y QR opcional). */
