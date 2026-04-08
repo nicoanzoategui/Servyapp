@@ -11,16 +11,43 @@ function toTwilioWhatsappAddress(raw: string): string {
     return `whatsapp:${num}`;
 }
 
+function maskPhoneTail(phone: string): string {
+    const d = phone.replace(/\D/g, '');
+    return d.length >= 4 ? `***${d.slice(-4)}` : '***';
+}
+
+/** Twilio REST errors tienen code/message/status; no siempre serializan bien con JSON.stringify. */
+function formatTwilioError(err: unknown): Record<string, unknown> {
+    if (err && typeof err === 'object') {
+        const o = err as Record<string, unknown>;
+        return {
+            message: o.message,
+            code: o.code,
+            status: o.status,
+            moreInfo: o.moreInfo,
+        };
+    }
+    return { raw: String(err) };
+}
+
 export class WhatsAppService {
     static async sendTextMessage(phone: string, text: string) {
         try {
-            await twilioClient.messages.create({
+            const msg = await twilioClient.messages.create({
                 from: toTwilioWhatsappAddress(env.TWILIO_PHONE_NUMBER),
                 to: toTwilioWhatsappAddress(phone),
                 body: text,
             });
+            console.log('[whatsapp] outbound OK', {
+                sid: msg.sid,
+                toMask: maskPhoneTail(phone),
+                bodyChars: text.length,
+            });
         } catch (err) {
-            console.error('Error sending Twilio message:', err);
+            console.error('[whatsapp] outbound FAIL sendTextMessage', {
+                toMask: maskPhoneTail(phone),
+                ...formatTwilioError(err),
+            });
         }
     }
 
@@ -31,13 +58,17 @@ export class WhatsAppService {
 
     static async sendImageMessage(phone: string, imageUrl: string) {
         try {
-            await twilioClient.messages.create({
+            const msg = await twilioClient.messages.create({
                 from: toTwilioWhatsappAddress(env.TWILIO_PHONE_NUMBER),
                 to: toTwilioWhatsappAddress(phone),
                 mediaUrl: [imageUrl],
             });
+            console.log('[whatsapp] outbound OK (image)', { sid: msg.sid, toMask: maskPhoneTail(phone) });
         } catch (err) {
-            console.error('Error sending image:', err);
+            console.error('[whatsapp] outbound FAIL sendImage', {
+                toMask: maskPhoneTail(phone),
+                ...formatTwilioError(err),
+            });
         }
     }
 
