@@ -18,7 +18,6 @@ import { errorHandler } from './middlewares/errorHandler';
 import { startCronJobs } from './workers/cron';
 import { startCrons } from './crons';
 import { initSentry } from './lib/sentry';
-import { apiRateLimit, authRateLimit } from './middlewares/rate-limit';
 
 initSentry();
 
@@ -66,8 +65,6 @@ app.use('/webhook', webhookRoutes);
 
 app.use(express.json());
 
-app.use('/auth', authRateLimit);
-
 /** Rutas públicas del portal (register / forgot / set password) antes del router /auth genérico. */
 app.use('/auth/professional', authProfessionalRoutes);
 app.use('/auth', authRoutes);
@@ -78,7 +75,6 @@ app.use('/leads', leadsRoutes);
 app.use('/professional', professionalRoutes);
 app.use('/admin/queues', authenticateJWT, requireRole('admin'), getBullBoardRouter());
 app.use('/admin', adminRoutes);
-app.use('/api', apiRateLimit);
 app.use('/api', operationalApiRoutes);
 app.use('/api/finance', financeRouter);
 
