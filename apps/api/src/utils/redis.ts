@@ -1,12 +1,8 @@
 import Redis from 'ioredis';
 import { env } from './env';
 
-export const redis = new Redis(env.REDIS_URL, {
-    maxRetriesPerRequest: null,
-});
+export const redis = new Redis(env.REDIS_URL);
 
-// Cuando Redis no está disponible, ioredis reintenta y spamea logs.
-// Para que el desarrollo sea usable, se throttlea el error.
 let lastRedisErrorLogAt = 0;
 redis.on('error', (err) => {
     const now = Date.now();
@@ -16,10 +12,6 @@ redis.on('error', (err) => {
     }
 });
 
-let hasLoggedConnect = false;
 redis.on('connect', () => {
-    if (!hasLoggedConnect) {
-        hasLoggedConnect = true;
-        console.log('Redis connected successfully');
-    }
+    console.log('Redis connected successfully');
 });
