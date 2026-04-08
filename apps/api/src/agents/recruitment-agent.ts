@@ -408,7 +408,7 @@ export async function syncAudienceMembers(audienceId: string, category: string, 
     const { CustomAudience } = initMeta();
     const audience = new CustomAudience(audienceId);
 
-    const fbIds = candidates.map((c) => c.facebook_id);
+    const fbIds = candidates.map((c: { facebook_id: string }) => c.facebook_id);
 
     await audience.createUser([], {
         payload: {

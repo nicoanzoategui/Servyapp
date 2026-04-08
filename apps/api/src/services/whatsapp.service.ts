@@ -48,7 +48,10 @@ export class WhatsAppService {
     ) {
         const rows = sections.flatMap((s) => s.rows);
         const body = `${text}\n\n${rows
-            .map((r, i) => `${i + 1}. ${r.title}${r.description ? ` - ${r.description}` : ''}`)
+            .map(
+                (r: { id: string; title: string; description?: string }, i: number) =>
+                    `${i + 1}. ${r.title}${r.description ? ` - ${r.description}` : ''}`,
+            )
             .join('\n')}`;
         return this.sendTextMessage(phone, body);
     }

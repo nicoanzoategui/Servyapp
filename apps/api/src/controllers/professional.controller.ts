@@ -1,5 +1,15 @@
 import { Request, Response } from 'express';
-import { prisma } from '@servy/db';
+import { prisma, type Prisma } from '@servy/db';
+
+type JobOfferWithServiceRequest = Prisma.JobOfferGetPayload<{
+    include: {
+        service_request: {
+            include: {
+                user: { select: { name: true; last_name: true; address: true; phone: true } };
+            };
+        };
+    };
+}>;
 import { StorageService } from '../services/storage.service';
 import { WhatsAppService } from '../services/whatsapp.service';
 import { ConversationService } from '../services/conversation.service';
@@ -188,7 +198,7 @@ export const getJobOffers = async (req: Request, res: Response) => {
             },
         });
 
-        const shaped = offers.map((o) => {
+        const shaped = offers.map((o: JobOfferWithServiceRequest) => {
             const hideAddress = o.status === 'pending' || o.status === 'quoted';
             const sr = o.service_request;
             return {

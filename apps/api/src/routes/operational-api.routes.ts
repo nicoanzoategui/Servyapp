@@ -542,9 +542,9 @@ router.get('/recruitment/coverage', async (_req: Request, res: Response) => {
             SELECT DISTINCT zone FROM expansion_opportunities
             WHERE priority = 'high' AND status = 'detected'
         `;
-        const high = new Set(highRows.map((r) => r.zone));
+        const high = new Set(highRows.map((r: { zone: string }) => r.zone));
 
-        const data = zones.map((r) => {
+        const data = zones.map((r: { zone: string; cnt: bigint }) => {
             const c = Number(r.cnt);
             let coverage: 'green' | 'yellow' | 'red' = 'red';
             if (c >= 3) coverage = 'green';

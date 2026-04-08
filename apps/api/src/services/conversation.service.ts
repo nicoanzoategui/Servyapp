@@ -1,6 +1,6 @@
 import { redis } from '../utils/redis';
 import { prisma } from '@servy/db';
-import type { Professional } from '@servy/db';
+import type { Job, Professional } from '@servy/db';
 import { insertAgentLog } from '../lib/agent-log';
 import { WhatsAppService } from './whatsapp.service';
 import { ProfessionalMatchingService } from './matching.service';
@@ -638,7 +638,7 @@ export class ConversationService {
         const allJobs = await prisma.job.findMany({
             where: { quotation: { job_offer: { professional_id: proId } }, rating: { not: null } },
         });
-        const avg = allJobs.reduce((s, j) => s + (j.rating || 0), 0) / allJobs.length;
+        const avg = allJobs.reduce((s: number, j: Job) => s + (j.rating || 0), 0) / allJobs.length;
         await prisma.professional.update({ where: { id: proId }, data: { rating: Math.round(avg * 10) / 10 } });
 
         if (rating >= 4) {
