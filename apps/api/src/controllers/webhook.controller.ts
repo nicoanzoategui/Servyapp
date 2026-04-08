@@ -11,7 +11,12 @@ import { processAvailabilityMessage } from '../agents/availability-agent';
 import { processQualityUserReply } from '../agents/quality-agent';
 import { tryExperimentWaitlist } from '../agents/experiments-agent';
 import { twilioWebhookAls } from '../lib/twilio-request-context';
-import { maskPhoneDigitsTail, mediationDirectionRedisKey, normalizeTwilioWhatsAppFrom } from '../utils/twilio-phone';
+import {
+    maskPhoneDigitsTail,
+    mediationDirectionRedisKey,
+    normalizeTwilioWhatsAppFrom,
+    userRelayPauseRedisKey,
+} from '../utils/twilio-phone';
 
 export const verifyWebhook = (req: Request, res: Response) => {
     const mode = req.query['hub.mode'];
@@ -248,6 +253,12 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
             }
             try {
                 await redis.del(mediationDirectionRedisKey(phone));
+            } catch {
+                /* ignore */
+            }
+            // Con job activo, sin esto cada mensaje se reenvía al técnico (tryForward) y el bot no te responde.
+            try {
+                await redis.set(userRelayPauseRedisKey(phone), '1', 'EX', 7 * 24 * 60 * 60);
             } catch {
                 /* ignore */
             }

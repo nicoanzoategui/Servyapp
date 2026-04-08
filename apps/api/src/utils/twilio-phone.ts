@@ -17,3 +17,9 @@ export function mediationDirectionRedisKey(phoneRaw: string): string {
     const d = normalizeTwilioWhatsAppFrom(phoneRaw) || phoneRaw.replace(/\D/g, '');
     return `mediation:await_direction:${d}`;
 }
+
+/** Tras `cancelar`, no reenviar mensajes al técnico aunque haya job activo (tryForward). TTL por si queda colgada. */
+export function userRelayPauseRedisKey(phoneRaw: string): string {
+    const d = normalizeTwilioWhatsAppFrom(phoneRaw) || phoneRaw.replace(/\D/g, '');
+    return `user_relay_pause:${d}`;
+}

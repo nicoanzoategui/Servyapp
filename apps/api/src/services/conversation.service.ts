@@ -7,7 +7,7 @@ import { ProfessionalMatchingService } from './matching.service';
 import { StorageService } from './storage.service';
 import { MercadoPagoService } from './mercadopago.service';
 import { GeminiService } from './gemini.service';
-import { mediationDirectionRedisKey, normalizeTwilioWhatsAppFrom } from '../utils/twilio-phone';
+import { mediationDirectionRedisKey, normalizeTwilioWhatsAppFrom, userRelayPauseRedisKey } from '../utils/twilio-phone';
 
 const SESSION_TTL = 60 * 60 * 24;
 const REDIS_OP_TIMEOUT_MS = 500;
@@ -245,6 +245,7 @@ export class ConversationService {
 
         switch (session.state) {
             case 'IDLE':
+                await redis.del(userRelayPauseRedisKey(phone));
                 await this.saveSession(phone, 'AWAITING_PROBLEM_DESCRIPTION', {});
                 await WhatsAppService.sendTextMessage(
                     phone,
@@ -757,6 +758,10 @@ export class ConversationService {
     ): Promise<boolean> {
         const forwardStates = new Set(['IDLE', 'AWAITING_PAYMENT_DECISION', 'PAYMENT_PENDING', 'COMPLETED']);
         if (!forwardStates.has(session.state)) return false;
+        if (await redis.get(userRelayPauseRedisKey(phone))) {
+            console.log('[conversation] relay usuario→técnico omitido (tras cancelar o pausa explícita)');
+            return false;
+        }
         const job = await prisma.job.findFirst({
             where: {
                 status: { in: ['confirmed', 'in_progress'] },
