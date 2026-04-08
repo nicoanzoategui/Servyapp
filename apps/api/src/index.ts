@@ -55,6 +55,7 @@ app.get('/debug/gemini-models', async (_req, res) => {
 });
 
 // WhatsApp primero: POST usa body crudo en la ruta (firma Meta). No pasar por express.json().
+app.use('/webhook/twilio', express.urlencoded({ extended: true }));
 app.use('/webhook', webhookRoutes);
 
 app.use(express.json());
