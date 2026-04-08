@@ -1,4 +1,5 @@
 import express from 'express';
+import { parse as parseUrlEncodedBody } from 'node:querystring';
 import cors from 'cors';
 import morgan from 'morgan';
 import authRoutes from './routes/auth.routes';
@@ -55,8 +56,22 @@ app.get('/debug/gemini-models', async (_req, res) => {
 });
 
 // WhatsApp primero: POST usa body crudo en la ruta (firma Meta). No pasar por express.json().
-// Twilio: un solo urlencoded aquí (evita doble parseo en el router).
-app.use('/webhook/twilio', express.urlencoded({ extended: true }));
+// Twilio: leer body en crudo y parsear como x-www-form-urlencoded (no depende del Content-Type;
+// algunos proxies/Railway alteran el header y express.urlencoded() antes hacía skip y dejaba req.body vacío).
+app.use(
+    '/webhook/twilio',
+    express.raw({ type: () => true, limit: '5mb' }),
+    (req, _res, next) => {
+        try {
+            const buf = req.body;
+            const s = Buffer.isBuffer(buf) ? buf.toString('utf8') : '';
+            req.body = parseUrlEncodedBody(s);
+        } catch {
+            req.body = {};
+        }
+        next();
+    }
+);
 app.use('/webhook', webhookRoutes);
 
 app.use(express.json());
