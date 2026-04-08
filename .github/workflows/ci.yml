@@ -49,27 +49,3 @@ jobs:
         run: pnpm --filter @servy/api exec tsc --noEmit
       - name: Test
         run: pnpm --filter @servy/api test
-
-  deploy-api:
-    needs: test
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: railwayapp/railway-github-action@v1
-        with:
-          railway-token: ${{ secrets.RAILWAY_TOKEN }}
-          service: api
-
-  deploy-frontends:
-    needs: test
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: --prod
