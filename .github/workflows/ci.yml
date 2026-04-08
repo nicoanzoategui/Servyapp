@@ -41,6 +41,8 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        run: pnpm --filter @servy/db exec prisma generate
       - run: pnpm --filter @servy/api test
       - run: pnpm --filter @servy/api exec tsc --noEmit
 
