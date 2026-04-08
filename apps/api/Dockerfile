@@ -19,3 +19,4 @@ RUN pnpm install --prod --frozen-lockfile
 
 EXPOSE 3000
 CMD ["pnpm", "-F", "@servy/api", "start"]
+# force rebuild Wed Apr  8 13:58:56 -03 2026
