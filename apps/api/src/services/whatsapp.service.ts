@@ -22,7 +22,7 @@ export class WhatsAppService {
             });
             await appendChatMessage(phone, 'bot', text);
         } catch (err) {
-            console.error('Error sending Twilio message:', err);
+            console.error('[whatsapp] sendTextMessage ERROR:', JSON.stringify(err), 'phone:', phone, 'from:', env.TWILIO_PHONE_NUMBER);
         }
     }
 
