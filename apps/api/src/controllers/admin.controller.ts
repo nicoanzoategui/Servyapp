@@ -4,7 +4,6 @@ import { prisma } from '@servy/db';
 import { WhatsAppService } from '../services/whatsapp.service';
 import { MercadoPagoService } from '../services/mercadopago.service';
 import { redis } from '../utils/redis';
-import { getChatMessages } from '../lib/conversation-chat-log';
 
 export const getDashboard = async (req: Request, res: Response) => {
     try {
@@ -64,45 +63,11 @@ export const getConversations = async (req: Request, res: Response) => {
     }
 };
 
-export const getConversationDetail = async (req: Request, res: Response) => {
-    try {
-        const rawParam = decodeURIComponent(req.params.phone || '');
-        const digits = rawParam.replace(/\D/g, '');
-        let session = digits
-            ? await prisma.whatsappSession.findUnique({ where: { phone: digits } })
-            : null;
-        if (!session && rawParam && rawParam !== digits) {
-            session = await prisma.whatsappSession.findUnique({ where: { phone: rawParam } });
-        }
-        const canonical = session?.phone ?? (digits || rawParam);
-        const messages = await getChatMessages(canonical);
-        res.json({
-            success: true,
-            data: {
-                phone: canonical,
-                session,
-                messages,
-            },
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            error: { code: 'INTERNAL_ERROR', message: 'Error fetching conversation' },
-        });
-    }
-};
-
 export const sendManualMessage = async (req: Request, res: Response) => {
     try {
-        const rawPhone = decodeURIComponent(req.params.phone || '');
-        const { text } = req.body as { text?: unknown };
-        if (typeof text !== 'string' || !text.trim()) {
-            return res.status(400).json({
-                success: false,
-                error: { code: 'BAD_REQUEST', message: 'Se requiere body.text (string no vacío)' },
-            });
-        }
-        await WhatsAppService.sendTextMessage(rawPhone, text.trim());
+        const { phone } = req.params;
+        const { text } = req.body;
+        await WhatsAppService.sendTextMessage(phone, text);
         res.json({ success: true, message: 'Message sent' });
     } catch (error) {
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Error sending message' } });

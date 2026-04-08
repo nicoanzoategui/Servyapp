@@ -2,8 +2,10 @@ import { Router, type Request, type Response } from 'express';
 import { subDays, format } from 'date-fns';
 import { prisma } from '@servy/db';
 import { redis } from '../utils/redis';
-import { refreshAlertsCache } from '../agents/finance-agent';
-import { agentQueue, agentsQueueEvents } from '../lib/queue';
+import {
+  refreshAlertsCache,
+  runDailyFinanceSnapshot,
+} from '../agents/finance-agent';
 
 export const financeRouter = Router();
 
@@ -220,12 +222,7 @@ financeRouter.post("/alerts/:id/resolve", async (req: Request, res: Response) =>
 
 financeRouter.post("/snapshot/force", async (_req: Request, res: Response) => {
   try {
-    const job = await agentQueue.add(
-      "daily-finance",
-      {},
-      { attempts: 2, backoff: { type: "fixed", delay: 60_000 } }
-    );
-    await job.waitUntilFinished(agentsQueueEvents);
+    await runDailyFinanceSnapshot();
     await refreshAlertsCache();
     res.json({ ok: true });
   } catch (e) {

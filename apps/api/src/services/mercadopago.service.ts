@@ -1,6 +1,5 @@
 import { MercadoPagoConfig, Preference, PaymentRefund, Payment as MPPayment } from 'mercadopago';
 import { env } from '../utils/env';
-import { captureException } from '../lib/sentry';
 import { prisma } from '@servy/db';
 
 const client = new MercadoPagoConfig({ accessToken: env.MP_ACCESS_TOKEN });
@@ -72,7 +71,6 @@ export class MercadoPagoService {
             return preference.init_point;
         } catch (error) {
             console.error('Error creating MP preference:', error);
-            captureException(error, { tags: { area: 'mercadopago', op: 'createPreference' } });
             throw new Error('Could not create preference');
         }
     }
@@ -117,7 +115,6 @@ export class MercadoPagoService {
             return true;
         } catch (error) {
             console.error('Error processing refund:', error);
-            captureException(error, { tags: { area: 'mercadopago', op: 'refund' } });
             throw error;
         }
     }

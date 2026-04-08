@@ -33,11 +33,7 @@ function timeMultiplierKey(d: Date): string {
         hour12: false,
     });
     const parts = fmt.formatToParts(d);
-    const map = Object.fromEntries(
-        parts
-            .filter((p: Intl.DateTimeFormatPart) => p.type !== 'literal')
-            .map((p: Intl.DateTimeFormatPart) => [p.type, p.value]),
-    );
+    const map = Object.fromEntries(parts.filter((p) => p.type !== 'literal').map((p) => [p.type, p.value]));
     const wd = map.weekday || '';
     const hour = parseInt(map.hour || '12', 10);
     if (wd === 'Sun') return 'sunday';
@@ -214,11 +210,7 @@ async function fetchMlSearch(q: string): Promise<MlSearchItem[]> {
     const res = await fetch(url);
     if (!res.ok) return [];
     const data = (await res.json()) as { results?: { price: number; title: string; permalink: string }[] };
-    return (data.results || []).map((r: { price: number; title: string; permalink: string }) => ({
-        price: r.price,
-        title: r.title,
-        permalink: r.permalink,
-    }));
+    return (data.results || []).map((r) => ({ price: r.price, title: r.title, permalink: r.permalink }));
 }
 
 interface MaterialGeminiOut {
@@ -252,15 +244,11 @@ export async function scrapeMaterials(): Promise<void> {
                 }
                 if (toInsert.length === 0) {
                     toInsert.push(...items.slice(0, 5));
-                    avg =
-                        items.slice(0, 5).reduce((s: number, i: MlSearchItem) => s + i.price, 0) /
-                        Math.min(5, items.length);
+                    avg = items.slice(0, 5).reduce((s, i) => s + i.price, 0) / Math.min(5, items.length);
                 }
             } else {
                 toInsert.push(...items.slice(0, 5));
-                avg =
-                    items.slice(0, 5).reduce((s: number, i: MlSearchItem) => s + i.price, 0) /
-                    Math.min(5, items.length);
+                avg = items.slice(0, 5).reduce((s, i) => s + i.price, 0) / Math.min(5, items.length);
                 await insertAgentLog({
                     agent: 'pricing',
                     event: 'materials_gemini_fallback',

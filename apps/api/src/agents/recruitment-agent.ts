@@ -2,7 +2,6 @@ import { ApifyClient } from 'apify-client';
 import { env } from '../utils/env';
 import { prisma } from '@servy/db';
 import { insertAgentLog } from '../lib/agent-log';
-import { captureException } from '../lib/sentry';
 import { geminiGenerateJson } from '../lib/gemini-json';
 import { recruitmentAdPrompt, RECRUITMENT_SCORE_PROMPT } from './prompts/recruitment';
 
@@ -136,7 +135,6 @@ export async function runRecruitmentCycle(): Promise<void> {
                 },
             });
         } catch (err: any) {
-            captureException(err, { tags: { agent: 'recruitment' } });
             await insertAgentLog({
                 agent: 'recruitment',
                 event: 'scrape_error',
@@ -408,7 +406,7 @@ export async function syncAudienceMembers(audienceId: string, category: string, 
     const { CustomAudience } = initMeta();
     const audience = new CustomAudience(audienceId);
 
-    const fbIds = candidates.map((c: { facebook_id: string }) => c.facebook_id);
+    const fbIds = candidates.map((c) => c.facebook_id);
 
     await audience.createUser([], {
         payload: {

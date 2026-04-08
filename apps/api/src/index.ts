@@ -1,9 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
-import { getBullBoardRouter } from './lib/bull-board-setup';
-import { authenticateJWT, requireRole } from './middlewares/auth.middleware';
-import { startBullmqWorkers } from './workers/start-bullmq';
 import authRoutes from './routes/auth.routes';
 import authProfessionalRoutes from './routes/auth.professional.routes';
 import webhookRoutes from './routes/webhook.routes';
@@ -17,9 +14,6 @@ import { env } from './utils/env';
 import { errorHandler } from './middlewares/errorHandler';
 import { startCronJobs } from './workers/cron';
 import { startCrons } from './crons';
-import { initSentry } from './lib/sentry';
-
-initSentry();
 
 const app = express();
 
@@ -61,7 +55,6 @@ app.get('/debug/gemini-models', async (_req, res) => {
 });
 
 // WhatsApp primero: POST usa body crudo en la ruta (firma Meta). No pasar por express.json().
-app.use('/webhook/twilio', express.urlencoded({ extended: true }));
 app.use('/webhook', webhookRoutes);
 
 app.use(express.json());
@@ -74,7 +67,6 @@ app.post('/webhook/mercadopago', handleMPWebhook);
 
 app.use('/leads', leadsRoutes);
 app.use('/professional', professionalRoutes);
-app.use('/admin/queues', authenticateJWT, requireRole('admin'), getBullBoardRouter());
 app.use('/admin', adminRoutes);
 app.use('/api', operationalApiRoutes);
 app.use('/api/finance', financeRouter);
@@ -82,7 +74,6 @@ app.use('/api/finance', financeRouter);
 // Apply global error handler middleware
 app.use(errorHandler);
 
-startBullmqWorkers();
 startCronJobs();
 startCrons();
 

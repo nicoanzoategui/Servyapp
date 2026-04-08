@@ -20,7 +20,7 @@ export const AR_HOLIDAYS_2026: { date: string; name: string }[] = [
 export function upcomingHolidays(daysAhead = 21): { date: string; name: string }[] {
     const now = new Date();
     const end = new Date(now.getTime() + daysAhead * 86400000);
-    return AR_HOLIDAYS_2026.filter((h: { date: string; name: string }) => {
+    return AR_HOLIDAYS_2026.filter((h) => {
         const d = new Date(h.date + 'T12:00:00');
         return d >= now && d <= end;
     });

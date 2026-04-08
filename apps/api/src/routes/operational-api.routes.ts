@@ -5,12 +5,12 @@ import { listRecentMaterialPrices, listRecentQuotes } from '../lib/agents-querie
 import { redis } from '../utils/redis';
 import { prisma } from '@servy/db';
 import {
+    runRecruitmentCycle,
     scoreCandidateText,
     uploadCustomAudience,
     syncAudienceMembers,
     launchCampaign,
 } from '../agents/recruitment-agent';
-import { enqueueRunRecruitmentCycle } from '../lib/queue';
 import { insertAgentLog } from '../lib/agent-log';
 
 const router = Router();
@@ -494,7 +494,7 @@ router.post('/recruitment/campaigns/:id/pause', async (req: Request, res: Respon
 
 router.post('/recruitment/scrape', async (_req: Request, res: Response) => {
     try {
-        await enqueueRunRecruitmentCycle();
+        await runRecruitmentCycle();
         res.json({ success: true });
     } catch (e) {
         res.status(500).json({ success: false, error: String(e) });
@@ -542,9 +542,9 @@ router.get('/recruitment/coverage', async (_req: Request, res: Response) => {
             SELECT DISTINCT zone FROM expansion_opportunities
             WHERE priority = 'high' AND status = 'detected'
         `;
-        const high = new Set(highRows.map((r: { zone: string }) => r.zone));
+        const high = new Set(highRows.map((r) => r.zone));
 
-        const data = zones.map((r: { zone: string; cnt: bigint }) => {
+        const data = zones.map((r) => {
             const c = Number(r.cnt);
             let coverage: 'green' | 'yellow' | 'red' = 'red';
             if (c >= 3) coverage = 'green';

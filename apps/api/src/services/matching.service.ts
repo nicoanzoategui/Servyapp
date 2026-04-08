@@ -1,4 +1,4 @@
-import { prisma, type Professional } from '@servy/db';
+import { prisma } from '@servy/db';
 
 export class ProfessionalMatchingService {
     static async findProfessionalsAndCreateOffers(requestId: string) {
@@ -18,7 +18,7 @@ export class ProfessionalMatchingService {
             },
         });
 
-        const matched = professionals.filter((p: Professional) => {
+        const matched = professionals.filter((p) => {
             if (!p.zones || p.zones.length === 0) return true;
             return p.zones.some(
                 (zone) =>
@@ -29,13 +29,9 @@ export class ProfessionalMatchingService {
         });
 
         const urgent =
-            matched
-                .filter((p: Professional) => p.is_urgent)
-                .sort((a: Professional, b: Professional) => (b.rating || 0) - (a.rating || 0))[0] || null;
+            matched.filter((p) => p.is_urgent).sort((a, b) => (b.rating || 0) - (a.rating || 0))[0] || null;
         const scheduled =
-            matched
-                .filter((p: Professional) => p.is_scheduled)
-                .sort((a: Professional, b: Professional) => (b.rating || 0) - (a.rating || 0))[0] || null;
+            matched.filter((p) => p.is_scheduled).sort((a, b) => (b.rating || 0) - (a.rating || 0))[0] || null;
 
         if (urgent) {
             await prisma.jobOffer.create({

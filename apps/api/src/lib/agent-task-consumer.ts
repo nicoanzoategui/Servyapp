@@ -1,8 +1,7 @@
 import { prisma } from '@servy/db';
 import { insertAgentLog } from './agent-log';
 import { bumpDemand } from '../agents/pricing-agent';
-import { draftCampaignsFromExpansion } from '../agents/recruitment-agent';
-import { enqueueRunRecruitmentCycle } from './queue';
+import { draftCampaignsFromExpansion, runRecruitmentCycle } from '../agents/recruitment-agent';
 
 interface AgentTask {
     id: string;
@@ -41,7 +40,7 @@ async function handleTask(task: AgentTask): Promise<void> {
 
         case 'experiment_sync_recruitment':
             // Disparar ciclo de reclutamiento completo
-            await enqueueRunRecruitmentCycle();
+            await runRecruitmentCycle();
             await insertAgentLog({
                 agent: 'task-consumer',
                 event: 'experiment_sync_recruitment',

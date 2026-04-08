@@ -1,5 +1,4 @@
 import { env } from '../utils/env';
-import { appendChatMessage } from '../lib/conversation-chat-log';
 import twilio from 'twilio';
 
 const twilioClient = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
@@ -20,9 +19,8 @@ export class WhatsAppService {
                 to: toTwilioWhatsappAddress(phone),
                 body: text,
             });
-            await appendChatMessage(phone, 'bot', text);
         } catch (err) {
-            console.error('[whatsapp] sendTextMessage ERROR:', JSON.stringify(err), 'phone:', phone, 'from:', env.TWILIO_PHONE_NUMBER);
+            console.error('Error sending Twilio message:', err);
         }
     }
 
@@ -38,7 +36,6 @@ export class WhatsAppService {
                 to: toTwilioWhatsappAddress(phone),
                 mediaUrl: [imageUrl],
             });
-            await appendChatMessage(phone, 'bot', `[Imagen] ${imageUrl}`);
         } catch (err) {
             console.error('Error sending image:', err);
         }
@@ -51,10 +48,7 @@ export class WhatsAppService {
     ) {
         const rows = sections.flatMap((s) => s.rows);
         const body = `${text}\n\n${rows
-            .map(
-                (r: { id: string; title: string; description?: string }, i: number) =>
-                    `${i + 1}. ${r.title}${r.description ? ` - ${r.description}` : ''}`,
-            )
+            .map((r, i) => `${i + 1}. ${r.title}${r.description ? ` - ${r.description}` : ''}`)
             .join('\n')}`;
         return this.sendTextMessage(phone, body);
     }

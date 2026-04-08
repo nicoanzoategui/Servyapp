@@ -10,9 +10,6 @@ import { redis } from '../utils/redis';
 import { processAvailabilityMessage } from '../agents/availability-agent';
 import { processQualityUserReply } from '../agents/quality-agent';
 import { tryExperimentWaitlist } from '../agents/experiments-agent';
-import { enqueuePostPaymentMessaging } from '../lib/queue';
-import { captureException } from '../lib/sentry';
-import { appendChatMessage } from '../lib/conversation-chat-log';
 
 export const verifyWebhook = (req: Request, res: Response) => {
     const mode = req.query['hub.mode'];
@@ -85,14 +82,12 @@ export const handleWhatsAppMessage = async (req: Request, res: Response) => {
                 }
 
                 if (phone && content) {
-                    await appendChatMessage(phone, 'user', content);
                     await ConversationService.processMessage(phone, messageType, content).catch(console.error);
                 }
             }
         }
     } catch (error) {
         console.error('Webhook error:', error);
-        captureException(error, { tags: { area: 'whatsapp-webhook' } });
     }
 };
 
@@ -100,7 +95,7 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
     res.sendStatus(200);
 
     try {
-        void req.headers?.['x-signature'];
+        void req.headers['x-signature'];
 
         const { type, data } = req.body || {};
         if (type !== 'payment' || !data?.id) return;
@@ -136,7 +131,14 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
                 qrUrl = await QRService.generateAndUpload(job.id);
             } catch (e) {
                 console.error('[MP webhook] QR generation failed:', e);
-                captureException(e, { tags: { area: 'mp-webhook', step: 'qr' } });
+            }
+
+            await WhatsAppService.sendTextMessage(
+                userPhone,
+                `✅ ¡Pago confirmado!\n\nTu técnico *${job.quotation.job_offer.professional.name}* está confirmado para tu servicio.\n\nCualquier consulta escribí acá y te lo hacemos llegar.${qrUrl ? '\n\n🔒 Guardá este QR — el técnico lo va a escanear al terminar para liberar el pago.' : ''}`
+            );
+            if (qrUrl) {
+                await WhatsAppService.sendImageMessage(userPhone, qrUrl);
             }
 
             const proJob = job.quotation.job_offer;
@@ -149,16 +151,10 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
                 ? new Date(serviceRequest.scheduled_date).toLocaleDateString('es-AR')
                 : 'a confirmar';
 
-            const userText = `✅ ¡Pago confirmado!\n\nTu técnico *${job.quotation.job_offer.professional.name}* está confirmado para tu servicio.\n\nCualquier consulta escribí acá y te lo hacemos llegar.${qrUrl ? '\n\n🔒 Guardá este QR — el técnico lo va a escanear al terminar para liberar el pago.' : ''}`;
-            const proText = `✅ Nuevo trabajo confirmado.\n\n📍 ${serviceRequest?.address ?? 'Ver portal'}\n🔧 ${serviceRequest?.description?.slice(0, 80) ?? 'Ver portal'}\n📅 ${fecha}, turno ${franja}\n💰 $${job.quotation.total_price} (se libera con QR del cliente)\n\nVer detalles: portal.servy.lat/jobs/${job.id}\n\nComandos:\n→ *estoy yendo* — le avisamos al cliente\n→ *llego en X minutos* — se lo reenviamos\n→ *no encuentro la dirección* — le pedimos info al cliente\n→ *tuve un imprevisto* — notificamos al cliente y al admin`;
-
-            await enqueuePostPaymentMessaging({
-                userPhone,
-                proPhone: job.quotation.job_offer.professional.phone,
-                userText,
-                proText,
-                qrUrl,
-            });
+            await WhatsAppService.sendTextMessage(
+                job.quotation.job_offer.professional.phone,
+                `✅ Nuevo trabajo confirmado.\n\n📍 ${serviceRequest?.address ?? 'Ver portal'}\n🔧 ${serviceRequest?.description?.slice(0, 80) ?? 'Ver portal'}\n📅 ${fecha}, turno ${franja}\n💰 $${job.quotation.total_price} (se libera con QR del cliente)\n\nVer detalles: portal.servy.lat/jobs/${job.id}\n\nComandos:\n→ *estoy yendo* — le avisamos al cliente\n→ *llego en X minutos* — se lo reenviamos\n→ *no encuentro la dirección* — le pedimos info al cliente\n→ *tuve un imprevisto* — notificamos al cliente y al admin`
+            );
         } else if (status === 'rejected' || status === 'cancelled') {
             await prisma.payment.updateMany({
                 where: { quotation_id: quotationId },
@@ -174,14 +170,12 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
         }
     } catch (error) {
         console.error('MP Webhook Error:', error);
-        captureException(error, { tags: { area: 'mp-webhook' } });
     }
 };
 
 export const handleTwilioMessage = async (req: Request, res: Response) => {
     res.set('Content-Type', 'text/xml');
     res.send('<Response></Response>');
-    console.log('[twilio] body:', JSON.stringify(req.body));
 
     try {
         const phone = (req.body.From as string)?.replace(/whatsapp:/i, '').replace('+', '').trim();
@@ -206,12 +200,7 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
             content = '__LOCATION__';
         }
 
-        console.log('[twilio] phone:', phone, '| content:', content);
         if (!phone || !content) return;
-        console.log('[twilio] procesando mensaje...');
-        console.log('[twilio] checking availability...');
-
-        await appendChatMessage(phone, 'user', content);
 
         // Comando global cancelar para ambos flujos
         if (content.toLowerCase().trim() === 'cancelar') {
@@ -243,7 +232,6 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
                 lat,
                 lng,
             }).catch(() => false);
-            console.log('[twilio] availability handled:', handledAvail);
             if (handledAvail) return;
 
             const mediated = await ConversationService.handleProfessionalMediatedMessaging({
@@ -260,24 +248,14 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
         }
 
         const userRow = await prisma.user.findUnique({ where: { phone } });
-        const session = await ConversationService.getSessionSnapshot(phone);
-        console.log('[twilio] session:', JSON.stringify(session));
         const qHandled = await processQualityUserReply(phone, content).catch(() => false);
         if (qHandled) return;
 
         const expHandled = await tryExperimentWaitlist(phone, content, userRow?.name).catch(() => false);
         if (expHandled) return;
 
-        console.log('[twilio] calling ConversationService.processMessage...');
-        try {
-            await ConversationService.processMessage(phone, messageType, content);
-            console.log('[twilio] ConversationService.processMessage done');
-        } catch (err) {
-            console.error('[twilio] ConversationService.processMessage ERROR:', err);
-            captureException(err, { tags: { area: 'conversation-service' } });
-        }
+        await ConversationService.processMessage(phone, messageType, content).catch(console.error);
     } catch (error) {
         console.error('Twilio webhook error:', error);
-        captureException(error, { tags: { area: 'twilio-webhook' } });
     }
 };

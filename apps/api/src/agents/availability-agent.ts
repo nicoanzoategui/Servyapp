@@ -49,8 +49,8 @@ export async function getShiftEndTtlSeconds(providerId: string): Promise<number>
         minute: '2-digit',
         hour12: false,
     }).formatToParts(new Date());
-    const h = parseInt(parts.find((p: Intl.DateTimeFormatPart) => p.type === 'hour')?.value || '0', 10);
-    const min = parseInt(parts.find((p: Intl.DateTimeFormatPart) => p.type === 'minute')?.value || '0', 10);
+    const h = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10);
+    const min = parseInt(parts.find((p) => p.type === 'minute')?.value || '0', 10);
     const nowMins = h * 60 + min;
 
     let diffMins = endMins - nowMins;

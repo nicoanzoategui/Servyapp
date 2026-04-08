@@ -1,6 +1,4 @@
 import { prisma } from '@servy/db';
-import { redis } from '../utils/redis';
-import { PRICING_CONFIG_KEY, PRICING_CONFIG_TTL_SEC } from './cache-keys';
 
 export interface PricingConfigRow {
     id: string;
@@ -12,22 +10,6 @@ export interface PricingConfigRow {
 }
 
 export async function getActivePricingConfig(): Promise<PricingConfigRow | null> {
-    try {
-        const cached = await redis.get(PRICING_CONFIG_KEY);
-        if (cached) {
-            const parsed = JSON.parse(cached) as PricingConfigRow;
-            return {
-                ...parsed,
-                labor_base: parsed.labor_base as Record<string, number>,
-                zone_multipliers: parsed.zone_multipliers as Record<string, number>,
-                time_multipliers: parsed.time_multipliers as Record<string, number>,
-                demand_thresholds: parsed.demand_thresholds as Record<string, { max: number; multiplier: number }>,
-            };
-        }
-    } catch {
-        /* sin Redis: seguir a Postgres */
-    }
-
     const rows = await prisma.$queryRaw<PricingConfigRow[]>`
         SELECT id, labor_base, zone_multipliers, time_multipliers, demand_thresholds, servy_commission
         FROM pricing_config
@@ -37,19 +19,13 @@ export async function getActivePricingConfig(): Promise<PricingConfigRow | null>
     `;
     const row = rows[0];
     if (!row) return null;
-    const out = {
+    return {
         ...row,
         labor_base: row.labor_base as Record<string, number>,
         zone_multipliers: row.zone_multipliers as Record<string, number>,
         time_multipliers: row.time_multipliers as Record<string, number>,
         demand_thresholds: row.demand_thresholds as Record<string, { max: number; multiplier: number }>,
     };
-    try {
-        await redis.set(PRICING_CONFIG_KEY, JSON.stringify(out), 'EX', PRICING_CONFIG_TTL_SEC);
-    } catch {
-        /* */
-    }
-    return out;
 }
 
 export async function listRecentMaterialPrices(category: string, limit = 50): Promise<

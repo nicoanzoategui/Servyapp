@@ -7,15 +7,8 @@ import {
 } from 'date-fns';
 import { env } from '../utils/env';
 import { redis } from '../utils/redis';
-import {
-  prisma,
-  type Prisma,
-  type FinanceSnapshot,
-  type DemandForecast,
-  type ExpansionOpportunity,
-} from '@servy/db';
+import { prisma, type Prisma } from '@servy/db';
 import { insertAgentLog } from '../lib/agent-log';
-import { captureException } from '../lib/sentry';
 import { geminiGenerateJson, geminiGenerateText } from '../lib/gemini-json';
 import { WhatsAppService } from '../services/whatsapp.service';
 import { buildProjectionSystemPrompt, buildWeeklyExecutiveSummaryPrompt } from './prompts/finance';
@@ -48,7 +41,6 @@ export async function logAgent(
     });
   } catch (e) {
     console.error('[finance-agent] logAgent failed', e);
-    captureException(e, { tags: { agent: 'finance' } });
   }
 }
 
@@ -559,7 +551,7 @@ export async function runProjections(): Promise<void> {
 
     let histSlice: { periodKey: string; net: number; jobs: number }[];
     if (monthlySnaps.length > 0) {
-      histSlice = monthlySnaps.map((m: FinanceSnapshot) => ({
+      histSlice = monthlySnaps.map((m) => ({
         periodKey: m.periodKey,
         net: Number(m.netRevenueArs),
         jobs: m.completedJobs,
@@ -578,13 +570,11 @@ export async function runProjections(): Promise<void> {
         order by period_month desc
         limit 3
       `;
-      histSlice = approx.map(
-        (r: { period_key: string; net: Prisma.Decimal; jobs: bigint }) => ({
-          periodKey: r.period_key,
-          net: Number(r.net),
-          jobs: Number(r.jobs),
-        }),
-      );
+      histSlice = approx.map((r) => ({
+        periodKey: r.period_key,
+        net: Number(r.net),
+        jobs: Number(r.jobs),
+      }));
     }
 
     const historicalSnapshots = JSON.stringify(histSlice);
@@ -594,7 +584,7 @@ export async function runProjections(): Promise<void> {
       take: 30,
     });
     const demandForecast = JSON.stringify(
-      forecasts.map((f: DemandForecast) => ({
+      forecasts.map((f) => ({
         cat: f.category,
         zone: f.zone,
         pred: f.predictedRequests,
@@ -608,7 +598,7 @@ export async function runProjections(): Promise<void> {
       take: 20,
     });
     const expansionOpportunities = JSON.stringify(
-      expansions.map((x: ExpansionOpportunity) => ({
+      expansions.map((x) => ({
         zone: x.zone,
         category: x.category,
         priority: x.priority,

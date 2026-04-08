@@ -2,7 +2,6 @@ import { Router } from 'express';
 import {
     getDashboard,
     getConversations,
-    getConversationDetail,
     sendManualMessage,
     getProfessionals,
     getProfessionalDetail,
@@ -29,7 +28,6 @@ router.use(requireRole('admin'));
 // Dashboard & Conversations
 router.get('/dashboard', getDashboard);
 router.get('/conversations', getConversations);
-router.get('/conversations/:phone', getConversationDetail);
 router.post('/conversations/:phone/send', sendManualMessage);
 
 // Professionals

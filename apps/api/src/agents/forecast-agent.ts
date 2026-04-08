@@ -34,7 +34,7 @@ export async function runWeeklyForecast(): Promise<void> {
         WHERE status = 'active' AND cardinality(zones) > 0
         LIMIT 12
     `;
-    const zones = zoneRows.map((z: { zone: string }) => z.zone).filter(Boolean);
+    const zones = zoneRows.map((z) => z.zone).filter(Boolean);
     if (zones.length === 0) {
         zones.push('amba');
     }
@@ -89,19 +89,10 @@ export async function runWeeklyForecast(): Promise<void> {
     const weekStr = weekStart.toISOString().slice(0, 10);
 
     const payload = {
-        demandByCategory: byCategory.map((h: { category: string; cnt: bigint }) => ({
-            category: h.category,
-            requests: Number(h.cnt),
-        })),
-        demandLast30d: Object.fromEntries(
-            recentWindow.map((r: { category: string; cnt: bigint }) => [r.category, Number(r.cnt)]),
-        ),
-        demandPrev30d: Object.fromEntries(
-            olderWindow.map((r: { category: string; cnt: bigint }) => [r.category, Number(r.cnt)]),
-        ),
-        demandSameFortnightLastYear: Object.fromEntries(
-            yoy.map((r: { category: string; cnt: bigint }) => [r.category, Number(r.cnt)]),
-        ),
+        demandByCategory: byCategory.map((h) => ({ category: h.category, requests: Number(h.cnt) })),
+        demandLast30d: Object.fromEntries(recentWindow.map((r) => [r.category, Number(r.cnt)])),
+        demandPrev30d: Object.fromEntries(olderWindow.map((r) => [r.category, Number(r.cnt)])),
+        demandSameFortnightLastYear: Object.fromEntries(yoy.map((r) => [r.category, Number(r.cnt)])),
         zones,
         providersByCategoryZone: Object.fromEntries(provMap.entries()),
         seasonalCalendar: seasonal,
