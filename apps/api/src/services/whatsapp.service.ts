@@ -1,4 +1,5 @@
 import { env } from '../utils/env';
+import { maskPhoneDigitsTail, normalizeTwilioWhatsAppFrom } from '../utils/twilio-phone';
 import twilio from 'twilio';
 
 const twilioClient = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
@@ -9,11 +10,6 @@ function toTwilioWhatsappAddress(raw: string): string {
     if (t.toLowerCase().startsWith('whatsapp:')) return t;
     const num = t.startsWith('+') ? t : `+${t.replace(/^\+/, '')}`;
     return `whatsapp:${num}`;
-}
-
-function maskPhoneTail(phone: string): string {
-    const d = phone.replace(/\D/g, '');
-    return d.length >= 4 ? `***${d.slice(-4)}` : '***';
 }
 
 /** Twilio REST errors tienen code/message/status; no siempre serializan bien con JSON.stringify. */
@@ -32,20 +28,30 @@ function formatTwilioError(err: unknown): Record<string, unknown> {
 
 export class WhatsAppService {
     static async sendTextMessage(phone: string, text: string) {
+        const digits = normalizeTwilioWhatsAppFrom(phone) || phone.replace(/\D/g, '');
         try {
             const msg = await twilioClient.messages.create({
                 from: toTwilioWhatsappAddress(env.TWILIO_PHONE_NUMBER),
-                to: toTwilioWhatsappAddress(phone),
+                to: toTwilioWhatsappAddress(digits),
                 body: text,
             });
+            const meta = msg as {
+                sid?: string;
+                status?: string;
+                errorCode?: number | null;
+                errorMessage?: string | null;
+            };
             console.log('[whatsapp] outbound OK', {
-                sid: msg.sid,
-                toMask: maskPhoneTail(phone),
+                sid: meta.sid,
+                toMask: maskPhoneDigitsTail(digits),
                 bodyChars: text.length,
+                twilioStatus: meta.status,
+                twilioErrorCode: meta.errorCode ?? undefined,
+                twilioErrorMessage: meta.errorMessage ?? undefined,
             });
         } catch (err) {
             console.error('[whatsapp] outbound FAIL sendTextMessage', {
-                toMask: maskPhoneTail(phone),
+                toMask: maskPhoneDigitsTail(digits),
                 ...formatTwilioError(err),
             });
         }
@@ -57,16 +63,22 @@ export class WhatsAppService {
     }
 
     static async sendImageMessage(phone: string, imageUrl: string) {
+        const digits = normalizeTwilioWhatsAppFrom(phone) || phone.replace(/\D/g, '');
         try {
             const msg = await twilioClient.messages.create({
                 from: toTwilioWhatsappAddress(env.TWILIO_PHONE_NUMBER),
-                to: toTwilioWhatsappAddress(phone),
+                to: toTwilioWhatsappAddress(digits),
                 mediaUrl: [imageUrl],
             });
-            console.log('[whatsapp] outbound OK (image)', { sid: msg.sid, toMask: maskPhoneTail(phone) });
+            const meta = msg as { sid?: string; status?: string };
+            console.log('[whatsapp] outbound OK (image)', {
+                sid: meta.sid,
+                toMask: maskPhoneDigitsTail(digits),
+                twilioStatus: meta.status,
+            });
         } catch (err) {
             console.error('[whatsapp] outbound FAIL sendImage', {
-                toMask: maskPhoneTail(phone),
+                toMask: maskPhoneDigitsTail(digits),
                 ...formatTwilioError(err),
             });
         }

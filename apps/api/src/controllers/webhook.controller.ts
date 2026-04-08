@@ -10,6 +10,7 @@ import { redis } from '../utils/redis';
 import { processAvailabilityMessage } from '../agents/availability-agent';
 import { processQualityUserReply } from '../agents/quality-agent';
 import { tryExperimentWaitlist } from '../agents/experiments-agent';
+import { maskPhoneDigitsTail, normalizeTwilioWhatsAppFrom } from '../utils/twilio-phone';
 
 export const verifyWebhook = (req: Request, res: Response) => {
     const mode = req.query['hub.mode'];
@@ -173,11 +174,6 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
     }
 };
 
-function maskPhoneTail(phone: string | undefined): string {
-    if (!phone || phone.length < 4) return phone ? '****' : '(none)';
-    return `***${phone.slice(-4)}`;
-}
-
 export const handleTwilioMessage = async (req: Request, res: Response) => {
     res.set('Content-Type', 'text/xml');
     res.send('<Response></Response>');
@@ -187,7 +183,7 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
             console.log('[twilio] DEBUG body:', JSON.stringify(req.body));
         }
 
-        const phone = (req.body.From as string)?.replace(/whatsapp:/i, '').replace('+', '').trim();
+        const phone = normalizeTwilioWhatsAppFrom(req.body.From as string | undefined);
         const messageType = req.body.NumMedia && parseInt(req.body.NumMedia) > 0 ? 'image' : 'text';
         const latRaw = req.body.Latitude;
         const lngRaw = req.body.Longitude;
@@ -211,7 +207,7 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
 
         if (!phone || !content) {
             console.warn('[twilio] skip: falta phone o content', {
-                phoneMask: maskPhoneTail(phone),
+                phoneMask: maskPhoneDigitsTail(phone),
                 contentLen: content?.length ?? 0,
                 bodyKeys: Object.keys(req.body || {}),
                 messageType,
@@ -220,7 +216,7 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
         }
 
         console.log('[twilio] mensaje', {
-            phoneMask: maskPhoneTail(phone),
+            phoneMask: maskPhoneDigitsTail(phone),
             messageType,
             contentPreview: content.slice(0, 120),
         });
@@ -248,7 +244,7 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
         // Verificar primero si es un profesional
         const professional = await prisma.professional.findUnique({ where: { phone } });
         if (professional) {
-            console.log('[twilio] flujo profesional', { phoneMask: maskPhoneTail(phone) });
+            console.log('[twilio] flujo profesional', { phoneMask: maskPhoneDigitsTail(phone) });
             const handledAvail = await processAvailabilityMessage({
                 professional,
                 body: content,
@@ -278,7 +274,7 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
             return;
         }
 
-        console.log('[twilio] flujo usuario', { phoneMask: maskPhoneTail(phone) });
+        console.log('[twilio] flujo usuario', { phoneMask: maskPhoneDigitsTail(phone) });
         const userRow = await prisma.user.findUnique({ where: { phone } });
         const qHandled = await processQualityUserReply(phone, content).catch(() => false);
         if (qHandled) {
