@@ -59,8 +59,8 @@ export class WhatsAppService {
                 twilioErrorMessage: meta.errorMessage ?? undefined,
             });
             if (ctx && replyMatchesInboundFrom === false) {
-                console.warn(
-                    '[whatsapp] posible bug: respuesta va a otro número que el From del webhook (o mezcla de logs sin ALS)'
+                console.log(
+                    '[whatsapp] outbound: destino ≠ remitente del webhook (normal: mediación a técnico, o log de CRON/otro proceso sin contexto Twilio)'
                 );
             }
         } catch (err) {

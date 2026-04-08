@@ -213,6 +213,10 @@ export class ConversationService {
             if (pendingDir) {
                 try {
                     const { proPhone, jobId } = JSON.parse(pendingDir) as { proPhone: string; jobId: string };
+                    console.log(
+                        '[conversation] mediación: el mensaje se reenvía al técnico (no al usuario). Si era prueba vieja, ya se borra la clave Redis tras esto.',
+                        { jobId, userTail: phone.slice(-4), proTail: String(proPhone).replace(/\D/g, '').slice(-4) }
+                    );
                     await WhatsAppService.sendTextMessage(
                         proPhone,
                         `Referencia del cliente: ${content.trim()}`
