@@ -7,6 +7,7 @@ import { ProfessionalMatchingService } from './matching.service';
 import { StorageService } from './storage.service';
 import { MercadoPagoService } from './mercadopago.service';
 import { GeminiService } from './gemini.service';
+import { mediationDirectionRedisKey, normalizeTwilioWhatsAppFrom } from '../utils/twilio-phone';
 
 const SESSION_TTL = 60 * 60 * 24;
 const REDIS_OP_TIMEOUT_MS = 500;
@@ -209,12 +210,13 @@ export class ConversationService {
         if (session.state === 'UNKNOWN') session = { state: 'IDLE', data: {} };
 
         if (messageType === 'text' && user) {
-            const pendingDir = await redis.get(`mediation:await_direction:${phone}`);
+            const mediationKey = mediationDirectionRedisKey(phone);
+            const pendingDir = await redis.get(mediationKey);
             if (pendingDir) {
                 try {
                     const { proPhone, jobId } = JSON.parse(pendingDir) as { proPhone: string; jobId: string };
                     console.log(
-                        '[conversation] mediación: el mensaje se reenvía al técnico (no al usuario). Si era prueba vieja, ya se borra la clave Redis tras esto.',
+                        '[conversation] mediación: reenvío al técnico (Referencia del cliente…). Tras esto se borra la clave Redis.',
                         { jobId, userTail: phone.slice(-4), proTail: String(proPhone).replace(/\D/g, '').slice(-4) }
                     );
                     await WhatsAppService.sendTextMessage(
@@ -230,7 +232,8 @@ export class ConversationService {
                 } catch {
                     /* ignore */
                 }
-                await redis.del(`mediation:await_direction:${phone}`);
+                const removed = await redis.del(mediationKey);
+                console.log('[conversation] mediación: redis DEL', { redisKeysRemoved: removed, mediationKey });
                 return;
             }
         }
@@ -862,8 +865,11 @@ export class ConversationService {
                 '📍 Tu técnico necesita confirmar la dirección. ¿Podés agregar referencias o aclarar el domicilio?'
             );
             await redis.set(
-                `mediation:await_direction:${userPhone}`,
-                JSON.stringify({ proPhone: professional.phone, jobId: job.id }),
+                mediationDirectionRedisKey(userPhone),
+                JSON.stringify({
+                    proPhone: normalizeTwilioWhatsAppFrom(professional.phone) || String(professional.phone).replace(/\D/g, ''),
+                    jobId: job.id,
+                }),
                 'EX',
                 MEDIATION_DIRECTION_TTL_SEC
             );

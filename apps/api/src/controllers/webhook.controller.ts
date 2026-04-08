@@ -11,7 +11,7 @@ import { processAvailabilityMessage } from '../agents/availability-agent';
 import { processQualityUserReply } from '../agents/quality-agent';
 import { tryExperimentWaitlist } from '../agents/experiments-agent';
 import { twilioWebhookAls } from '../lib/twilio-request-context';
-import { maskPhoneDigitsTail, normalizeTwilioWhatsAppFrom } from '../utils/twilio-phone';
+import { maskPhoneDigitsTail, mediationDirectionRedisKey, normalizeTwilioWhatsAppFrom } from '../utils/twilio-phone';
 
 export const verifyWebhook = (req: Request, res: Response) => {
     const mode = req.query['hub.mode'];
@@ -243,6 +243,11 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
             try {
                 await redis.del(`pro_session:${phone}`);
                 await prisma.professionalSession.delete({ where: { phone } }).catch(() => {});
+            } catch {
+                /* ignore */
+            }
+            try {
+                await redis.del(mediationDirectionRedisKey(phone));
             } catch {
                 /* ignore */
             }

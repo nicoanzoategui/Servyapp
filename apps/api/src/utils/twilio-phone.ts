@@ -11,3 +11,9 @@ export function maskPhoneDigitsTail(digitsOrMixed: string): string {
     const d = digitsOrMixed.replace(/\D/g, '');
     return d.length >= 4 ? `***${d.slice(-4)}` : '***';
 }
+
+/** Clave Redis para mediación “esperando referencia de dirección” (mismo criterio que el webhook). */
+export function mediationDirectionRedisKey(phoneRaw: string): string {
+    const d = normalizeTwilioWhatsAppFrom(phoneRaw) || phoneRaw.replace(/\D/g, '');
+    return `mediation:await_direction:${d}`;
+}
