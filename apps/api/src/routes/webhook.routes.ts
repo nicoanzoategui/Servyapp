@@ -5,6 +5,6 @@ const router = Router();
 
 router.get('/whatsapp', verifyWebhook);
 router.post('/whatsapp', express.raw({ type: 'application/json' }), handleWhatsAppMessage);
-router.post('/twilio', express.urlencoded({ extended: false }), handleTwilioMessage);
+router.post('/twilio', handleTwilioMessage);
 
 export default router;
