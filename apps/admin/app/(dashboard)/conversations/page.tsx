@@ -47,7 +47,7 @@ export default function ConversationsPage() {
                                 <td className="p-4 font-medium text-slate-900 tracking-tight">+{session.phone}</td>
                                 <td className="p-4">
                                     <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
-                                        {session.state}
+                                        {session.step}
                                     </span>
                                 </td>
                                 <td className="p-4 text-slate-600">

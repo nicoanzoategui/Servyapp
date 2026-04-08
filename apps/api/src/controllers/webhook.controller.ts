@@ -12,6 +12,7 @@ import { processQualityUserReply } from '../agents/quality-agent';
 import { tryExperimentWaitlist } from '../agents/experiments-agent';
 import { enqueuePostPaymentMessaging } from '../lib/queue';
 import { captureException } from '../lib/sentry';
+import { appendChatMessage } from '../lib/conversation-chat-log';
 
 export const verifyWebhook = (req: Request, res: Response) => {
     const mode = req.query['hub.mode'];
@@ -84,6 +85,7 @@ export const handleWhatsAppMessage = async (req: Request, res: Response) => {
                 }
 
                 if (phone && content) {
+                    await appendChatMessage(phone, 'user', content);
                     await ConversationService.processMessage(phone, messageType, content).catch(console.error);
                 }
             }
@@ -204,6 +206,8 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
         }
 
         if (!phone || !content) return;
+
+        await appendChatMessage(phone, 'user', content);
 
         // Comando global cancelar para ambos flujos
         if (content.toLowerCase().trim() === 'cancelar') {

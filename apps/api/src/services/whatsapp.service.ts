@@ -1,4 +1,5 @@
 import { env } from '../utils/env';
+import { appendChatMessage } from '../lib/conversation-chat-log';
 import twilio from 'twilio';
 
 const twilioClient = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
@@ -19,6 +20,7 @@ export class WhatsAppService {
                 to: toTwilioWhatsappAddress(phone),
                 body: text,
             });
+            await appendChatMessage(phone, 'bot', text);
         } catch (err) {
             console.error('Error sending Twilio message:', err);
         }
@@ -36,6 +38,7 @@ export class WhatsAppService {
                 to: toTwilioWhatsappAddress(phone),
                 mediaUrl: [imageUrl],
             });
+            await appendChatMessage(phone, 'bot', `[Imagen] ${imageUrl}`);
         } catch (err) {
             console.error('Error sending image:', err);
         }
