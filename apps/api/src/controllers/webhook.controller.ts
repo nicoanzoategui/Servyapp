@@ -209,6 +209,7 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
         console.log('[twilio] phone:', phone, '| content:', content);
         if (!phone || !content) return;
         console.log('[twilio] procesando mensaje...');
+        console.log('[twilio] checking availability...');
 
         await appendChatMessage(phone, 'user', content);
 
@@ -242,6 +243,7 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
                 lat,
                 lng,
             }).catch(() => false);
+            console.log('[twilio] availability handled:', handledAvail);
             if (handledAvail) return;
 
             const mediated = await ConversationService.handleProfessionalMediatedMessaging({
@@ -258,6 +260,8 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
         }
 
         const userRow = await prisma.user.findUnique({ where: { phone } });
+        const session = await ConversationService.getSessionSnapshot(phone);
+        console.log('[twilio] session:', JSON.stringify(session));
         const qHandled = await processQualityUserReply(phone, content).catch(() => false);
         if (qHandled) return;
 

@@ -148,6 +148,11 @@ export class ConversationService {
         return session;
     }
 
+    /** Snapshot para logs (p. ej. webhook Twilio). */
+    static async getSessionSnapshot(phone: string) {
+        return this.getSession(phone);
+    }
+
     private static async saveSession(phone: string, state: string, data: Record<string, unknown> = {}) {
         try {
             await this.withRedisTimeout(redis.set(`session:${phone}`, JSON.stringify({ state, data }), 'EX', SESSION_TTL));
