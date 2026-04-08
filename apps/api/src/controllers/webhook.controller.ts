@@ -181,6 +181,7 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
 export const handleTwilioMessage = async (req: Request, res: Response) => {
     res.set('Content-Type', 'text/xml');
     res.send('<Response></Response>');
+    console.log('[twilio] body:', JSON.stringify(req.body));
 
     try {
         const phone = (req.body.From as string)?.replace(/whatsapp:/i, '').replace('+', '').trim();
