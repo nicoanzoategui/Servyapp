@@ -269,8 +269,13 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
         if (expHandled) return;
 
         console.log('[twilio] calling ConversationService.processMessage...');
-        await ConversationService.processMessage(phone, messageType, content).catch(console.error);
-        console.log('[twilio] ConversationService.processMessage done');
+        try {
+            await ConversationService.processMessage(phone, messageType, content);
+            console.log('[twilio] ConversationService.processMessage done');
+        } catch (err) {
+            console.error('[twilio] ConversationService.processMessage ERROR:', err);
+            captureException(err, { tags: { area: 'conversation-service' } });
+        }
     } catch (error) {
         console.error('Twilio webhook error:', error);
         captureException(error, { tags: { area: 'twilio-webhook' } });
