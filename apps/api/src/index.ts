@@ -68,20 +68,24 @@ app.use(
             const s = rawOk ? buf.toString('utf8') : '';
             req.body = parseUrlEncodedBody(s);
             const keys = Object.keys(req.body as Record<string, unknown>);
-            console.log('[twilio] parse', {
-                contentType: req.headers['content-type'],
-                contentLength: req.headers['content-length'],
-                transferEncoding: req.headers['transfer-encoding'],
-                rawIsBuffer: rawOk,
-                rawBytes: rawOk ? buf.length : 0,
-                parsedKeys: keys.length,
-                keysSample: keys.slice(0, 12),
-            });
-            if (!rawOk || keys.length === 0) {
-                console.warn('[twilio] parse: empty or skipped — revisar Content-Length / proxy', {
+            // Una sola línea reduce entrelazado con otros console.* concurrentes (CRON, etc.)
+            console.log(
+                '[twilio] parse',
+                JSON.stringify({
+                    contentType: req.headers['content-type'],
+                    contentLength: req.headers['content-length'],
+                    transferEncoding: req.headers['transfer-encoding'],
                     rawIsBuffer: rawOk,
+                    rawBytes: rawOk ? buf.length : 0,
                     parsedKeys: keys.length,
-                });
+                    keysSample: keys.slice(0, 12),
+                })
+            );
+            if (!rawOk || keys.length === 0) {
+                console.warn(
+                    '[twilio] parse: empty or skipped',
+                    JSON.stringify({ rawIsBuffer: rawOk, parsedKeys: keys.length })
+                );
             }
         } catch (e) {
             console.error('[twilio] parse error:', e);

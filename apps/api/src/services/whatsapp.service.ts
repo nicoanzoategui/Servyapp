@@ -1,4 +1,5 @@
 import { env } from '../utils/env';
+import { twilioWebhookAls } from '../lib/twilio-request-context';
 import { maskPhoneDigitsTail, normalizeTwilioWhatsAppFrom } from '../utils/twilio-phone';
 import twilio from 'twilio';
 
@@ -41,14 +42,27 @@ export class WhatsAppService {
                 errorCode?: number | null;
                 errorMessage?: string | null;
             };
+            const ctx = twilioWebhookAls.getStore();
+            const toTail = digits.length >= 4 ? digits.slice(-4) : '';
+            const replyMatchesInboundFrom =
+                ctx != null && ctx.fromTail.length > 0 ? ctx.fromTail === toTail : undefined;
             console.log('[whatsapp] outbound OK', {
                 sid: meta.sid,
+                inboundMessageSid: ctx?.inboundMessageSid,
                 toMask: maskPhoneDigitsTail(digits),
+                toTail,
+                fromTailFromWebhook: ctx?.fromTail,
+                replyMatchesInboundFrom,
                 bodyChars: text.length,
                 twilioStatus: meta.status,
                 twilioErrorCode: meta.errorCode ?? undefined,
                 twilioErrorMessage: meta.errorMessage ?? undefined,
             });
+            if (ctx && replyMatchesInboundFrom === false) {
+                console.warn(
+                    '[whatsapp] posible bug: respuesta va a otro número que el From del webhook (o mezcla de logs sin ALS)'
+                );
+            }
         } catch (err) {
             console.error('[whatsapp] outbound FAIL sendTextMessage', {
                 toMask: maskPhoneDigitsTail(digits),

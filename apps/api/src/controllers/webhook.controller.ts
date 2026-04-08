@@ -10,6 +10,7 @@ import { redis } from '../utils/redis';
 import { processAvailabilityMessage } from '../agents/availability-agent';
 import { processQualityUserReply } from '../agents/quality-agent';
 import { tryExperimentWaitlist } from '../agents/experiments-agent';
+import { twilioWebhookAls } from '../lib/twilio-request-context';
 import { maskPhoneDigitsTail, normalizeTwilioWhatsAppFrom } from '../utils/twilio-phone';
 
 export const verifyWebhook = (req: Request, res: Response) => {
@@ -184,6 +185,14 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
         }
 
         const phone = normalizeTwilioWhatsAppFrom(req.body.From as string | undefined);
+        const inboundMessageSid = String(
+            (req.body as Record<string, string>).MessageSid ||
+                (req.body as Record<string, string>).SmsMessageSid ||
+                ''
+        );
+        const fromTail = phone.length >= 4 ? phone.slice(-4) : '';
+
+        await twilioWebhookAls.run({ inboundMessageSid, fromTail }, async () => {
         const messageType = req.body.NumMedia && parseInt(req.body.NumMedia) > 0 ? 'image' : 'text';
         const latRaw = req.body.Latitude;
         const lngRaw = req.body.Longitude;
@@ -292,7 +301,8 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
         await ConversationService.processMessage(phone, messageType, content).catch((err) => {
             console.error('[twilio] ConversationService.processMessage error:', err);
         });
-        console.log('[twilio] ConversationService.processMessage hecho');
+        console.log('[twilio] ConversationService.processMessage hecho', { inboundMessageSid });
+        });
     } catch (error) {
         console.error('Twilio webhook error:', error);
     }
