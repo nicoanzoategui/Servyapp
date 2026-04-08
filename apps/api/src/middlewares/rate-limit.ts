@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { RedisStore } from 'rate-limit-redis';
 import { redis } from '../utils/redis';
 
@@ -9,8 +9,9 @@ export const whatsappRateLimit = rateLimit({
     windowMs: 60 * 1000,
     max: 10,
     keyGenerator: (req) => {
-        const from = (req.body as { From?: string })?.From ?? '';
-        return from || req.ip || 'unknown';
+        const from = (req.body as { From?: string })?.From;
+        if (from != null && String(from).trim() !== '') return String(from);
+        return req.ip != null ? ipKeyGenerator(req.ip) : 'unknown';
     },
     store: new RedisStore({ sendCommand }),
     message: { error: 'Demasiados mensajes. Esperá un momento.' },
@@ -21,7 +22,7 @@ export const whatsappRateLimit = rateLimit({
 export const authRateLimit = rateLimit({
     windowMs: 60 * 1000,
     max: 5,
-    keyGenerator: (req) => req.ip ?? 'unknown',
+    keyGenerator: (req) => (req.ip != null ? ipKeyGenerator(req.ip) : 'unknown'),
     store: new RedisStore({ sendCommand }),
     standardHeaders: true,
     legacyHeaders: false,
@@ -30,7 +31,7 @@ export const authRateLimit = rateLimit({
 export const apiRateLimit = rateLimit({
     windowMs: 60 * 1000,
     max: 100,
-    keyGenerator: (req) => req.ip ?? 'unknown',
+    keyGenerator: (req) => (req.ip != null ? ipKeyGenerator(req.ip) : 'unknown'),
     store: new RedisStore({ sendCommand }),
     standardHeaders: true,
     legacyHeaders: false,
