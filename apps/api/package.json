@@ -8,7 +8,10 @@
         "start": "node dist/index.js",
         "test": "vitest run",
         "test:watch": "vitest",
-        "test:coverage": "vitest run --coverage"
+        "test:coverage": "vitest run --coverage",
+        "seed": "ts-node --transpile-only src/scripts/seed-test-data.ts",
+        "seed:clear": "ts-node --transpile-only src/scripts/clear-test-data.ts",
+        "simulate": "ts-node --transpile-only src/scripts/simulate-conversation.ts"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.1022.0",
