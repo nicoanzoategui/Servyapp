@@ -206,7 +206,9 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
             content = '__LOCATION__';
         }
 
+        console.log('[twilio] phone:', phone, '| content:', content);
         if (!phone || !content) return;
+        console.log('[twilio] procesando mensaje...');
 
         await appendChatMessage(phone, 'user', content);
 
