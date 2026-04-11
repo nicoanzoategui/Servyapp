@@ -16,6 +16,28 @@ vi.mock('@servy/db', () => ({
     },
 }));
 
+const completePro = (overrides: Record<string, unknown>) => ({
+    id: 'pro1',
+    categories: ['Plomería'],
+    zones: ['1414'],
+    is_urgent: true,
+    is_scheduled: false,
+    rating: 5,
+    name: 'Ana',
+    last_name: 'García',
+    dni: '30123456',
+    address: 'Calle 1',
+    postal_code: '1414',
+    bio: 'a'.repeat(35),
+    skills: ['Instalaciones'],
+    cbu_alias: '0000000000000000000000',
+    mp_alias: null,
+    payout_institution: 'Banco',
+    payout_account_type: 'cbu',
+    documents: [{ kind: 'dni_front' }, { kind: 'dni_back' }],
+    ...overrides,
+});
+
 describe('ProfessionalMatchingService', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -53,26 +75,14 @@ describe('ProfessionalMatchingService', () => {
         });
 
         (prisma.professional.findMany as any).mockResolvedValue([
-            {
-                id: 'pro1',
-                categories: ['Plomería'],
-                zones: ['1414'],
-                status: 'active',
-                is_urgent: true,
-                is_scheduled: false,
-                rating: 5,
-                phone: '111',
-            },
-            {
+            completePro({ id: 'pro1', is_urgent: true, is_scheduled: false, rating: 5 }),
+            completePro({
                 id: 'pro2',
-                categories: ['Plomería'],
-                zones: ['1414'],
-                status: 'active',
                 is_urgent: false,
                 is_scheduled: true,
                 rating: 4,
                 phone: '222',
-            },
+            }),
         ]);
 
         (prisma.jobOffer.create as any).mockResolvedValue({ id: 'offer1' });

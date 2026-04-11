@@ -66,6 +66,9 @@ model Professional {
   status               ProfessionalStatus @default(pending)
   onboarding_completed Boolean            @default(false)
   onboarding_step      Int                @default(1)
+  /// Perfil listo para recibir ofertas (zonas, facturación, docs, etc.).
+  profile_operational_complete Boolean   @default(false)
+  profile_ready_whatsapp_sent_at DateTime?
   created_at           DateTime           @default(now())
 
   job_offers           JobOffer[]

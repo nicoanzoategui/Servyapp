@@ -5,6 +5,10 @@ import { WhatsAppService } from '../services/whatsapp.service';
 import { ConversationService } from '../services/conversation.service';
 import { QRService } from '../services/qr.service';
 import { availabilityAgent } from '../agents/availability-agent';
+import {
+    buildProfileCompletionFromDbRow,
+    recomputeProfileOperationalCompleteAndNotify,
+} from '../services/professional-profile-completion.service';
 
 function normalizeQuoteBody(body: any) {
     let items = body.items;
@@ -115,12 +119,48 @@ export const getDashboard = async (req: Request, res: Response) => {
             select: {
                 rating: true,
                 onboarding_completed: true,
+                name: true,
+                last_name: true,
+                dni: true,
+                address: true,
+                postal_code: true,
                 zones: true,
+                categories: true,
                 cbu_alias: true,
+                mp_alias: true,
                 is_urgent: true,
                 is_scheduled: true,
+                bio: true,
+                skills: true,
+                payout_institution: true,
+                payout_account_type: true,
+                profile_operational_complete: true,
+                documents: { select: { kind: true } },
             },
         });
+
+        let profile_completion = {
+            complete: false,
+            percent: 0,
+            done_steps: 0,
+            total_steps: 0,
+            missing_sample: [] as string[],
+            missing_count: 0,
+        };
+
+        if (professional) {
+            const { documents, rating: _r, onboarding_completed: _ob, profile_operational_complete: _poc, ...pf } =
+                professional;
+            const evald = buildProfileCompletionFromDbRow(pf, documents);
+            profile_completion = {
+                complete: evald.complete,
+                percent: evald.percent,
+                done_steps: evald.items.filter((i) => i.done).length,
+                total_steps: evald.items.length,
+                missing_sample: evald.missing_labels.slice(0, 4),
+                missing_count: evald.missing_labels.length,
+            };
+        }
 
         res.json({
             success: true,
@@ -138,6 +178,8 @@ export const getDashboard = async (req: Request, res: Response) => {
                 cbu_alias: professional?.cbu_alias ?? null,
                 is_urgent: professional?.is_urgent ?? false,
                 is_scheduled: professional?.is_scheduled ?? false,
+                profile_operational_complete: professional?.profile_operational_complete ?? false,
+                profile_completion,
             },
         });
     } catch (error) {
@@ -414,6 +456,7 @@ export const completeOnboarding = async (req: Request, res: Response) => {
                 onboarding_step: 1,
             },
         });
+        await recomputeProfileOperationalCompleteAndNotify(professionalId);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ success: false, error: { message: 'Error al completar onboarding' } });
@@ -523,6 +566,7 @@ export const updateProfile = async (req: Request, res: Response) => {
                 where: { id: professionalId },
                 select: PROFESSIONAL_PROFILE_SELECT,
             });
+            await recomputeProfileOperationalCompleteAndNotify(professionalId);
             return res.json({ success: true, data: current });
         }
 
@@ -532,6 +576,7 @@ export const updateProfile = async (req: Request, res: Response) => {
             select: PROFESSIONAL_PROFILE_SELECT,
         });
 
+        await recomputeProfileOperationalCompleteAndNotify(professionalId);
         res.json({ success: true, data: updated });
     } catch (error) {
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Error updating profile' } });

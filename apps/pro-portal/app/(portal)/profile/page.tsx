@@ -61,6 +61,13 @@ const PAYOUT_OPTIONS: { value: string; label: string }[] = [
     { value: 'wallet_other', label: 'Otra billetera virtual' },
 ];
 
+/** Borde continuo (sin ring) para evitar esquinas “cortadas” al enfocar. */
+const INPUT_BASE =
+    'w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 shadow-sm transition-colors focus:border-servy-600 focus:outline-none focus:ring-0 focus-visible:outline-none disabled:bg-slate-50 disabled:opacity-60';
+
+const INPUT_TIME =
+    'rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 shadow-sm transition-colors focus:border-servy-600 focus:outline-none focus:ring-0 disabled:opacity-50 disabled:bg-slate-50';
+
 type TabId = 'profile' | 'personal' | 'work' | 'billing' | 'documents';
 
 const TABS: { id: TabId; label: string }[] = [
@@ -428,7 +435,7 @@ export default function ProfilePage() {
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-2">Descripción</label>
                             <textarea
-                                className="w-full min-h-[120px] px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-servy-500 resize-y"
+                                className={`${INPUT_BASE} min-h-[120px] resize-y`}
                                 value={bio}
                                 onChange={(e) => setBio(e.target.value.slice(0, 2000))}
                                 placeholder="Experiencia, especialidades, tipo de trabajos que preferís…"
@@ -439,7 +446,7 @@ export default function ProfilePage() {
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-2">Skills (separadas por coma)</label>
                             <input
-                                className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-servy-500"
+                                className={INPUT_BASE}
                                 value={skillsStr}
                                 onChange={(e) => setSkillsStr(e.target.value)}
                                 placeholder="Instalación de termotanque, Pérdidas, Grifería FV"
@@ -458,7 +465,7 @@ export default function ProfilePage() {
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 mb-2">Nombre</label>
                                 <input
-                                    className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-servy-500"
+                                    className={INPUT_BASE}
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                 />
@@ -466,7 +473,7 @@ export default function ProfilePage() {
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 mb-2">Apellido</label>
                                 <input
-                                    className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-servy-500"
+                                    className={INPUT_BASE}
                                     value={lastName}
                                     onChange={(e) => setLastName(e.target.value)}
                                 />
@@ -475,7 +482,7 @@ export default function ProfilePage() {
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-2">DNI (solo números)</label>
                             <input
-                                className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-servy-500 max-w-md"
+                                className={`${INPUT_BASE} max-w-md`}
                                 value={dni}
                                 onChange={(e) => setDni(e.target.value.replace(/\D/g, '').slice(0, 10))}
                                 placeholder="12345678"
@@ -496,7 +503,7 @@ export default function ProfilePage() {
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 mb-2">Dirección</label>
                                 <input
-                                    className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-servy-500"
+                                    className={INPUT_BASE}
                                     value={address}
                                     onChange={(e) => setAddress(e.target.value)}
                                     placeholder="Calle, número, piso/depto"
@@ -505,7 +512,7 @@ export default function ProfilePage() {
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 mb-2">Código postal</label>
                                 <input
-                                    className="w-full max-w-xs px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-servy-500"
+                                    className={`${INPUT_BASE} max-w-xs`}
                                     value={postalCode}
                                     onChange={(e) => setPostalCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
                                     placeholder="Ej. 1414"
@@ -524,7 +531,7 @@ export default function ProfilePage() {
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-2">Zonas de trabajo (separadas por coma)</label>
                             <input
-                                className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-servy-500"
+                                className={INPUT_BASE}
                                 value={zonesStr}
                                 onChange={(e) => setZonesStr(e.target.value)}
                                 placeholder="Ej. Pilar, Escobar, CABA, 1629"
@@ -534,7 +541,7 @@ export default function ProfilePage() {
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-2">Categorías (separadas por coma)</label>
                             <input
-                                className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-servy-500"
+                                className={INPUT_BASE}
                                 value={categoriesStr}
                                 onChange={(e) => setCategoriesStr(e.target.value)}
                                 placeholder="Plomería, Electricidad"
@@ -544,7 +551,7 @@ export default function ProfilePage() {
                             <label className="flex items-center gap-3 cursor-pointer">
                                 <input
                                     type="checkbox"
-                                    className="h-4 w-4 rounded border-slate-300 text-servy-600 focus:ring-servy-500"
+                                    className="h-4 w-4 rounded border-slate-300 text-servy-600 focus:outline-none focus:ring-2 focus:ring-servy-500/30 focus:ring-offset-0"
                                     checked={isUrgent}
                                     onChange={(e) => setIsUrgent(e.target.checked)}
                                 />
@@ -553,7 +560,7 @@ export default function ProfilePage() {
                             <label className="flex items-center gap-3 cursor-pointer">
                                 <input
                                     type="checkbox"
-                                    className="h-4 w-4 rounded border-slate-300 text-servy-600 focus:ring-servy-500"
+                                    className="h-4 w-4 rounded border-slate-300 text-servy-600 focus:outline-none focus:ring-2 focus:ring-servy-500/30 focus:ring-offset-0"
                                     checked={isScheduled}
                                     onChange={(e) => setIsScheduled(e.target.checked)}
                                 />
@@ -562,7 +569,7 @@ export default function ProfilePage() {
                             <label className="flex items-center gap-3 cursor-pointer">
                                 <input
                                     type="checkbox"
-                                    className="h-4 w-4 rounded border-slate-300 text-servy-600 focus:ring-servy-500"
+                                    className="h-4 w-4 rounded border-slate-300 text-servy-600 focus:outline-none focus:ring-2 focus:ring-servy-500/30 focus:ring-offset-0"
                                     checked={afterHours}
                                     onChange={(e) => setAfterHours(e.target.checked)}
                                 />
@@ -580,7 +587,7 @@ export default function ProfilePage() {
                                         <label className="flex items-center gap-2 w-36 shrink-0 cursor-pointer">
                                             <input
                                                 type="checkbox"
-                                                className="h-4 w-4 rounded border-slate-300 text-servy-600"
+                                                className="h-4 w-4 rounded border-slate-300 text-servy-600 focus:outline-none focus:ring-2 focus:ring-servy-500/30 focus:ring-offset-0"
                                                 checked={schedule[key].enabled}
                                                 onChange={(e) => updateDay(key, { enabled: e.target.checked })}
                                             />
@@ -591,7 +598,7 @@ export default function ProfilePage() {
                                             <input
                                                 type="time"
                                                 disabled={!schedule[key].enabled}
-                                                className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm disabled:opacity-50"
+                                                className={`${INPUT_TIME} w-auto`}
                                                 value={schedule[key].from}
                                                 onChange={(e) => updateDay(key, { from: e.target.value })}
                                             />
@@ -599,7 +606,7 @@ export default function ProfilePage() {
                                             <input
                                                 type="time"
                                                 disabled={!schedule[key].enabled}
-                                                className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm disabled:opacity-50"
+                                                className={`${INPUT_TIME} w-auto`}
                                                 value={schedule[key].to}
                                                 onChange={(e) => updateDay(key, { to: e.target.value })}
                                             />
@@ -620,7 +627,7 @@ export default function ProfilePage() {
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-2">Tipo de cuenta / medio</label>
                             <select
-                                className="w-full max-w-md px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-servy-500 bg-white"
+                                className={`${INPUT_BASE} max-w-md`}
                                 value={payoutAccountType}
                                 onChange={(e) => setPayoutAccountType(e.target.value)}
                             >
@@ -634,7 +641,7 @@ export default function ProfilePage() {
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-2">Banco o billetera virtual</label>
                             <input
-                                className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-servy-500"
+                                className={INPUT_BASE}
                                 value={payoutInstitution}
                                 onChange={(e) => setPayoutInstitution(e.target.value)}
                                 placeholder="Ej. Banco Galicia, Mercado Pago, Ualá…"
@@ -643,7 +650,7 @@ export default function ProfilePage() {
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-2">CBU / CVU / Alias de cobro</label>
                             <input
-                                className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-servy-500 font-mono text-sm"
+                                className={`${INPUT_BASE} font-mono text-sm`}
                                 value={cbuAlias}
                                 onChange={(e) => setCbuAlias(e.target.value)}
                                 placeholder="22 dígitos CBU, CVU o alias"
@@ -652,7 +659,7 @@ export default function ProfilePage() {
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-2">Alias Mercado Pago (si aplica)</label>
                             <input
-                                className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-servy-500"
+                                className={INPUT_BASE}
                                 value={mpAlias}
                                 onChange={(e) => setMpAlias(e.target.value)}
                                 placeholder="Solo si cobrás principalmente por MP"
@@ -661,7 +668,7 @@ export default function ProfilePage() {
                         <div>
                             <label className="block text-sm font-bold text-slate-700 mb-2">CUIT / CUIL (opcional, 11 dígitos)</label>
                             <input
-                                className="w-full max-w-md px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-servy-500 font-mono text-sm"
+                                className={`${INPUT_BASE} max-w-md font-mono text-sm`}
                                 value={taxId}
                                 onChange={(e) => setTaxId(e.target.value.replace(/\D/g, '').slice(0, 11))}
                                 placeholder="Sin guiones"

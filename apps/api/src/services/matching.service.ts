@@ -1,4 +1,26 @@
 import { prisma } from '@servy/db';
+import { buildProfileCompletionFromDbRow } from './professional-profile-completion.service';
+
+const professionalMatchSelect = {
+    id: true,
+    categories: true,
+    zones: true,
+    is_urgent: true,
+    is_scheduled: true,
+    rating: true,
+    name: true,
+    last_name: true,
+    dni: true,
+    address: true,
+    postal_code: true,
+    bio: true,
+    skills: true,
+    cbu_alias: true,
+    mp_alias: true,
+    payout_institution: true,
+    payout_account_type: true,
+    documents: { select: { kind: true } },
+} as const;
 
 export class ProfessionalMatchingService {
     static async findProfessionalsAndCreateOffers(requestId: string) {
@@ -16,9 +38,15 @@ export class ProfessionalMatchingService {
                 status: 'active',
                 categories: { has: request.category || '' },
             },
+            select: professionalMatchSelect,
         });
 
-        const matched = professionals.filter((p) => {
+        const profileComplete = professionals.filter((p) => {
+            const { documents, ...rest } = p;
+            return buildProfileCompletionFromDbRow(rest, documents).complete;
+        });
+
+        const matched = profileComplete.filter((p) => {
             if (!p.zones || p.zones.length === 0) return true;
             return p.zones.some(
                 (zone) =>

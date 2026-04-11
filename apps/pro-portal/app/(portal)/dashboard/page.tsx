@@ -6,6 +6,15 @@ import { AlertCircle, TrendingUp, Calendar, Star } from 'lucide-react';
 import Link from 'next/link';
 import { API_URL } from '@/lib/api';
 
+type ProfileCompletion = {
+    complete: boolean;
+    percent: number;
+    done_steps: number;
+    total_steps: number;
+    missing_sample: string[];
+    missing_count: number;
+};
+
 const fetchDashboard = async () => {
     const token = Cookies.get('token');
     const res = await fetch(`${API_URL}/professional/dashboard`, {
@@ -13,7 +22,14 @@ const fetchDashboard = async () => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error('Error fetching data');
-    return data.data;
+    return data.data as {
+        pending_quotes: number;
+        upcoming_jobs: number;
+        month_earnings: { net: number };
+        rating: number;
+        onboarding_completed?: boolean;
+        profile_completion?: ProfileCompletion;
+    };
 };
 
 export default function ProDashboard() {
@@ -29,33 +45,74 @@ export default function ProDashboard() {
     const monthNet = data?.month_earnings?.net ?? 0;
     const rating = data?.rating ?? 0;
 
-    const zones = data?.zones as string[] | undefined;
-    const cbu = data?.cbu_alias as string | null | undefined;
-    const urgent = data?.is_urgent as boolean | undefined;
-    const scheduled = data?.is_scheduled as boolean | undefined;
     const onboardingDone = data?.onboarding_completed === true;
-    const profileIncomplete =
-        onboardingDone &&
-        ((!zones || zones.length === 0) ||
-            !String(cbu || '').trim() ||
-            (!urgent && !scheduled));
+    const pc = data?.profile_completion;
+    const profileIncomplete = onboardingDone && pc && !pc.complete;
 
     return (
         <div className="p-6 md:p-10 flex flex-col gap-6 w-full animate-fade-in">
             <h1 className="text-2xl font-bold text-slate-900">Hola de nuevo 👋</h1>
 
-            {profileIncomplete && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+            {onboardingDone && pc?.complete && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
                     <div>
-                        <p className="font-semibold text-amber-800">Completá tu perfil para recibir más trabajos</p>
-                        <p className="text-amber-600 text-sm">Agregá tus zonas, disponibilidad y datos de cobro.</p>
+                        <p className="font-semibold text-emerald-900">Perfil completo</p>
+                        <p className="text-emerald-800 text-sm">
+                            Ya podés recibir solicitudes por WhatsApp y gestionar trabajos desde el portal. Si te llegó un
+                            mensaje de confirmación, ¡todo listo para arrancar!
+                        </p>
                     </div>
                     <Link
                         href="/profile"
-                        className="shrink-0 bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-bold text-center"
+                        className="shrink-0 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold text-center hover:bg-emerald-500"
                     >
-                        Completar ahora
+                        Ver mi perfil
                     </Link>
+                </div>
+            )}
+
+            {profileIncomplete && pc && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col gap-4 mb-2">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-amber-900">Completá tu perfil para la aprobación</p>
+                            <p className="text-amber-800 text-sm mt-1">
+                                Hasta no tener el perfil al 100% no vas a recibir ofertas de trabajo por WhatsApp. Te
+                                falta completar requisitos de datos, trabajo, facturación y documentación.
+                            </p>
+                        </div>
+                        <Link
+                            href="/profile"
+                            className="shrink-0 bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-bold text-center hover:bg-amber-600"
+                        >
+                            Ir al perfil
+                        </Link>
+                    </div>
+                    <div>
+                        <div className="flex justify-between text-xs font-medium text-amber-900 mb-1">
+                            <span>Progreso del perfil</span>
+                            <span>
+                                {pc.done_steps} / {pc.total_steps} ({pc.percent}%)
+                            </span>
+                        </div>
+                        <div className="h-2.5 w-full rounded-full bg-amber-200/80 overflow-hidden">
+                            <div
+                                className="h-full rounded-full bg-amber-500 transition-all duration-300"
+                                style={{ width: `${pc.percent}%` }}
+                            />
+                        </div>
+                    </div>
+                    {pc.missing_sample.length > 0 && (
+                        <div className="text-sm text-amber-900">
+                            <span className="font-semibold">Ejemplos de lo que falta: </span>
+                            <span className="text-amber-800">
+                                {pc.missing_sample.join(' · ')}
+                                {pc.missing_count > pc.missing_sample.length
+                                    ? ` · y ${pc.missing_count - pc.missing_sample.length} más…`
+                                    : ''}
+                            </span>
+                        </div>
+                    )}
                 </div>
             )}
 

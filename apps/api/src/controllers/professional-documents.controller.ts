@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import { prisma, ProfessionalDocumentKind } from '@servy/db';
 import { StorageService } from '../services/storage.service';
+import { recomputeProfileOperationalCompleteAndNotify } from '../services/professional-profile-completion.service';
 
 const ALLOWED_KINDS = new Set<string>(['dni_front', 'dni_back', 'certification']);
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'application/pdf']);
@@ -109,6 +110,7 @@ export const uploadProfessionalDocument = async (req: Request, res: Response) =>
             },
         });
         const url = await StorageService.getSignedUrl(doc.storage_key);
+        await recomputeProfileOperationalCompleteAndNotify(professionalId);
         res.status(201).json({
             success: true,
             data: {
@@ -140,6 +142,7 @@ export const deleteProfessionalDocument = async (req: Request, res: Response) =>
             /* object may not exist */
         }
         await prisma.professionalDocument.delete({ where: { id } });
+        await recomputeProfileOperationalCompleteAndNotify(professionalId);
         res.json({ success: true });
     } catch {
         res.status(500).json({ success: false, error: { message: 'Error al eliminar' } });

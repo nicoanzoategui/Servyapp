@@ -15,6 +15,18 @@ function hash(password: string): string {
     return bcrypt.hashSync(password, 12);
 }
 
+/** Datos mínimos para que el matching por perfil completo incluya a los pros demo. */
+const DEMO_PROFILE_EXTRA = {
+    dni: '30111222',
+    address: 'Calle Demo 100',
+    postal_code: '1000',
+    bio: 'Profesional de demostración para desarrollo local en Servy.',
+    skills: ['Instalación', 'Reparación'],
+    cbu_alias: '0000000000000000000000',
+    payout_institution: 'Banco Demo',
+    payout_account_type: 'cbu',
+};
+
 async function main() {
     await prisma.earning.deleteMany();
     await prisma.job.deleteMany();
@@ -48,6 +60,8 @@ async function main() {
             is_urgent: true,
             rating: 4.8,
             onboarding_completed: true,
+            profile_operational_complete: true,
+            ...DEMO_PROFILE_EXTRA,
         },
     });
 
@@ -64,6 +78,8 @@ async function main() {
             is_scheduled: true,
             rating: 4.5,
             onboarding_completed: true,
+            profile_operational_complete: true,
+            ...DEMO_PROFILE_EXTRA,
         },
     });
 
@@ -80,11 +96,13 @@ async function main() {
             is_urgent: true,
             rating: 5.0,
             onboarding_completed: true,
+            profile_operational_complete: true,
+            ...DEMO_PROFILE_EXTRA,
         },
     });
 
     /** Plomero en Pilar / CP 1629 — matchea `matching.service` (postal_code + address). */
-    await prisma.professional.create({
+    const p4 = await prisma.professional.create({
         data: {
             name: 'Nicolás',
             last_name: 'Técnico (prueba)',
@@ -98,7 +116,31 @@ async function main() {
             is_scheduled: true,
             rating: 4.9,
             onboarding_completed: true,
+            profile_operational_complete: true,
+            ...DEMO_PROFILE_EXTRA,
+            postal_code: '1629',
+            address: 'Pilar, Buenos Aires',
         },
+    });
+
+    const demoProIds = [p1.id, p2.id, p3.id, p4.id];
+    await prisma.professionalDocument.createMany({
+        data: demoProIds.flatMap((pid) => [
+            {
+                professional_id: pid,
+                kind: 'dni_front',
+                storage_key: `seed/${pid}/dni_front.pdf`,
+                content_type: 'application/pdf',
+                filename: 'dni-frente-demo.pdf',
+            },
+            {
+                professional_id: pid,
+                kind: 'dni_back',
+                storage_key: `seed/${pid}/dni_back.pdf`,
+                content_type: 'application/pdf',
+                filename: 'dni-dorso-demo.pdf',
+            },
+        ]),
     });
 
     const u1 = await prisma.user.create({
