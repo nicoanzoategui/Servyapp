@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { prisma } from '@servy/db';
+import { prisma, Prisma } from '@servy/db';
 import { StorageService } from '../services/storage.service';
 import { WhatsAppService } from '../services/whatsapp.service';
 import { ConversationService } from '../services/conversation.service';
@@ -27,6 +27,60 @@ function normalizeQuoteBody(body: any) {
     if (Number.isNaN(total_price) || total_price <= 0) total_price = computed;
 
     return { items, total_price, description, estimated_duration };
+}
+
+const PROFESSIONAL_PROFILE_SELECT = {
+    name: true,
+    last_name: true,
+    email: true,
+    phone: true,
+    dni: true,
+    categories: true,
+    zones: true,
+    onboarding_completed: true,
+    cbu_alias: true,
+    mp_alias: true,
+    is_urgent: true,
+    is_scheduled: true,
+    status: true,
+    schedule_json: true,
+    address: true,
+    postal_code: true,
+    bio: true,
+    skills: true,
+    after_hours_available: true,
+    payout_institution: true,
+    payout_account_type: true,
+    tax_id: true,
+} as const;
+
+const PAYOUT_ACCOUNT_TYPES = new Set(['cbu', 'cvu', 'alias', 'mercadopago', 'wallet_other']);
+
+function trimOrUndef(val: unknown, maxLen: number): string | undefined {
+    if (val === undefined) return undefined;
+    if (typeof val !== 'string') return undefined;
+    const t = val.trim();
+    if (!t) return undefined;
+    return t.slice(0, maxLen);
+}
+
+function trimOrNull(val: unknown, maxLen: number): string | null | undefined {
+    if (val === undefined) return undefined;
+    if (val === null) return null;
+    if (typeof val !== 'string') return undefined;
+    const t = val.trim();
+    if (!t) return null;
+    return t.slice(0, maxLen);
+}
+
+function parseStringArray(val: unknown, maxItems: number, maxItemLen: number): string[] | undefined {
+    if (val === undefined) return undefined;
+    if (!Array.isArray(val)) return undefined;
+    return val
+        .map((v) => String(v).trim())
+        .filter(Boolean)
+        .slice(0, maxItems)
+        .map((s) => s.slice(0, maxItemLen));
 }
 
 export const getDashboard = async (req: Request, res: Response) => {
@@ -329,19 +383,7 @@ export const getProfile = async (req: Request, res: Response) => {
         const professionalId = req.user!.userId;
         const pro = await prisma.professional.findUnique({
             where: { id: professionalId },
-            select: {
-                name: true,
-                last_name: true,
-                email: true,
-                phone: true,
-                categories: true,
-                zones: true,
-                onboarding_completed: true,
-                cbu_alias: true,
-                is_urgent: true,
-                is_scheduled: true,
-                status: true,
-            },
+            select: PROFESSIONAL_PROFILE_SELECT,
         });
         if (!pro) {
             return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Profesional no encontrado' } });
@@ -381,19 +423,113 @@ export const completeOnboarding = async (req: Request, res: Response) => {
 export const updateProfile = async (req: Request, res: Response) => {
     try {
         const professionalId = req.user!.userId;
-        const { zones, categories, is_urgent, is_scheduled, schedule_json, cbu_alias, mp_alias } = req.body;
+        const b = req.body as Record<string, unknown>;
+        const data: Prisma.ProfessionalUpdateInput = {};
+
+        const name = trimOrUndef(b.name, 120);
+        if (name !== undefined) data.name = name;
+
+        const lastName = trimOrUndef(b.last_name, 120);
+        if (lastName !== undefined) data.last_name = lastName;
+
+        const dni = trimOrNull(b.dni, 32);
+        if (dni !== undefined) data.dni = dni;
+
+        const zones = parseStringArray(b.zones, 40, 120);
+        if (zones !== undefined) data.zones = zones;
+
+        const categories = parseStringArray(b.categories, 20, 80);
+        if (categories !== undefined) data.categories = categories;
+
+        if (typeof b.is_urgent === 'boolean') data.is_urgent = b.is_urgent;
+        if (typeof b.is_scheduled === 'boolean') data.is_scheduled = b.is_scheduled;
+        if (typeof b.after_hours_available === 'boolean') data.after_hours_available = b.after_hours_available;
+
+        if ('schedule_json' in b) {
+            const s = b.schedule_json;
+            if (s === null) {
+                data.schedule_json = Prisma.DbNull;
+            } else if (typeof s === 'object' && s !== null && !Array.isArray(s)) {
+                data.schedule_json = s as Prisma.InputJsonValue;
+            } else if (s !== undefined) {
+                return res.status(400).json({
+                    success: false,
+                    error: { code: 'VALIDATION_ERROR', message: 'schedule_json debe ser un objeto o null' },
+                });
+            }
+        }
+
+        const address = trimOrNull(b.address, 500);
+        if (address !== undefined) data.address = address;
+
+        const postalCode = trimOrNull(b.postal_code, 16);
+        if (postalCode !== undefined) data.postal_code = postalCode;
+
+        const bioRaw = trimOrNull(b.bio, 2000);
+        if (bioRaw !== undefined) data.bio = bioRaw;
+
+        const skills = parseStringArray(b.skills, 40, 80);
+        if (skills !== undefined) data.skills = skills;
+
+        const cbu = trimOrNull(b.cbu_alias, 64);
+        if (cbu !== undefined) data.cbu_alias = cbu;
+
+        const mp = trimOrNull(b.mp_alias, 120);
+        if (mp !== undefined) data.mp_alias = mp;
+
+        const institution = trimOrNull(b.payout_institution, 120);
+        if (institution !== undefined) data.payout_institution = institution;
+
+        if ('payout_account_type' in b) {
+            const raw = b.payout_account_type;
+            if (raw === null || raw === '') {
+                data.payout_account_type = null;
+            } else if (typeof raw === 'string') {
+                const low = raw.trim().toLowerCase();
+                if (!PAYOUT_ACCOUNT_TYPES.has(low)) {
+                    return res.status(400).json({
+                        success: false,
+                        error: {
+                            code: 'VALIDATION_ERROR',
+                            message: `Tipo de cuenta inválido. Usá: ${[...PAYOUT_ACCOUNT_TYPES].join(', ')}`,
+                        },
+                    });
+                }
+                data.payout_account_type = low;
+            }
+        }
+
+        if ('tax_id' in b) {
+            const raw = b.tax_id;
+            if (raw === null) {
+                data.tax_id = null;
+            } else if (typeof raw === 'string') {
+                const digits = raw.replace(/\D/g, '');
+                if (!digits) {
+                    data.tax_id = null;
+                } else if (digits.length !== 11) {
+                    return res.status(400).json({
+                        success: false,
+                        error: { code: 'VALIDATION_ERROR', message: 'CUIT/CUIL debe tener 11 dígitos' },
+                    });
+                } else {
+                    data.tax_id = digits;
+                }
+            }
+        }
+
+        if (Object.keys(data).length === 0) {
+            const current = await prisma.professional.findUnique({
+                where: { id: professionalId },
+                select: PROFESSIONAL_PROFILE_SELECT,
+            });
+            return res.json({ success: true, data: current });
+        }
 
         const updated = await prisma.professional.update({
             where: { id: professionalId },
-            data: {
-                zones,
-                categories,
-                is_urgent,
-                is_scheduled,
-                schedule_json,
-                cbu_alias,
-                mp_alias,
-            },
+            data,
+            select: PROFESSIONAL_PROFILE_SELECT,
         });
 
         res.json({ success: true, data: updated });

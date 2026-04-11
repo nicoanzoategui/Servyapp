@@ -44,6 +44,18 @@ model Professional {
   is_scheduled         Boolean            @default(true)
   cbu_alias            String?
   mp_alias             String?
+  /// Domicilio / referencia de contacto (no reemplaza zonas de trabajo).
+  address              String?
+  postal_code          String?
+  bio                  String?
+  skills               String[]           @default([])
+  after_hours_available Boolean           @default(false)
+  /// Banco o billetera virtual asociada al cobro.
+  payout_institution   String?
+  /// cbu | cvu | alias | mercadopago | wallet_other
+  payout_account_type  String?
+  /// CUIT/CUIL u otro identificador fiscal (opcional).
+  tax_id               String?
   rating               Float              @default(0)
   status               ProfessionalStatus @default(pending)
   onboarding_completed Boolean            @default(false)
