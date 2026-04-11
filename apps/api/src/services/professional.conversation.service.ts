@@ -63,30 +63,26 @@ export class ProfessionalConversationService {
     ) {
         const urgencyText =
             jobOffer.priority === 'urgent'
-                ? '⚡ Tipo: URGENTE (tarifa alta)'
-                : '📅 Tipo: PROGRAMADO (tarifa estándar)';
+                ? '⚡ *Urgente* — tarifa alta'
+                : '📅 *Programado* — tarifa estándar';
 
-        // 1. Primero el mensaje con los detalles
-        await WhatsAppService.sendTextMessage(
-            professional.phone,
-            `🔧 Nuevo trabajo disponible, ${professional.name}!\n\n` +
-                `👤 Cliente: ${user.name} ${user.last_name || ''}\n` +
-                `📍 Dirección: ${request.address}\n` +
-                `🔧 Categoría: ${request.category}\n` +
-                `📋 Problema: ${request.description}\n` +
-                `🕐 Horario solicitado: ${jobOffer.schedule || 'A coordinar'}\n\n` +
-                `${urgencyText}`
-        );
+        const jobCount = await prisma.job.count({
+            where: { quotation: { job_offer: { professional_id: professional.id } } },
+        });
 
-        // 2. Después los botones
-        await WhatsAppService.sendButtonMessage(
-            professional.phone,
-            '¿Aceptás el trabajo?',
-            [
-                { id: `job_accept_${jobOffer.id}`, title: 'Sí, acepto' },
-                { id: `job_reject_${jobOffer.id}`, title: 'No, paso' },
-            ]
-        );
+        const uname = `${user.name ?? ''} ${user.last_name ?? ''}`.trim() || 'Cliente';
+        const cat = request.category ?? '—';
+        const desc = request.description ?? '—';
+        const addr = request.address ?? '—';
+        const sched = jobOffer.schedule || 'A coordinar';
+
+        const proFirst = professional.name.trim() || 'vos';
+        const body =
+            jobCount === 0
+                ? `🎉 *¡Tu primer trabajo en Servy, ${proFirst}!*\n\n━━━━━━━━━━━━━━━\n👤 *${uname}*\n📍 ${addr}\n🔧 ${cat}\n📋 ${desc}\n🕐 ${sched}\n━━━━━━━━━━━━━━━\n\n${urgencyText}\n\n¿Aceptás el trabajo?\n\n1. Sí, acepto\n2. No, paso`
+                : `💼 *Nuevo trabajo disponible*\n\n━━━━━━━━━━━━━━━\n👤 *${uname}*\n📍 ${addr}\n🔧 ${cat}\n📋 ${desc}\n🕐 ${sched}\n━━━━━━━━━━━━━━━\n\n${urgencyText}\n\n¿Aceptás el trabajo?\n\n1. Sí, acepto\n2. No, paso`;
+
+        await WhatsAppService.sendTextMessage(professional.phone, body);
 
         await this.saveSession(professional.phone, 'AWAITING_JOB_RESPONSE', {
             jobOfferId: jobOffer.id,
@@ -122,11 +118,7 @@ export class ProfessionalConversationService {
                 await this.saveSession(phone, 'AWAITING_QUOTATION', session.data);
                 await WhatsAppService.sendTextMessage(
                     phone,
-                    `Perfecto! Mandanos la cotización con este formato:\n\n` +
-                        `Trabajo: [descripción del trabajo]\n` +
-                        `Tiempo: [tiempo estimado]\n` +
-                        `Precio: [monto en pesos]\n\n` +
-                        `⚠️ Recordá que el precio NO incluye materiales.`
+                    '*Perfecto.* Trabajo aceptado ✅\n\nMandanos la cotización con este formato:\n\nTrabajo: [descripción del trabajo]\nTiempo: [tiempo estimado]\nPrecio: [monto en pesos]\n\n_El precio NO incluye materiales._'
                 );
             } else if (content === `job_reject_${jobOfferId}` || content.toLowerCase().includes('paso') || content === '2') {
                 await prisma.jobOffer.update({ where: { id: jobOfferId }, data: { status: 'rejected' } });
@@ -135,15 +127,12 @@ export class ProfessionalConversationService {
                 await this.clearSession(phone);
                 await WhatsAppService.sendTextMessage(
                     phone,
-                    'Entendido. No te preocupes, te avisamos cuando haya otro trabajo disponible.'
+                    'Entendido. No te preocupes, te avisamos cuando haya otro trabajo disponible. 💪'
                 );
 
-                const endUser = await prisma.user.findUnique({ where: { phone: userPhone } });
-                const greet = endUser?.name?.trim() ? `${endUser.name.trim()}, ` : '';
                 await WhatsAppService.sendTextMessage(
                     userPhone,
-                    `${greet}el profesional que te recomendamos no está disponible en este momento. ` +
-                        'Ya te estamos buscando otro que va a cumplir igual el trabajo en el tiempo que necesitás. En breve te avisamos.'
+                    'El técnico que te recomendamos no está disponible en este momento.\n\nYa estamos buscando otra opción para vos. En breve te avisamos. 🔍'
                 );
 
                 await this.findNextProfessional(requestId, jobOfferId, userPhone);
@@ -172,17 +161,17 @@ export class ProfessionalConversationService {
             if (!trabajo || !tiempo || !precio) {
                 await WhatsAppService.sendTextMessage(
                     phone,
-                    'No pude leer bien la cotización. Usá este formato exacto:\n\n' +
-                        'Trabajo: [descripción]\n' +
-                        'Tiempo: [tiempo estimado]\n' +
-                        'Precio: [monto en pesos]'
+                    'No pude leer bien la cotización. Usá este formato exacto:\n\nTrabajo: [descripción]\nTiempo: [tiempo estimado]\nPrecio: [monto en pesos]'
                 );
                 return;
             }
 
             const precioNum = parseFloat(precio.replace(/[^0-9.]/g, ''));
             if (Number.isNaN(precioNum) || precioNum <= 0) {
-                await WhatsAppService.sendTextMessage(phone, 'El precio no es válido. Enviá un monto en pesos en la línea Precio:');
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    'El precio no es válido. Enviá un monto en pesos en la línea _Precio:_\n\n_Ej: Precio: 45000_'
+                );
                 return;
             }
 
@@ -206,7 +195,7 @@ export class ProfessionalConversationService {
             await prisma.jobOffer.update({ where: { id: jobOfferId }, data: { status: 'quoted' } });
 
             await this.clearSession(phone);
-            await WhatsAppService.sendTextMessage(phone, '✅ Cotización enviada al cliente. Te avisamos cuando la acepte.');
+            await WhatsAppService.sendTextMessage(phone, '✅ *Cotización enviada.*\n\nTe avisamos cuando el cliente la acepte.');
 
             const { ConversationService } = await import('./conversation.service');
             await ConversationService.afterQuotationSent(userPhone, {
@@ -215,20 +204,6 @@ export class ProfessionalConversationService {
                 requestId: jobOffer.request_id,
                 totalPrice: precioNum,
             });
-
-            await WhatsAppService.sendButtonMessage(
-                userPhone,
-                `💼 ${professional.name} te envió su cotización:\n\n` +
-                    `🔧 Trabajo: ${trabajo}\n` +
-                    `⏱ Tiempo estimado: ${tiempo}\n` +
-                    `💰 Total: $${precioNum.toLocaleString('es-AR')}\n` +
-                    `⚠️ Precio no incluye materiales\n\n` +
-                    `¿Qué querés hacer?`,
-                [
-                    { id: 'btn_accept', title: 'Aceptar' },
-                    { id: 'btn_reject', title: 'Rechazar' },
-                ]
-            );
         }
     }
 
@@ -252,8 +227,7 @@ export class ProfessionalConversationService {
         } else {
             await WhatsAppService.sendTextMessage(
                 userPhone,
-                'Lo sentimos, no encontramos más profesionales disponibles para tu zona en este momento. ' +
-                    'Podés intentarlo de nuevo más tarde escribiendo un nuevo mensaje.'
+                'Lo sentimos, no encontramos más técnicos disponibles en tu zona en este momento.\n\nEscribí cuando quieras intentarlo de nuevo. 🙏'
             );
         }
     }

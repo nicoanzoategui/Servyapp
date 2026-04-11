@@ -23,3 +23,9 @@ export function userRelayPauseRedisKey(phoneRaw: string): string {
     const d = normalizeTwilioWhatsAppFrom(phoneRaw) || phoneRaw.replace(/\D/g, '');
     return `user_relay_pause:${d}`;
 }
+
+/** Saludo con nombre al técnico (Twilio): una vez cada TTL sin repetir. */
+export function professionalGreetedRedisKey(phoneRaw: string): string {
+    const d = normalizeTwilioWhatsAppFrom(phoneRaw) || phoneRaw.replace(/\D/g, '');
+    return `pro_greeted:${d}`;
+}

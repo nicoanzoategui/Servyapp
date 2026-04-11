@@ -132,6 +132,7 @@ model Job {
   rating         Int?
   review         String?
   reminder_sent  Boolean   @default(false)
+  updated_at     DateTime  @updatedAt
 
   quotation Quotation @relation(fields: [quotation_id], references: [id])
   earnings  Earning[]

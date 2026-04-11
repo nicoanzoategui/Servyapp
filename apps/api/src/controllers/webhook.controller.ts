@@ -15,6 +15,7 @@ import {
     maskPhoneDigitsTail,
     mediationDirectionRedisKey,
     normalizeTwilioWhatsAppFrom,
+    professionalGreetedRedisKey,
     userRelayPauseRedisKey,
 } from '../utils/twilio-phone';
 
@@ -140,14 +141,6 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
                 console.error('[MP webhook] QR generation failed:', e);
             }
 
-            await WhatsAppService.sendTextMessage(
-                userPhone,
-                `✅ ¡Pago confirmado!\n\nTu técnico *${job.quotation.job_offer.professional.name}* está confirmado para tu servicio.\n\nCualquier consulta escribí acá y te lo hacemos llegar.${qrUrl ? '\n\n🔒 Guardá este QR — el técnico lo va a escanear al terminar para liberar el pago.' : ''}`
-            );
-            if (qrUrl) {
-                await WhatsAppService.sendImageMessage(userPhone, qrUrl);
-            }
-
             const proJob = job.quotation.job_offer;
             const serviceRequest = await prisma.serviceRequest.findUnique({
                 where: { id: proJob.request_id },
@@ -157,10 +150,25 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
             const fecha = serviceRequest?.scheduled_date
                 ? new Date(serviceRequest.scheduled_date).toLocaleDateString('es-AR')
                 : 'a confirmar';
+            const proNm = job.quotation.job_offer.professional.name.trim() || 'Tu técnico';
+            const addr = serviceRequest?.address ?? 'Ver portal';
+
+            const qrCopy = qrUrl
+                ? '🔒 *QR de liberación de pago*\nGuardá la imagen que te mandamos ahora. El técnico la escanea al terminar — ahí se libera el pago. Si algo no quedó bien, no lo muestres antes.'
+                : '🔒 *QR de liberación de pago*\nEn breve te enviamos el código. El técnico lo escanea al terminar para liberar el pago.';
 
             await WhatsAppService.sendTextMessage(
+                userPhone,
+                `✅ *¡Pago confirmado!*\n\nTu técnico está reservado 🎉\n\n━━━━━━━━━━━━━━━\n👤 *${proNm}*\n📅 ${fecha} · ${franja}\n📍 ${addr}\n━━━━━━━━━━━━━━━\n\n${qrCopy}\n\n_Cualquier consulta escribí acá, te lo hacemos llegar._`
+            );
+            if (qrUrl) {
+                await WhatsAppService.sendImageMessage(userPhone, qrUrl);
+            }
+
+            const totalStr = job.quotation.total_price.toLocaleString('es-AR');
+            await WhatsAppService.sendTextMessage(
                 job.quotation.job_offer.professional.phone,
-                `✅ Nuevo trabajo confirmado.\n\n📍 ${serviceRequest?.address ?? 'Ver portal'}\n🔧 ${serviceRequest?.description?.slice(0, 80) ?? 'Ver portal'}\n📅 ${fecha}, turno ${franja}\n💰 $${job.quotation.total_price} (se libera con QR del cliente)\n\nVer detalles: portal.servy.lat/jobs/${job.id}\n\nComandos:\n→ *estoy yendo* — le avisamos al cliente\n→ *llego en X minutos* — se lo reenviamos\n→ *no encuentro la dirección* — le pedimos info al cliente\n→ *tuve un imprevisto* — notificamos al cliente y al admin`
+                `💼 *Nuevo trabajo confirmado*\n\n━━━━━━━━━━━━━━━\n📍 ${serviceRequest?.address ?? 'Ver portal'}\n🔧 ${serviceRequest?.description?.slice(0, 80) ?? 'Ver portal'}\n📅 ${fecha} · turno ${franja}\n💰 *$${totalStr}*\n━━━━━━━━━━━━━━━\n\nEl pago se libera cuando el cliente te muestre el QR al terminar.\n\n🔗 _portal.servy.lat/jobs/${job.id}_\n\n━━━━━━━━━━━━━━━\n*Comandos disponibles*\n━━━━━━━━━━━━━━━\n_estoy yendo_ → avisamos al cliente\n_llego en X minutos_ → se lo reenviamos\n_no encuentro la dirección_ → le pedimos referencias\n_tuve un imprevisto_ → notificamos al cliente`
             );
         } else if (status === 'rejected' || status === 'cancelled') {
             await prisma.payment.updateMany({
@@ -171,7 +179,7 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
             if (metadata.user_phone) {
                 await WhatsAppService.sendTextMessage(
                     String(metadata.user_phone),
-                    'El pago falló o fue cancelado. ¿Querés intentar de nuevo?'
+                    '⚠️ El pago no se pudo procesar.\n\n¿Querés intentar de nuevo? Escribí _ayuda_ si necesitás asistencia.'
                 );
             }
         }
@@ -270,6 +278,21 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
         const professional = await prisma.professional.findUnique({ where: { phone } });
         if (professional) {
             console.log('[twilio] flujo profesional', { phoneMask: maskPhoneDigitsTail(phone) });
+            const PRO_GREETED_TTL = 8 * 60 * 60;
+            const greetKey = professionalGreetedRedisKey(phone);
+            try {
+                const alreadyGreeted = await redis.get(greetKey);
+                if (!alreadyGreeted) {
+                    await redis.set(greetKey, '1', 'EX', PRO_GREETED_TTL);
+                    const nm = professional.name.trim() || 'vos';
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        `Hola *${nm}* 👋\n\n¿En qué te puedo ayudar hoy?`
+                    );
+                }
+            } catch {
+                /* no bloquear flujo si Redis falla */
+            }
             const handledAvail = await processAvailabilityMessage({
                 professional,
                 body: content,
@@ -313,6 +336,7 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
             return;
         }
 
+        // Sin User ni Professional: ROLE_SELECTION y onboarding técnico (PRO_ONBOARDING_*) viven en ConversationService.processMessage.
         console.log('[twilio] ConversationService.processMessage…', { messageType });
         await ConversationService.processMessage(phone, messageType, content).catch((err) => {
             console.error('[twilio] ConversationService.processMessage error:', err);

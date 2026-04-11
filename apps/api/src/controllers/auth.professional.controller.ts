@@ -1,47 +1,27 @@
 import { Request, Response } from 'express';
-import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { prisma } from '@servy/db';
 import { EmailService } from '../services/email.service';
-
-const MIN_PASSWORD_LEN = 12;
+import bcrypt from 'bcrypt';
+import {
+    MIN_PROFESSIONAL_PASSWORD_LEN,
+    registerProfessionalViaHttp,
+} from '../services/professional-registration.internal';
 
 export const registerProfessional = async (req: Request, res: Response) => {
     try {
         const { name, last_name, email, phone, password } = req.body;
-        if (!name || !last_name || !email || !phone || !password) {
-            return res.status(400).json({ success: false, error: { message: 'Todos los campos son requeridos' } });
-        }
-        if (typeof password !== 'string' || password.length < MIN_PASSWORD_LEN) {
-            return res.status(400).json({
-                success: false,
-                error: { message: `La contraseña debe tener al menos ${MIN_PASSWORD_LEN} caracteres` },
-            });
-        }
-        const emailNorm = String(email).trim().toLowerCase();
-        const phoneNorm = String(phone).replace(/\s/g, '');
-        const existing = await prisma.professional.findFirst({
-            where: { OR: [{ email: emailNorm }, { phone: phoneNorm }] },
+        const result = await registerProfessionalViaHttp({
+            name: String(name ?? ''),
+            last_name: String(last_name ?? ''),
+            email: String(email ?? ''),
+            phone: String(phone ?? ''),
+            password: String(password ?? ''),
         });
-        if (existing) {
-            const msg = existing.email === emailNorm ? 'El email ya está registrado' : 'El teléfono ya está registrado';
-            return res.status(400).json({ success: false, error: { message: msg } });
+        if (!result.ok) {
+            return res.status(result.status).json({ success: false, error: { message: result.message } });
         }
-        const password_hash = await bcrypt.hash(password, 12);
-        const professional = await prisma.professional.create({
-            data: {
-                name: String(name).trim(),
-                last_name: String(last_name).trim(),
-                email: emailNorm,
-                phone: phoneNorm,
-                password_hash,
-                status: 'pending',
-                onboarding_completed: false,
-                categories: [],
-                zones: [],
-            },
-        });
-        res.status(201).json({ success: true, data: { id: professional.id } });
+        res.status(201).json({ success: true, data: { id: result.id } });
     } catch (error) {
         res.status(500).json({ success: false, error: { message: 'Error al registrar' } });
     }
@@ -77,10 +57,10 @@ export const forgotPassword = async (req: Request, res: Response) => {
 export const resetPassword = async (req: Request, res: Response) => {
     try {
         const { token, password } = req.body;
-        if (!token || !password || typeof password !== 'string' || password.length < MIN_PASSWORD_LEN) {
+        if (!token || !password || typeof password !== 'string' || password.length < MIN_PROFESSIONAL_PASSWORD_LEN) {
             return res.status(400).json({
                 success: false,
-                error: { message: `Token y contraseña requeridos (mín. ${MIN_PASSWORD_LEN} caracteres)` },
+                error: { message: `Token y contraseña requeridos (mín. ${MIN_PROFESSIONAL_PASSWORD_LEN} caracteres)` },
             });
         }
         const record = await prisma.passwordToken.findUnique({ where: { token } });
@@ -99,10 +79,10 @@ export const resetPassword = async (req: Request, res: Response) => {
 export const setPassword = async (req: Request, res: Response) => {
     try {
         const { token, password } = req.body;
-        if (!token || !password || typeof password !== 'string' || password.length < MIN_PASSWORD_LEN) {
+        if (!token || !password || typeof password !== 'string' || password.length < MIN_PROFESSIONAL_PASSWORD_LEN) {
             return res.status(400).json({
                 success: false,
-                error: { message: `Token y contraseña requeridos (mín. ${MIN_PASSWORD_LEN} caracteres)` },
+                error: { message: `Token y contraseña requeridos (mín. ${MIN_PROFESSIONAL_PASSWORD_LEN} caracteres)` },
             });
         }
         const record = await prisma.passwordToken.findUnique({ where: { token } });

@@ -8,6 +8,8 @@ import { StorageService } from './storage.service';
 import { MercadoPagoService } from './mercadopago.service';
 import { GeminiService } from './gemini.service';
 import { mediationDirectionRedisKey, normalizeTwilioWhatsAppFrom, userRelayPauseRedisKey } from '../utils/twilio-phone';
+import { env } from '../utils/env';
+import { createProfessionalFromWhatsAppWizard } from './professional-registration.internal';
 
 const SESSION_TTL = 60 * 60 * 24;
 const REDIS_OP_TIMEOUT_MS = 500;
@@ -81,6 +83,57 @@ const CATEGORY_EMOJIS: Record<string, string> = {
     'Aires acondicionados': '❄️',
 };
 
+/** Rubros para onboarding técnico por WhatsApp (mismo criterio que matching / portal). */
+const PRO_ONBOARDING_CATEGORY_OPTIONS = [
+    'Plomería',
+    'Electricidad',
+    'Cerrajería',
+    'Gas',
+    'Aires acondicionados',
+] as const;
+
+const PRO_ONBOARDING_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const ROLE_SELECTION_PROMPT =
+    'Hola, soy Servy 👋\n\n¿Cómo puedo ayudarte?\n\n1. Necesito un técnico\n2. Soy técnico y quiero registrarme';
+
+const CLIENT_ONBOARDING_NAME_PROMPT =
+    'Hola, soy Servy 👋\n\nTe conecto con técnicos verificados para tu hogar — plomeros, electricistas, gasistas y más.\n\nAntes de empezar necesito un par de datos rápidos.\n\n¿Cuál es tu nombre y apellido?';
+
+function parseProOnboardingCategorySelection(raw: string): string[] | null {
+    const parts = raw
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    const indices = new Set<number>();
+    for (const p of parts) {
+        const n = parseInt(p, 10);
+        if (Number.isNaN(n) || n < 1 || n > PRO_ONBOARDING_CATEGORY_OPTIONS.length) {
+            return null;
+        }
+        indices.add(n - 1);
+    }
+    if (indices.size === 0) return null;
+    return [...indices].sort((a, b) => a - b).map((i) => PRO_ONBOARDING_CATEGORY_OPTIONS[i]!);
+}
+
+function zonesFromFreeText(raw: string): string[] {
+    return raw
+        .split(',')
+        .map((z) => z.trim())
+        .filter((z) => z.length > 0);
+}
+
+function dniDigitsOnly(raw: string): string {
+    return raw.replace(/\D/g, '');
+}
+
+async function countJobsForProfessional(professionalId: string): Promise<number> {
+    return prisma.job.count({
+        where: { quotation: { job_offer: { professional_id: professionalId } } },
+    });
+}
+
 const EMPATHY_MESSAGES: Record<string, string[]> = {
     alta: [
         'Entiendo, no te preocupes. Estas situaciones son estresantes pero las resolvemos rápido. 💪',
@@ -106,10 +159,6 @@ function randomEmpathy(urgency: string): string {
     const key = u.includes('alta') ? 'alta' : u.includes('baja') ? 'baja' : 'media';
     const msgs = EMPATHY_MESSAGES[key] || EMPATHY_MESSAGES.media;
     return msgs[Math.floor(Math.random() * msgs.length)];
-}
-
-function displayName(user: { name: string | null } | null): string {
-    return user?.name?.trim() ? `${user.name.trim()}, ` : '';
 }
 
 export class ConversationService {
@@ -175,16 +224,54 @@ export class ConversationService {
         userPhone: string,
         payload: { quotationId: string; jobOfferId: string; requestId: string; totalPrice: number }
     ) {
+        const offer = await prisma.jobOffer.findUnique({
+            where: { id: payload.jobOfferId },
+            include: { professional: true },
+        });
+        const proName = offer?.professional?.name?.trim() || 'Tu técnico';
+        const priceStr = payload.totalPrice.toLocaleString('es-AR');
+        await WhatsAppService.sendTextMessage(
+            userPhone,
+            `💰 *Cotización recibida*\n\n━━━━━━━━━━━━━━━\n👤 *${proName}*\n💵 *$${priceStr}*\n⚠️ _Precio no incluye materiales_\n━━━━━━━━━━━━━━━\n\n🔒 _Tu dinero está protegido: el pago se retiene hasta que el trabajo esté terminado y vos lo confirmés._\n\n¿Aceptás?\n\n1. Sí, acepto\n2. No, prefiero otra opción`
+        );
         await this.saveSession(userPhone, 'AWAITING_PAYMENT_DECISION', payload as unknown as Record<string, unknown>);
     }
 
     /** Tras marcar el trabajo completado (manual o por QR), el usuario puede responder con estrellas. */
     static async beginReviewPrompt(userPhone: string, jobId: string) {
+        const job = await prisma.job.findUnique({
+            where: { id: jobId },
+            include: { quotation: { include: { job_offer: { include: { professional: true } } } } },
+        });
+        if (!job?.quotation?.job_offer?.professional) {
+            return;
+        }
+        const proName = job.quotation.job_offer.professional.name.trim() || 'el técnico';
+        await WhatsAppService.sendTextMessage(
+            userPhone,
+            `🎉 *¡Trabajo completado!*\n\n¿Cómo te fue con *${proName}*?\n\n⭐ 1 — Muy malo\n⭐⭐ 2 — Malo\n⭐⭐⭐ 3 — Regular\n⭐⭐⭐⭐ 4 — Bueno\n⭐⭐⭐⭐⭐ 5 — Excelente\n\n_Respondé con el número._`
+        );
         await this.saveSession(userPhone, 'AWAITING_REVIEW', { jobId });
     }
 
     static async processMessage(phone: string, messageType: string, content: string) {
         const user = await prisma.user.findUnique({ where: { phone } });
+
+        let session = await this.getSession(phone);
+        if (session.state === 'EXPIRED') {
+            await this.clearSession(phone);
+            session = { state: 'UNKNOWN', data: {} };
+        }
+
+        if (session.state.startsWith('PRO_ONBOARDING_')) {
+            await this.handleProOnboardingFlow(phone, messageType, content, session);
+            return;
+        }
+
+        if (session.state === 'ROLE_SELECTION') {
+            await this.handleRoleSelection(phone, messageType, content);
+            return;
+        }
 
         if (messageType === 'text' && content.toLowerCase().includes('cambiar dirección')) {
             await this.saveSession(phone, 'ONBOARDING_ADDRESS', { isChange: true });
@@ -202,7 +289,7 @@ export class ConversationService {
             if (hit) return;
         }
 
-        let session = await this.getSession(phone);
+        session = await this.getSession(phone);
         if (session.state === 'EXPIRED') {
             await this.clearSession(phone);
             session = { state: 'IDLE', data: {} };
@@ -219,9 +306,10 @@ export class ConversationService {
                         '[conversation] mediación: reenvío al técnico (Referencia del cliente…). Tras esto se borra la clave Redis.',
                         { jobId, userTail: phone.slice(-4), proTail: String(proPhone).replace(/\D/g, '').slice(-4) }
                     );
+                    const safeRef = content.trim().replace(/"/g, '“');
                     await WhatsAppService.sendTextMessage(
                         proPhone,
-                        `Referencia del cliente: ${content.trim()}`
+                        `📍 *Referencia del cliente*\n\n_${safeRef}_`
                     );
                     await insertAgentLog({
                         agent: 'messaging',
@@ -244,18 +332,23 @@ export class ConversationService {
         }
 
         switch (session.state) {
-            case 'IDLE':
+            case 'IDLE': {
                 await redis.del(userRelayPauseRedisKey(phone));
                 await this.saveSession(phone, 'AWAITING_PROBLEM_DESCRIPTION', {});
-                await WhatsAppService.sendTextMessage(
-                    phone,
-                    `${displayName(user)}contame ¿en qué te puedo ayudar hoy?\n\n_(Describime el problema como puedas, nosotros entendemos todo — cuanto más detalle, mejor puede cotizar el profesional)_`
-                );
+                const nm = user.name?.trim();
+                const line = nm
+                    ? `*${nm}*, contame ¿qué necesitás?\n\n_Describime el problema — cuanto más detalle, mejor cotiza el técnico._`
+                    : `Contame ¿qué necesitás?\n\n_Describime el problema — cuanto más detalle, mejor cotiza el técnico._`;
+                await WhatsAppService.sendTextMessage(phone, line);
                 break;
+            }
 
             case 'AWAITING_PROBLEM_DESCRIPTION': {
                 if (messageType === 'image') {
-                    await WhatsAppService.sendTextMessage(phone, 'Recibí la imagen. Contame también con palabras ¿qué está pasando?');
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        '📸 Foto recibida.\n\nContame también con palabras qué está pasando, así el técnico entiende bien el problema.'
+                    );
                     return;
                 }
                 const greetings = [
@@ -269,15 +362,20 @@ export class ConversationService {
                     'hey',
                 ];
                 if (greetings.includes(content.toLowerCase().trim())) {
+                    const nm = user.name?.trim() || '';
+                    const greetLine = nm ? `Hola *${nm}* 👋\n\n` : `Hola 👋\n\n`;
                     await WhatsAppService.sendTextMessage(
                         phone,
-                        `Hola ${user.name}! 👋 Contame ¿en qué te puedo ayudar hoy?\n\n_(Describime el problema como puedas, nosotros entendemos todo — cuanto más detalle, mejor puede cotizar el profesional)_`
+                        `${greetLine}Contame ¿qué necesitás?\n\n_Describime el problema — cuanto más detalle, mejor cotiza el técnico._`
                     );
                     return;
                 }
                 const classification = await GeminiService.classifyProblem(content);
                 if (!classification.understood || !classification.category) {
-                    await WhatsAppService.sendTextMessage(phone, 'No entendí bien el problema. ¿Podés contarme con más detalle qué está pasando?');
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'No entendí bien el problema. ¿Podés contarme con más detalle qué está pasando?'
+                    );
                     return;
                 }
                 session.data.description = content;
@@ -287,13 +385,9 @@ export class ConversationService {
                 const empathy = randomEmpathy(String(classification.urgency));
                 const emoji = CATEGORY_EMOJIS[classification.category] || '🔧';
                 await WhatsAppService.sendTextMessage(phone, empathy);
-                await WhatsAppService.sendButtonMessage(
+                await WhatsAppService.sendTextMessage(
                     phone,
-                    `${emoji} Entiendo que necesitás ayuda con *${classification.category}*.\n\n¿Querés adjuntar una foto del problema? Le ayuda al profesional a entender mejor y cotizar con más precisión.`,
-                    [
-                        { id: 'btn_yes_photos', title: 'Sí, adjuntar foto' },
-                        { id: 'btn_no_photos', title: 'No, continuar' },
-                    ]
+                    `${emoji} *${classification.category}*\n\n¿Tenés una foto del problema? Le ayuda al técnico a cotizar mejor.\n\n1. Sí, mando una foto\n2. No, continuamos`
                 );
                 break;
             }
@@ -309,7 +403,10 @@ export class ConversationService {
                         (session.data.photos as string[]).push(url);
                     }
                     await this.saveSession(phone, 'AWAITING_PHOTOS', session.data);
-                    await WhatsAppService.sendTextMessage(phone, 'Foto recibida. Podés enviar otra o escribir *listo* para continuar.');
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        '📸 Foto guardada.\n\nPodés mandar otra o escribir _listo_ cuando termines.'
+                    );
                     return;
                 }
                 {
@@ -331,13 +428,10 @@ export class ConversationService {
                     } else if (yesPhotos) {
                         await WhatsAppService.sendTextMessage(
                             phone,
-                            'Mandá las fotos cuando quieras. Cuando termines escribí *listo*.'
+                            'Mandá las fotos cuando quieras. Cuando termines escribí _listo_.'
                         );
                     } else {
-                        await WhatsAppService.sendTextMessage(
-                            phone,
-                            'Respondé *1* para adjuntar foto o *2* para continuar sin foto.'
-                        );
+                        await WhatsAppService.sendTextMessage(phone, 'Respondé *1* para mandar foto o *2* para continuar sin foto.');
                     }
                 }
                 break;
@@ -349,14 +443,24 @@ export class ConversationService {
 
             case 'AWAITING_PROFESSIONAL_SELECTION': {
                 const requestId = session.data.requestId as string;
-                if (content === 'btn_urgent' || content === '1') {
+                const hasUrgent = Boolean(session.data.hasUrgent);
+                const hasScheduled = Boolean(session.data.hasScheduled);
+                const lc = content.toLowerCase().trim();
+
+                const pickUrgent =
+                    (hasUrgent && hasScheduled && (content === 'btn_urgent' || content === '1')) ||
+                    (hasUrgent && !hasScheduled && (content === 'btn_urgent' || content === '1' || lc === 'si' || lc === 'sí'));
+                const pickScheduled =
+                    (hasScheduled && hasUrgent && (content === 'btn_sched' || content === '2')) ||
+                    (hasScheduled && !hasUrgent && (content === 'btn_sched' || content === '1' || lc === 'si' || lc === 'sí'));
+
+                if (pickUrgent) {
                     session.data.selection = 'urgent';
                     await prisma.jobOffer.updateMany({
                         where: { request_id: requestId, priority: 'scheduled' },
                         data: { status: 'cancelled' },
                     });
 
-                    // Notificar al profesional seleccionado
                     const selectedOffer = await prisma.jobOffer.findFirst({
                         where: {
                             request_id: requestId,
@@ -379,40 +483,50 @@ export class ConversationService {
                         );
                     }
 
-                    await this.saveSession(phone, 'AWAITING_SCHEDULE', session.data);
-
                     const now = new Date();
                     const hour = parseInt(
                         new Intl.DateTimeFormat('es-AR', {
                             hour: 'numeric',
                             hour12: false,
                             timeZone: 'America/Argentina/Buenos_Aires',
-                        }).format(now)
+                        }).format(now),
+                        10
                     );
 
-                    const slots: { id: string; title: string }[] = [];
+                    let scheduleOptionIds: string[] = [];
+                    let scheduleLabels: string[] = [];
+                    let scheduleMsg = '';
 
                     if (hour < 18) {
-                        if (hour < 12) slots.push({ id: 'sch_9_12', title: '9 a 12hs' });
-                        if (hour < 15) slots.push({ id: 'sch_12_15', title: '12 a 15hs' });
-                        if (hour < 18) slots.push({ id: 'sch_15_18', title: '15 a 18hs' });
-                        slots.push({ id: 'sch_asap', title: 'Lo antes posible' });
-                        await WhatsAppService.sendButtonMessage(phone, '¿En qué horario preferís que vaya hoy?', slots);
+                        if (hour < 12) {
+                            scheduleOptionIds.push('sch_9_12');
+                            scheduleLabels.push('9 a 12hs');
+                        }
+                        if (hour < 15) {
+                            scheduleOptionIds.push('sch_12_15');
+                            scheduleLabels.push('12 a 15hs');
+                        }
+                        if (hour < 18) {
+                            scheduleOptionIds.push('sch_15_18');
+                            scheduleLabels.push('15 a 18hs');
+                        }
+                        scheduleOptionIds.push('sch_asap');
+                        scheduleLabels.push('Lo antes posible');
+                        const lines = scheduleOptionIds.map((_, i) => `${i + 1}. ${scheduleLabels[i]}`).join('\n');
+                        scheduleMsg = `¿En qué horario preferís que vaya hoy?\n\n${lines}`;
                     } else {
-                        slots.push({ id: 'sch_tomorrow_morning', title: 'Mañana a primera hora (8-10hs)' });
-                        slots.push({ id: 'sch_tomorrow_mid', title: 'Mañana a la mañana (10-12hs)' });
-                        slots.push({ id: 'sch_tomorrow_afternoon', title: 'Mañana a la tarde (14-18hs)' });
-                        await WhatsAppService.sendButtonMessage(
-                            phone,
-                            'Ya no quedan franjas para hoy. ¿Cuándo preferís que vaya mañana?',
-                            slots
-                        );
+                        scheduleOptionIds = ['sch_tomorrow_morning', 'sch_tomorrow_mid', 'sch_tomorrow_afternoon'];
+                        scheduleMsg =
+                            'Ya es tarde para coordinar para hoy.\n\n¿A qué horario preferís mañana?\n\n1. Mañana temprano (8 a 10hs)\n2. Mañana a la mañana (10 a 12hs)\n3. Mañana a la tarde (14 a 18hs)';
                     }
-                } else if (content === 'btn_sched' || content === '2') {
+
+                    session.data.scheduleOptionIds = scheduleOptionIds;
+                    await this.saveSession(phone, 'AWAITING_SCHEDULE', session.data);
+                    await WhatsAppService.sendTextMessage(phone, scheduleMsg);
+                } else if (pickScheduled) {
                     session.data.selection = 'scheduled';
                     await prisma.jobOffer.updateMany({ where: { request_id: requestId, priority: 'urgent' }, data: { status: 'cancelled' } });
 
-                    // Notificar al profesional seleccionado
                     const selectedOffer = await prisma.jobOffer.findFirst({
                         where: {
                             request_id: requestId,
@@ -436,13 +550,12 @@ export class ConversationService {
                     }
 
                     await this.saveSession(phone, 'AWAITING_SCHEDULE_DAY', session.data);
-                    await WhatsAppService.sendButtonMessage(phone, '¿Qué día preferís?', [
-                        { id: 'day_tomorrow', title: 'Mañana' },
-                        { id: 'day_after', title: 'Pasado mañana' },
-                        { id: 'day_3', title: 'En 3 días' },
-                    ]);
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        '¿Qué día preferís?\n\n1. Mañana\n2. Pasado mañana\n3. En 3 días'
+                    );
                 } else {
-                    await WhatsAppService.sendTextMessage(phone, 'Por favor seleccioná una de las opciones.');
+                    await WhatsAppService.sendTextMessage(phone, 'Por favor respondé *1* o *2* para elegir una opción.');
                 }
                 break;
             }
@@ -458,13 +571,28 @@ export class ConversationService {
                     sch_tomorrow_mid: 'Mañana 10 a 12hs',
                     sch_tomorrow_afternoon: 'Mañana 14 a 18hs',
                 };
-                session.data.schedule = scheduleMap[content] || content;
+                const optionIds = session.data.scheduleOptionIds as string[] | undefined;
+                const trimmed = content.trim();
+                let slotId: string | null = Object.prototype.hasOwnProperty.call(scheduleMap, trimmed) ? trimmed : null;
+                if (!slotId && optionIds?.includes(trimmed)) slotId = trimmed;
+                if (!slotId && /^\d+$/.test(trimmed) && optionIds?.length) {
+                    const idx = parseInt(trimmed, 10) - 1;
+                    if (idx >= 0 && idx < optionIds.length) slotId = optionIds[idx]!;
+                }
+                if (!slotId) {
+                    await WhatsAppService.sendTextMessage(phone, 'Elegí una opción válida escribiendo el número.');
+                    break;
+                }
+                session.data.schedule = scheduleMap[slotId] ?? trimmed;
                 await prisma.jobOffer.updateMany({
                     where: { request_id: session.data.requestId as string },
                     data: { schedule: session.data.schedule as string },
                 });
                 await this.saveSession(phone, 'AWAITING_QUOTATION', session.data);
-                await WhatsAppService.sendTextMessage(phone, `Perfecto. Le avisamos al profesional. En breve te manda su cotización.`);
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    '*Perfecto.* Le avisamos al técnico ahora mismo.\n\n⏳ En breve te llega su cotización — normalmente en menos de 30 minutos.\n\n_Si no recibís nada en una hora, escribí *ayuda*._'
+                );
                 break;
             }
 
@@ -474,13 +602,21 @@ export class ConversationService {
                     day_after: 'Pasado mañana',
                     day_3: 'En 3 días',
                 };
-                session.data.scheduleDay = dayMap[content] || content;
+                const dayKeys = ['day_tomorrow', 'day_after', 'day_3'] as const;
+                let dayKey: string | null = dayMap[content] ? content : null;
+                if (!dayKey && /^[123]$/.test(content.trim())) {
+                    dayKey = dayKeys[parseInt(content.trim(), 10) - 1] ?? null;
+                }
+                if (!dayKey || !dayMap[dayKey]) {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'Escribí *1*, *2* o *3* para elegir el día.'
+                    );
+                    break;
+                }
+                session.data.scheduleDay = dayMap[dayKey];
                 await this.saveSession(phone, 'AWAITING_SCHEDULE_TIME', session.data);
-                await WhatsAppService.sendButtonMessage(phone, '¿En qué horario?', [
-                    { id: 'sch_9_12', title: '9 a 12hs' },
-                    { id: 'sch_12_15', title: '12 a 15hs' },
-                    { id: 'sch_15_18', title: '15 a 18hs' },
-                ]);
+                await WhatsAppService.sendTextMessage(phone, '¿En qué horario?\n\n1. 9 a 12hs\n2. 12 a 15hs\n3. 15 a 18hs');
                 break;
             }
 
@@ -490,18 +626,34 @@ export class ConversationService {
                     sch_12_15: '12 a 15hs',
                     sch_15_18: '15 a 18hs',
                 };
-                session.data.schedule = `${session.data.scheduleDay} ${timeMap[content] || content}`;
+                const timeKeys = ['sch_9_12', 'sch_12_15', 'sch_15_18'] as const;
+                const trimmedT = content.trim();
+                let tk: string | null = Object.prototype.hasOwnProperty.call(timeMap, trimmedT) ? trimmedT : null;
+                if (!tk && /^[123]$/.test(trimmedT)) {
+                    tk = timeKeys[parseInt(trimmedT, 10) - 1] ?? null;
+                }
+                if (!tk || !timeMap[tk]) {
+                    await WhatsAppService.sendTextMessage(phone, 'Escribí *1*, *2* o *3* para el horario.');
+                    break;
+                }
+                session.data.schedule = `${session.data.scheduleDay} ${timeMap[tk]}`;
                 await prisma.jobOffer.updateMany({
                     where: { request_id: session.data.requestId as string },
                     data: { schedule: session.data.schedule as string },
                 });
                 await this.saveSession(phone, 'AWAITING_QUOTATION', session.data);
-                await WhatsAppService.sendTextMessage(phone, `Perfecto. Le avisamos al profesional. En breve te manda su cotización.`);
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    '*Perfecto.* Le avisamos al técnico ahora mismo.\n\n⏳ En breve te llega su cotización — normalmente en menos de 30 minutos.\n\n_Si no recibís nada en una hora, escribí *ayuda*._'
+                );
                 break;
             }
 
             case 'AWAITING_QUOTATION':
-                await WhatsAppService.sendTextMessage(phone, 'Todavía estamos esperando la cotización del profesional. En breve te avisamos.');
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    '⏳ Todavía estamos esperando la cotización del técnico.\n\nTe avisamos en cuanto la tengamos. _Normalmente llega en menos de 30 minutos._'
+                );
                 break;
 
             case 'AWAITING_PAYMENT_DECISION': {
@@ -515,16 +667,16 @@ export class ConversationService {
                 } else if (rejectWords.includes(lc)) {
                     await this.handleRejectQuotation(phone, session.data);
                 } else {
-                    await WhatsAppService.sendTextMessage(
-                        phone,
-                        'Respondé *1* para aceptar o *2* para rechazar la cotización.'
-                    );
+                    await WhatsAppService.sendTextMessage(phone, 'Respondé *1* para aceptar o *2* para rechazar la cotización.');
                 }
                 break;
             }
 
             case 'PAYMENT_PENDING':
-                await WhatsAppService.sendTextMessage(phone, 'Tu pago está pendiente. Si ya pagaste, en breve recibís la confirmación.');
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    '⏳ Tu pago está siendo procesado.\n\nSi ya completaste el pago, la confirmación llega en unos minutos. Si tuviste algún problema, escribí _ayuda_.'
+                );
                 break;
 
             case 'AWAITING_REVIEW':
@@ -537,18 +689,30 @@ export class ConversationService {
                     data: { review: content },
                 });
                 await this.clearSession(phone);
-                await WhatsAppService.sendTextMessage(phone, 'Gracias por tu comentario. Lo tendremos en cuenta para mejorar.');
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    'Gracias, tomamos nota. 🙏\n\nLo revisamos y trabajamos para que no vuelva a pasar. Cuando quieras, acá estamos.'
+                );
                 break;
 
             case 'COMPLETED':
                 await this.clearSession(phone);
                 await this.saveSession(phone, 'IDLE', {});
-                await WhatsAppService.sendTextMessage(phone, `${displayName(user)}contame ¿en qué te puedo ayudar hoy?`);
+                {
+                    const nm = user.name?.trim();
+                    const line = nm
+                        ? `*${nm}*, contame ¿qué necesitás?\n\n_Describime el problema — cuanto más detalle, mejor cotiza el técnico._`
+                        : `Contame ¿qué necesitás?\n\n_Describime el problema — cuanto más detalle, mejor cotiza el técnico._`;
+                    await WhatsAppService.sendTextMessage(phone, line);
+                }
                 break;
 
             default:
                 await this.saveSession(phone, 'IDLE', {});
-                await WhatsAppService.sendTextMessage(phone, 'No entendí tu mensaje. Escribí algo para comenzar.');
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    'No entendí tu mensaje.\n\nEscribí _ayuda_ para ver qué podés hacer.'
+                );
         }
     }
 
@@ -557,7 +721,7 @@ export class ConversationService {
         if (t === 'ayuda' || t === '?') {
             await WhatsAppService.sendTextMessage(
                 phone,
-                `Servy: podés pedir Plomería, Electricidad, Cerrajería, Gas o Aires acondicionados.\n\nComandos:\n• *Estado* — tu pedido actual\n• *Cancelar* — cancelar pedido\n• *Cambiar dirección* — actualizar dirección`
+                '*Servy* — técnicos verificados para tu hogar 🏠\n\nServicios disponibles:\n🔧 Plomería\n⚡ Electricidad\n🔑 Cerrajería\n🔥 Gas\n❄️ Aires acondicionados\n\n━━━━━━━━━━━━━━━\n*Comandos*\n━━━━━━━━━━━━━━━\n_estado_ → ver tu pedido actual\n_cancelar_ → cancelar pedido en curso\n_cambiar dirección_ → actualizar tu domicilio'
             );
             return true;
         }
@@ -571,7 +735,10 @@ export class ConversationService {
         }
         if (t === 'cancelar') {
             await this.clearSession(phone);
-            await WhatsAppService.sendTextMessage(phone, 'Listo, cancelamos el pedido en curso. Escribí cuando quieras iniciar uno nuevo.');
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'Listo, cancelamos el pedido. 👍\n\nEscribí cuando quieras empezar uno nuevo.'
+            );
             return true;
         }
         return false;
@@ -590,18 +757,20 @@ export class ConversationService {
             return;
         }
 
-        const proName = quotation.job_offer.professional.name;
-
-        await WhatsAppService.sendTextMessage(
-            phone,
-            `Genial ${user.name || 'vos'}! Para confirmar el servicio con ${proName} necesitamos el pago total.\n\n💳 Total a pagar: $${quotation.total_price.toLocaleString('es-AR')}\n\n🔒 Tu dinero está protegido:\n• La seña se libera a ${proName} al confirmar\n• El resto se libera cuando termina el trabajo\n• Si ${proName} no aparece, te devolvemos todo`
-        );
+        const proName = quotation.job_offer.professional.name.trim() || 'el técnico';
+        const priceStr = quotation.total_price.toLocaleString('es-AR');
 
         try {
             const initPoint = await MercadoPagoService.createPreference(quotation, user);
-            await WhatsAppService.sendTextMessage(phone, `Pagá acá:\n👉 ${initPoint}`);
+            await WhatsAppService.sendTextMessage(
+                phone,
+                `*¡Genial!* Confirmamos el servicio con *${proName}* 🙌\n\n━━━━━━━━━━━━━━━\n💳 *Total: $${priceStr}*\n━━━━━━━━━━━━━━━\n\n🔒 *Tu dinero está protegido*\nEl pago queda retenido hasta que el trabajo esté bien hecho. Si el técnico no aparece, te devolvemos todo.\n\n👉 ${initPoint}\n\n_Tenés 30 minutos para completar el pago antes de que se libere la reserva._`
+            );
         } catch {
-            await WhatsAppService.sendTextMessage(phone, 'Hubo un error al generar el link de pago. Intentá de nuevo o escribí *Ayuda*.');
+            await WhatsAppService.sendTextMessage(
+                phone,
+                '⚠️ Hubo un problema al generar el link de pago.\n\nEscribí _ayuda_ y te contactamos para resolverlo en minutos.'
+            );
         }
     }
 
@@ -610,8 +779,20 @@ export class ConversationService {
         const jobOfferId = data.jobOfferId as string;
         const requestId = data.requestId as string;
 
+        const rejectedOffer = await prisma.jobOffer.findUnique({
+            where: { id: jobOfferId },
+            include: { professional: true },
+        });
+
         await prisma.quotation.update({ where: { id: quotationId }, data: { status: 'rejected' } }).catch(() => {});
         await prisma.jobOffer.update({ where: { id: jobOfferId }, data: { status: 'rejected' } }).catch(() => {});
+
+        if (rejectedOffer?.professional?.phone) {
+            await WhatsAppService.sendTextMessage(
+                rejectedOffer.professional.phone,
+                'El cliente eligió otra opción para este trabajo.\n\nNo te preocupes, seguís activo y te llegan nuevas solicitudes. 💪'
+            );
+        }
 
         const sibling = await prisma.jobOffer.findFirst({
             where: { request_id: requestId, id: { not: jobOfferId }, status: 'cancelled' },
@@ -622,10 +803,16 @@ export class ConversationService {
             await prisma.jobOffer.update({ where: { id: sibling.id }, data: { status: 'pending' } });
             await WhatsAppService.sendTextMessage(sibling.professional.phone, 'El cliente pidió otra opción. Entrá al portal y enviá tu cotización.');
             await this.saveSession(phone, 'AWAITING_QUOTATION', { requestId });
-            await WhatsAppService.sendTextMessage(phone, 'Entendido. Le pedimos cotización al otro profesional. Te avisamos cuando la tengamos.');
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'Entendido, buscamos otra opción.\n\n⏳ Le pedimos cotización al otro técnico disponible. Te avisamos cuando llegue.'
+            );
         } else {
             await this.clearSession(phone);
-            await WhatsAppService.sendTextMessage(phone, 'No hay otra opción disponible. Escribí cuando quieras iniciar un nuevo pedido.');
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'No tenemos otra opción disponible para este pedido en este momento.\n\nEscribí cuando quieras hacer un nuevo pedido y buscamos de nuevo. 👍'
+            );
         }
     }
 
@@ -651,21 +838,27 @@ export class ConversationService {
 
         if (rating >= 4) {
             await this.clearSession(phone);
-            await WhatsAppService.sendTextMessage(phone, `¡Gracias! Nos alegra que haya salido bien. Cuando necesités otro servicio, acá estamos. 🙌`);
+            await WhatsAppService.sendTextMessage(
+                phone,
+                '*¡Gracias por calificarlo!* 🙌\n\nNos alegra que haya salido bien. Cuando necesités otro servicio, ya sabés dónde encontrarnos.'
+            );
         } else {
             await this.saveSession(phone, 'REVIEW_COMMENT', data);
             await WhatsAppService.sendTextMessage(
                 phone,
-                `Gracias por contarnos. Lamentamos que no haya sido la mejor experiencia. ¿Querés contarnos qué pasó?`
+                'Gracias por contarnos. Lamentamos que no haya sido la experiencia que esperabas.\n\n¿Podés contarnos qué pasó? Tu feedback nos ayuda a mejorar.'
             );
         }
     }
 
     private static async handleOnboardingFlow(phone: string, messageType: string, content: string, user: { phone: string } | null) {
-        const session = await this.getSession(phone);
-        if (!user) await prisma.user.create({ data: { phone } });
+        let session = await this.getSession(phone);
+        if (session.state === 'EXPIRED') {
+            await this.clearSession(phone);
+            session = { state: 'UNKNOWN', data: {} };
+        }
 
-        if (session.state === 'ONBOARDING_ADDRESS') {
+        if (user && session.state === 'ONBOARDING_ADDRESS') {
             await prisma.user.update({ where: { phone }, data: { address: content.trim() } });
             await this.clearSession(phone);
             await this.saveSession(phone, 'IDLE', {});
@@ -673,9 +866,21 @@ export class ConversationService {
             return;
         }
 
+        if (!user) {
+            if (session.state === 'UNKNOWN' || session.state === 'IDLE') {
+                await this.saveSession(phone, 'ROLE_SELECTION', {});
+                await WhatsAppService.sendTextMessage(phone, ROLE_SELECTION_PROMPT);
+                return;
+            }
+            return;
+        }
+
         if (session.state === 'UNKNOWN' || session.state === 'IDLE') {
             await this.saveSession(phone, 'ONBOARDING_NAME', {});
-            await WhatsAppService.sendTextMessage(phone, 'Hola! Soy Servy 👋 Primero necesito un par de datos.\n¿Cuál es tu nombre y apellido?');
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'Hola, soy Servy 👋\n\nTe conecto con técnicos verificados para tu hogar — plomeros, electricistas, gasistas y más.\n\nAntes de empezar necesito un par de datos rápidos.\n\n¿Cuál es tu nombre y apellido?'
+            );
             return;
         }
 
@@ -686,32 +891,43 @@ export class ConversationService {
                 data: { name: parts[0], last_name: parts.slice(1).join(' ') || '-' },
             });
             await this.saveSession(phone, 'ONBOARDING_DOMICILE_TYPE', { name: parts[0] });
-            await WhatsAppService.sendButtonMessage(phone, `Hola ${parts[0]}! ¿Dónde vas a necesitar el servicio?`, [
-                { id: 'dom_casa', title: 'Casa' },
-                { id: 'dom_depto', title: 'Departamento' },
-                { id: 'dom_barrio', title: 'Barrio cerrado' },
-                { id: 'dom_empresa', title: 'Empresa' },
-            ]);
+            const first = parts[0]?.trim() || 'Hola';
+            await WhatsAppService.sendTextMessage(
+                phone,
+                `Hola *${first}* 👋\n\n¿Dónde vas a necesitar el servicio?\n\n1. Casa\n2. Departamento\n3. Barrio cerrado / country\n4. Empresa`
+            );
             return;
         }
 
         if (session.state === 'ONBOARDING_DOMICILE_TYPE') {
             const typeMap: Record<string, string> = {
+                '1': 'casa',
+                '2': 'departamento',
+                '3': 'barrio_cerrado',
+                '4': 'empresa',
                 dom_casa: 'casa',
                 dom_depto: 'departamento',
                 dom_barrio: 'barrio_cerrado',
                 dom_empresa: 'empresa',
             };
-            const domType = typeMap[content] || content;
+            const domType = typeMap[content.trim()] || typeMap[content] || content;
             session.data.domicileType = domType;
             await this.saveSession(phone, 'ONBOARDING_STREET', session.data);
 
             if (domType === 'barrio_cerrado') {
-                await WhatsAppService.sendTextMessage(phone, '¿Cuál es el nombre del barrio y tu lote? (ej: Los Pinos, Lote 42)');
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    '¿Cuál es el nombre del barrio y tu lote?\n\n_Ej: Los Pinos, Lote 42_'
+                );
             } else if (domType === 'departamento') {
-                await WhatsAppService.sendTextMessage(phone, '¿Cuál es tu calle, número y piso/depto? (ej: Av. Santa Fe 1234, Piso 3 Depto B)');
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    '¿Cuál es tu dirección completa?\n\n_Ej: Av. Santa Fe 1234, Piso 3 Depto B_'
+                );
+            } else if (domType === 'empresa') {
+                await WhatsAppService.sendTextMessage(phone, '¿Cuál es la dirección de la empresa?');
             } else {
-                await WhatsAppService.sendTextMessage(phone, '¿Cuál es tu calle y número?');
+                await WhatsAppService.sendTextMessage(phone, '¿Cuál es tu dirección?\n\n_Ej: Av. Rivadavia 4521_');
             }
             return;
         }
@@ -719,14 +935,17 @@ export class ConversationService {
         if (session.state === 'ONBOARDING_STREET') {
             session.data.street = content;
             await this.saveSession(phone, 'ONBOARDING_CITY', session.data);
-            await WhatsAppService.sendTextMessage(phone, '¿En qué ciudad?');
+            await WhatsAppService.sendTextMessage(phone, '¿En qué ciudad está ubicado?');
             return;
         }
 
         if (session.state === 'ONBOARDING_CITY') {
             session.data.city = content;
             await this.saveSession(phone, 'ONBOARDING_POSTAL', session.data);
-            await WhatsAppService.sendTextMessage(phone, '¿Cuál es tu código postal?');
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'Último dato: ¿cuál es el código postal?\n\n_Lo usamos para encontrar técnicos cerca tuyo._'
+            );
             return;
         }
 
@@ -745,9 +964,198 @@ export class ConversationService {
             await this.saveSession(phone, 'AWAITING_PROBLEM_DESCRIPTION', {});
             await WhatsAppService.sendTextMessage(
                 phone,
-                `¡Perfecto ${userName}! Ya tenés tu perfil completo.\n\nContame ¿en qué te puedo ayudar hoy?\n\n_(Describime el problema como puedas, nosotros entendemos todo — cuanto más detalle, mejor puede cotizar el profesional)_`
+                `*¡Listo ${userName}!* Ya tenés tu perfil. 🎉\n\nContame qué necesitás — plomería, electricidad, gas, cerrajería, aires acondicionados.\n\n_Cuanto más detalle des, mejor puede cotizar el técnico._`
             );
             return;
+        }
+    }
+
+    private static async handleRoleSelection(phone: string, messageType: string, content: string) {
+        if (messageType !== 'text') {
+            await WhatsAppService.sendTextMessage(phone, ROLE_SELECTION_PROMPT);
+            return;
+        }
+        const c = content.trim();
+        const lc = c.toLowerCase();
+
+        const pickPro =
+            c === '2' ||
+            c === 'btn_pro' ||
+            lc.includes('soy técnico') ||
+            lc.includes('soy tecnico');
+        const pickClient =
+            c === '1' ||
+            c === 'btn_client' ||
+            (lc.includes('necesito') && !pickPro);
+
+        if (pickPro) {
+            await this.saveSession(phone, 'PRO_ONBOARDING_NAME', {});
+            await WhatsAppService.sendTextMessage(phone, '¿Cuál es tu nombre?');
+            return;
+        }
+
+        if (pickClient) {
+            await this.clearSession(phone);
+            await prisma.user.create({ data: { phone } });
+            await this.saveSession(phone, 'ONBOARDING_NAME', {});
+            await WhatsAppService.sendTextMessage(phone, CLIENT_ONBOARDING_NAME_PROMPT);
+            return;
+        }
+
+        await WhatsAppService.sendTextMessage(phone, ROLE_SELECTION_PROMPT);
+    }
+
+    private static async finalizeProOnboardingWhatsApp(phone: string, data: Record<string, unknown>): Promise<void> {
+        const name = String(data.name ?? '').trim();
+        const lastName = String(data.lastName ?? '').trim();
+        const categories = data.categories as string[] | undefined;
+        const zones = data.zones as string[] | undefined;
+        const dniDigits = String(data.dni ?? '').replace(/\D/g, '');
+        const email = String(data.email ?? '').trim().toLowerCase();
+        if (!name || !lastName || !categories?.length || !zones?.length || !dniDigits || !email) {
+            await this.clearSession(phone);
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'Se perdió parte de los datos del registro. Escribí de nuevo para empezar.'
+            );
+            return;
+        }
+        const result = await createProfessionalFromWhatsAppWizard({
+            name,
+            last_name: lastName,
+            phone,
+            email,
+            dniDigits,
+            categories,
+            zones,
+        });
+        if (!result.ok) {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'Ya existe una cuenta con ese email o teléfono.\n\nEscribí _ayuda_ si necesitás acceder a tu cuenta.'
+            );
+            await this.clearSession(phone);
+            return;
+        }
+        await this.clearSession(phone);
+        const base = env.FRONTEND_PRO_URL.replace(/\/$/, '');
+        const link = `${base}/set-password?token=${encodeURIComponent(result.token)}`;
+        await WhatsAppService.sendTextMessage(
+            phone,
+            `✅ *¡Perfecto ${result.firstName}!* Ya creamos tu perfil en Servy.\n\nPara activar tu cuenta y completar tu registro entrá acá:\n👉 ${link}\n\n_El link es válido por 24 horas._\n\nCuando actives tu cuenta vas a poder recibir trabajos en tu zona. 💪`
+        );
+    }
+
+    private static async handleProOnboardingFlow(
+        phone: string,
+        messageType: string,
+        content: string,
+        session: { state: string; data: Record<string, unknown> }
+    ) {
+        const data = { ...session.data };
+
+        const needText = async () => {
+            await WhatsAppService.sendTextMessage(phone, 'Necesito que me lo escribas en texto.');
+        };
+
+        if (messageType !== 'text') {
+            await needText();
+            return;
+        }
+
+        const text = content.trim();
+
+        switch (session.state) {
+            case 'PRO_ONBOARDING_NAME': {
+                if (!text) {
+                    await WhatsAppService.sendTextMessage(phone, '¿Cuál es tu nombre?');
+                    return;
+                }
+                data.name = text;
+                await this.saveSession(phone, 'PRO_ONBOARDING_LASTNAME', data);
+                await WhatsAppService.sendTextMessage(phone, '¿Y tu apellido?');
+                return;
+            }
+            case 'PRO_ONBOARDING_LASTNAME': {
+                if (!text) {
+                    await WhatsAppService.sendTextMessage(phone, '¿Y tu apellido?');
+                    return;
+                }
+                data.lastName = text;
+                await this.saveSession(phone, 'PRO_ONBOARDING_CATEGORIES', data);
+                const lines = PRO_ONBOARDING_CATEGORY_OPTIONS.map((c, i) => `${i + 1}. ${c}`).join('\n');
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    `¿A qué te dedicás? Podés elegir más de uno.\n\n${lines}\n\n_Respondé con los números separados por coma. Ej: 1,3_`
+                );
+                return;
+            }
+            case 'PRO_ONBOARDING_CATEGORIES': {
+                const cats = parseProOnboardingCategorySelection(text);
+                if (!cats) {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'No entendí la selección. Respondé con números separados por coma.\n\n_Ej: 1,3_'
+                    );
+                    return;
+                }
+                data.categories = cats;
+                await this.saveSession(phone, 'PRO_ONBOARDING_ZONES', data);
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    '¿En qué zona o zonas trabajás?\n\n_Ej: Palermo, Belgrano, Villa Urquiza_'
+                );
+                return;
+            }
+            case 'PRO_ONBOARDING_ZONES': {
+                const zones = zonesFromFreeText(text);
+                if (zones.length === 0) {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'Necesito al menos una zona.\n\n_Ej: Palermo, Belgrano, Villa Urquiza_'
+                    );
+                    return;
+                }
+                data.zones = zones;
+                await this.saveSession(phone, 'PRO_ONBOARDING_DNI', data);
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    '¿Cuál es tu DNI?\n\n_Solo el número, sin puntos._'
+                );
+                return;
+            }
+            case 'PRO_ONBOARDING_DNI': {
+                const dni = dniDigitsOnly(text);
+                if (dni.length < 7 || dni.length > 8) {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'El DNI no parece válido. Enviá solo el número sin puntos.\n\n_Ej: 35421890_'
+                    );
+                    return;
+                }
+                data.dni = dni;
+                await this.saveSession(phone, 'PRO_ONBOARDING_EMAIL', data);
+                await WhatsAppService.sendTextMessage(phone, 'DNI recibido ✓\n\n¿Cuál es tu email?');
+                return;
+            }
+            case 'PRO_ONBOARDING_EMAIL': {
+                const email = text.trim().toLowerCase();
+                if (!PRO_ONBOARDING_EMAIL_RE.test(email)) {
+                    await WhatsAppService.sendTextMessage(phone, 'Ese email no parece válido. ¿Podés revisarlo?');
+                    return;
+                }
+                data.email = email;
+                await this.saveSession(phone, 'PRO_ONBOARDING_DONE', data);
+                await this.finalizeProOnboardingWhatsApp(phone, data);
+                return;
+            }
+            case 'PRO_ONBOARDING_DONE': {
+                await this.finalizeProOnboardingWhatsApp(phone, data);
+                return;
+            }
+            default:
+                await this.clearSession(phone);
+                await WhatsAppService.sendTextMessage(phone, 'Algo salió mal con el registro. Escribí de nuevo para empezar.');
         }
     }
 
@@ -779,7 +1187,7 @@ export class ConversationService {
         if (!job) return false;
         const proPhone = job.quotation.job_offer.professional.phone;
         const safe = text.replace(/"/g, '“');
-        await WhatsAppService.sendTextMessage(proPhone, `Mensaje del cliente: "${safe}"`);
+        await WhatsAppService.sendTextMessage(proPhone, `💬 *Mensaje del cliente*\n\n_${safe}_`);
         await insertAgentLog({
             agent: 'messaging',
             event: 'relay_user_to_pro',
@@ -826,10 +1234,7 @@ export class ConversationService {
         const llegoMatch = trimmed.match(/llego\s+en\s+(\d+)/i);
         if (llegoMatch) {
             const mins = llegoMatch[1];
-            await WhatsAppService.sendTextMessage(
-                userPhone,
-                `⏱️ Tu técnico te avisa que llega en ${mins} minutos.`
-            );
+            await WhatsAppService.sendTextMessage(userPhone, `⏱️ *${proName} llega en ${mins} minutos.*`);
             await insertAgentLog({
                 agent: 'messaging',
                 event: 'command_llego_minutos',
@@ -842,7 +1247,10 @@ export class ConversationService {
         const norm = normalizeTextForCommands(trimmed);
         const cmd = matchProfessionalCommandKey(norm);
         if (cmd === 'en_camino') {
-            await WhatsAppService.sendTextMessage(userPhone, `🚗 Tu técnico ${proName} está en camino.`);
+            await WhatsAppService.sendTextMessage(
+                userPhone,
+                `🚗 *${proName} está en camino.*\n\nTe avisamos cuando esté cerca. Cualquier consulta escribí acá.`
+            );
             await insertAgentLog({
                 agent: 'messaging',
                 event: 'command_en_camino',
@@ -854,7 +1262,7 @@ export class ConversationService {
         if (cmd === 'imprevisto') {
             await WhatsAppService.sendTextMessage(
                 userPhone,
-                '⚠️ Tu técnico tuvo un imprevisto. Un integrante de Servy se va a comunicar con vos pronto.'
+                `⚠️ *${proName} tuvo un imprevisto.*\n\nUn integrante del equipo Servy se va a comunicar con vos en los próximos minutos para coordinar.\n\n_Disculpá los inconvenientes._`
             );
             await insertAgentLog({
                 agent: 'messaging',
@@ -867,7 +1275,7 @@ export class ConversationService {
         if (cmd === 'direccion') {
             await WhatsAppService.sendTextMessage(
                 userPhone,
-                '📍 Tu técnico necesita confirmar la dirección. ¿Podés agregar referencias o aclarar el domicilio?'
+                `📍 *${proName} necesita confirmar la dirección.*\n\n¿Podés darle una referencia o aclaración para encontrar tu casa?\n\n_Respondé acá y se lo hacemos llegar._`
             );
             await redis.set(
                 mediationDirectionRedisKey(userPhone),
@@ -888,7 +1296,7 @@ export class ConversationService {
         }
 
         const safe = trimmed.replace(/"/g, '“');
-        await WhatsAppService.sendTextMessage(userPhone, `Mensaje de tu técnico: "${safe}"`);
+        await WhatsAppService.sendTextMessage(userPhone, `💬 *Mensaje de ${proName}*\n\n_${safe}_`);
         await insertAgentLog({
             agent: 'messaging',
             event: 'relay_pro_to_user',
@@ -919,24 +1327,82 @@ export class ConversationService {
             return;
         }
 
-        await this.saveSession(phone, 'AWAITING_PROFESSIONAL_SELECTION', { requestId: request.id, ...sessionData });
+        const hasUrgent = Boolean(matchRes.urgent);
+        const hasScheduled = Boolean(matchRes.scheduled);
 
-        let text = `${displayName(user)}encontré estas opciones para vos:\n\n`;
-
+        let urgentJobs = 0;
+        let schedJobs = 0;
         if (matchRes.urgent) {
-            const p = matchRes.urgent;
-            text += `⚡ *OPCIÓN 1 — Urgente*\n👤 ${p.name} ${p.last_name}\n⭐ ${p.rating} · servicios realizados\n🕐 Disponible hoy en menos de 24hs\n💰 Tarifa urgente (precio mayor por rapidez)\n\n`;
+            urgentJobs = await countJobsForProfessional(matchRes.urgent.id);
         }
         if (matchRes.scheduled) {
-            const p = matchRes.scheduled;
-            text += `📅 *OPCIÓN 2 — Programado*\n👤 ${p.name} ${p.last_name}\n⭐ ${p.rating} · servicios realizados\n🕐 Disponible en hasta 72hs\n💰 Tarifa estándar (precio más económico)\n\n`;
+            schedJobs = await countJobsForProfessional(matchRes.scheduled.id);
         }
 
-        text += '¿Con cuál preferís continuar?';
+        const fmtRating = (r: number): string => (Number.isInteger(r) ? String(r) : r.toFixed(1));
 
-        await WhatsAppService.sendButtonMessage(phone, text, [
-            ...(matchRes.urgent ? [{ id: 'btn_urgent', title: 'Opción urgente' }] : []),
-            ...(matchRes.scheduled ? [{ id: 'btn_sched', title: 'Opción programada' }] : []),
-        ]);
+        await this.saveSession(phone, 'AWAITING_PROFESSIONAL_SELECTION', {
+            requestId: request.id,
+            hasUrgent,
+            hasScheduled,
+            ...sessionData,
+        });
+
+        if (hasUrgent && hasScheduled) {
+            const u = matchRes.urgent!;
+            const s = matchRes.scheduled!;
+            const text =
+                'Encontré técnicos disponibles en tu zona 👇\n\n' +
+                '━━━━━━━━━━━━━━━\n' +
+                '⚡ *Urgente*\n' +
+                '━━━━━━━━━━━━━━━\n' +
+                `👤 *${u.name} ${u.last_name}*\n` +
+                `⭐ ${fmtRating(u.rating)} · ${urgentJobs} trabajos\n` +
+                '🕐 Hoy, en menos de 24hs\n' +
+                '💰 Tarifa urgente\n\n' +
+                '━━━━━━━━━━━━━━━\n' +
+                '📅 *Programado*\n' +
+                '━━━━━━━━━━━━━━━\n' +
+                `👤 *${s.name} ${s.last_name}*\n` +
+                `⭐ ${fmtRating(s.rating)} · ${schedJobs} trabajos\n` +
+                '🕐 Hasta 72hs\n' +
+                '💰 Tarifa estándar\n\n' +
+                '¿Con cuál continuamos?\n\n' +
+                '1. Urgente\n' +
+                '2. Programado';
+            await WhatsAppService.sendTextMessage(phone, text);
+            return;
+        }
+
+        if (hasUrgent) {
+            const u = matchRes.urgent!;
+            const text =
+                'Encontré técnicos disponibles en tu zona 👇\n\n' +
+                '━━━━━━━━━━━━━━━\n' +
+                '⚡ *Urgente*\n' +
+                '━━━━━━━━━━━━━━━\n' +
+                `👤 *${u.name} ${u.last_name}*\n` +
+                `⭐ ${fmtRating(u.rating)} · ${urgentJobs} trabajos\n` +
+                '🕐 Hoy, en menos de 24hs\n' +
+                '💰 Tarifa urgente\n\n' +
+                '¿Te sirve esta opción?\n\n' +
+                'Escribí *sí* o *1* para continuar.';
+            await WhatsAppService.sendTextMessage(phone, text);
+            return;
+        }
+
+        const s = matchRes.scheduled!;
+        const text =
+            'Encontré técnicos disponibles en tu zona 👇\n\n' +
+            '━━━━━━━━━━━━━━━\n' +
+            '📅 *Programado*\n' +
+            '━━━━━━━━━━━━━━━\n' +
+            `👤 *${s.name} ${s.last_name}*\n` +
+            `⭐ ${fmtRating(s.rating)} · ${schedJobs} trabajos\n` +
+            '🕐 Hasta 72hs\n' +
+            '💰 Tarifa estándar\n\n' +
+            '¿Te sirve esta opción?\n\n' +
+            'Escribí *sí* o *1* para continuar.';
+        await WhatsAppService.sendTextMessage(phone, text);
     }
 }

@@ -10,6 +10,8 @@ import { runForecast } from './forecast-generator';
 import { runRecruitmentCron } from './recruitment-cycle';
 import { runExperimentsDaily, runExperimentsMonthly } from './experiments-cron';
 import { processAgentTasks } from '../lib/agent-task-consumer';
+import { runPaymentReminder } from './payment-reminder';
+import { runJobTimeout } from './job-timeout';
 
 /**
  * Crons de los agentes operativos (Servy).
@@ -29,6 +31,10 @@ export function startCrons(): void {
         )
     );
 
+    cron.schedule('*/10 * * * *', () => {
+        void runPaymentReminder().catch((err) => console.error('[cron runPaymentReminder]', err));
+    });
+
     cron.schedule('* * * * *', () => {
         void runCheckinScheduler().catch((err) => console.error('[cron runCheckinScheduler]', err));
     });
@@ -39,6 +45,7 @@ export function startCrons(): void {
 
     cron.schedule('0 * * * *', () => {
         void runQualityFollowup().catch((err) => console.error('[cron runQualityFollowup]', err));
+        void runJobTimeout().catch((err) => console.error('[cron runJobTimeout]', err));
     });
 
     cron.schedule('0 10 * * *', () => {

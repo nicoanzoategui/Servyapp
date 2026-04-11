@@ -5,6 +5,12 @@ const prisma = new PrismaClient();
 
 const DEMO_PASSWORD = 'ServyDemo123!';
 
+/** Solo dígitos. En prod/local: definí los tuyos para probar WhatsApp (cliente vs técnico). */
+const NICOLAS_CLIENT_PHONE =
+    (process.env.SEED_NICOLAS_CLIENT_PHONE || '5491115000001').replace(/\D/g, '') || '5491115000001';
+const NICOLAS_PRO_PHONE =
+    (process.env.SEED_NICOLAS_PRO_PHONE || '5491115000002').replace(/\D/g, '') || '5491115000002';
+
 function hash(password: string): string {
     return bcrypt.hashSync(password, 12);
 }
@@ -77,12 +83,41 @@ async function main() {
         },
     });
 
+    /** Plomero en Pilar / CP 1629 — matchea `matching.service` (postal_code + address). */
+    await prisma.professional.create({
+        data: {
+            name: 'Nicolás',
+            last_name: 'Técnico (prueba)',
+            phone: NICOLAS_PRO_PHONE,
+            email: 'nicolas.plomero.pilar@servy.local',
+            password_hash: hash(DEMO_PASSWORD),
+            categories: ['Plomería'],
+            zones: ['1629', 'Pilar', 'GBA Norte'],
+            status: 'active',
+            is_urgent: true,
+            is_scheduled: true,
+            rating: 4.9,
+            onboarding_completed: true,
+        },
+    });
+
     const u1 = await prisma.user.create({
         data: {
             phone: '5491100000000',
             name: 'María',
             last_name: 'López',
             address: 'Av. Corrientes 1234, Capital Federal',
+            onboarding_completed: true,
+        },
+    });
+
+    await prisma.user.create({
+        data: {
+            phone: NICOLAS_CLIENT_PHONE,
+            name: 'Nicolás',
+            last_name: 'Usuario prueba',
+            address: 'Pilar, Buenos Aires',
+            postal_code: '1629',
             onboarding_completed: true,
         },
     });
@@ -142,7 +177,12 @@ async function main() {
 
     console.log('Seed OK. Demo password para admin y profesionales:', DEMO_PASSWORD);
     console.log('Admin:', 'admin@servy.local');
-    console.log('Pros:', 'juan@plomero.com, carlos@electricista.com, roberto@cerrajero.com');
+    console.log('Pros:', 'juan@plomero.com, carlos@electricista.com, roberto@cerrajero.com, nicolas.plomero.pilar@servy.local');
+    console.log('');
+    console.log('Flujo Pilar / plomero / CP 1629 (WhatsApp de prueba):');
+    console.log('  Usuario cliente → phone:', NICOLAS_CLIENT_PHONE, '(env: SEED_NICOLAS_CLIENT_PHONE)');
+    console.log('  Profesional Nicolás → phone:', NICOLAS_PRO_PHONE, '(env: SEED_NICOLAS_PRO_PHONE)');
+    console.log('  Sin env: placeholders 5491115000001 / 5491115000002 — reemplazá con tus E.164 sin + al seedear.');
 }
 
 main()
