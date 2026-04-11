@@ -15,6 +15,11 @@ import {
     completeJob,
     completeJobByQr,
 } from '../controllers/professional.controller';
+import {
+    listProfessionalDocuments,
+    uploadProfessionalDocument,
+    deleteProfessionalDocument,
+} from '../controllers/professional-documents.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth.middleware';
 
 const router = Router();
@@ -24,6 +29,9 @@ router.use(authenticateJWT);
 router.use(requireRole('professional'));
 
 router.get('/dashboard', getDashboard);
+router.get('/documents', listProfessionalDocuments);
+router.post('/documents', uploadProfessionalDocument);
+router.delete('/documents/:id', deleteProfessionalDocument);
 router.get('/profile', getProfile);
 router.put('/onboarding/complete', completeOnboarding);
 router.get('/offers', getJobOffers);

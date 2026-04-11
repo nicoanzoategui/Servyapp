@@ -29,6 +29,12 @@ enum ProfessionalStatus {
   suspended
 }
 
+enum ProfessionalDocumentKind {
+  dni_front
+  dni_back
+  certification
+}
+
 model Professional {
   id                   String             @id @default(cuid())
   name                 String
@@ -64,8 +70,26 @@ model Professional {
 
   job_offers           JobOffer[]
   earnings             Earning[]
+  documents            ProfessionalDocument[]
 
   @@map("professionals")
+}
+
+model ProfessionalDocument {
+  id                String                   @id @default(cuid())
+  professional_id String
+  kind              ProfessionalDocumentKind
+  storage_key       String                   @unique
+  filename          String?
+  content_type      String
+  size_bytes        Int?
+  created_at        DateTime                 @default(now())
+
+  professional Professional @relation(fields: [professional_id], references: [id], onDelete: Cascade)
+
+  @@index([professional_id])
+  @@index([professional_id, kind])
+  @@map("professional_documents")
 }
 
 model ServiceRequest {

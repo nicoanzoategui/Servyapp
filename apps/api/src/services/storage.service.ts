@@ -1,4 +1,4 @@
-import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from '../utils/env';
 
@@ -46,6 +46,19 @@ export class StorageService {
             return key;
         } catch (err) {
             console.error('Error uploading file to R2:', err);
+            throw err;
+        }
+    }
+
+    static async deleteFile(key: string) {
+        const command = new DeleteObjectCommand({
+            Bucket: env.R2_BUCKET,
+            Key: key,
+        });
+        try {
+            await s3Client.send(command);
+        } catch (err) {
+            console.error('Error deleting file from R2:', err);
             throw err;
         }
     }
