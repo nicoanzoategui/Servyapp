@@ -5,11 +5,17 @@ import twilio from 'twilio';
 
 const twilioClient = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
 
-/** Evita `whatsapp:whatsapp:+...` si el .env ya trae el prefijo. */
+/** Evita `whatsapp:whatsapp:+...` si el .env ya trae el prefijo. Quita espacios (p. ej. +1 620 … pegado desde la consola). */
 function toTwilioWhatsappAddress(raw: string): string {
     const t = raw.trim();
-    if (t.toLowerCase().startsWith('whatsapp:')) return t;
-    const num = t.startsWith('+') ? t : `+${t.replace(/^\+/, '')}`;
+    if (t.toLowerCase().startsWith('whatsapp:')) {
+        const rest = t.slice('whatsapp:'.length).trim();
+        const inner = rest.replace(/\s/g, '');
+        const num = inner.startsWith('+') ? inner : `+${inner.replace(/^\+/, '')}`;
+        return `whatsapp:${num}`;
+    }
+    const compact = t.replace(/\s/g, '');
+    const num = compact.startsWith('+') ? compact : `+${compact.replace(/^\+/, '')}`;
     return `whatsapp:${num}`;
 }
 
