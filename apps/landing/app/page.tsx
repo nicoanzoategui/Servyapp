@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import { Wrench, Zap, Key, ShieldCheck, Clock, Star, HeartHandshake, Flame, Wind } from 'lucide-react';
 
-const NEXT_PUBLIC_WA_NUMBER = process.env.NEXT_PUBLIC_WA_NUMBER || '5491100000000';
+/** E.164 sin + (wa.me). Env opcional en Railway: NEXT_PUBLIC_WA_NUMBER */
+const NEXT_PUBLIC_WA_NUMBER = (
+    process.env.NEXT_PUBLIC_WA_NUMBER || '16206474920'
+).replace(/\D/g, '');
 const WA_LINK = `https://wa.me/${NEXT_PUBLIC_WA_NUMBER}?text=Hola,%20necesito%20ayuda`;
 
 export default function Home() {
@@ -13,7 +16,7 @@ export default function Home() {
                 <nav className="gap-6 hidden md:flex font-medium text-slate-600 text-sm">
                     <a href="#como-funciona" className="hover:text-servy-500 transition">Cómo Funciona</a>
                     <a href="#categorias" className="hover:text-servy-500 transition">Servicios</a>
-                    <Link href="/profesionales" className="hover:text-servy-500 transition">Soy Profesional</Link>
+                    <Link href="/tecnicos" className="hover:text-servy-500 transition">Soy técnico</Link>
                 </nav>
             </header>
 
@@ -264,7 +267,7 @@ export default function Home() {
                 <div className="absolute top-0 right-0 w-96 h-96 bg-servy-500/20 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2"></div>
                 <h2 className="text-4xl md:text-5xl font-bold mb-6 relative z-10">¿Sos profesional del hogar?</h2>
                 <p className="text-xl text-slate-300 max-w-2xl mb-10 relative z-10">Recibí trabajos sin salir a buscarlos. Cotizá desde tu celular, cobrá antes de arrancar y manejá todo desde tu portal.</p>
-                <Link href="/profesionales" className="relative z-10 bg-servy-500 hover:bg-servy-400 text-white px-8 py-4 rounded-full font-bold shadow-xl transition-all">
+                <Link href="/tecnicos" className="relative z-10 bg-servy-500 hover:bg-servy-400 text-white px-8 py-4 rounded-full font-bold shadow-xl transition-all">
                     Unirme a Servy
                 </Link>
             </section>
