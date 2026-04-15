@@ -55,6 +55,13 @@ app.get('/debug/gemini-models', async (_req, res) => {
     }
 });
 
+// Verificación rápida en navegador: Twilio solo usa POST; esto confirma URL/HTTPS/DNS correctos.
+app.get('/webhook/twilio', (_req, res) => {
+    res.type('text/plain; charset=utf-8').send(
+        'Servy: webhook Twilio OK. En Twilio Console configurá "When a message comes in" → POST a esta misma URL.'
+    );
+});
+
 // WhatsApp primero: POST usa body crudo en la ruta (firma Meta). No pasar por express.json().
 // Twilio: leer body en crudo y parsear como x-www-form-urlencoded (no depende del Content-Type;
 // algunos proxies/Railway alteran el header y express.urlencoded() antes hacía skip y dejaba req.body vacío).

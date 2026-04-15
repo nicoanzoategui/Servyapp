@@ -8,10 +8,11 @@ Este documento lista **todo lo externo** que tenés que dar de alta, configurar 
 
 | Componente | Conecta con |
 |--------------|-------------|
-| **API** (`apps/api`) | PostgreSQL, Redis, Meta WhatsApp, R2, Mercado Pago |
+| **API** (`apps/api`) | PostgreSQL, Redis, **Twilio WhatsApp** (chat), Meta WhatsApp (opcional / legado), R2, Mercado Pago |
 | **Landing / Admin / Pro portal** | La API (`NEXT_PUBLIC_API_URL`) y, en landing, el número de WhatsApp |
 | **Base de datos (Prisma)** | PostgreSQL (`DATABASE_URL`) |
-| **Meta** | Tu API pública (webhook HTTPS) |
+| **Twilio** | Tu API pública (**POST** `https://TU-API/webhook/twilio`) |
+| **Meta** | Tu API pública (webhook HTTPS `/webhook/whatsapp` — no es el que usa el envío del bot hoy) |
 | **Mercado Pago** | Tu API pública (webhook HTTPS) |
 
 ---
@@ -107,6 +108,39 @@ Este documento lista **todo lo externo** que tenés que dar de alta, configurar 
    ```
 
 **Checklist:** app Meta + WhatsApp → tokens en `.env` → webhook apuntando a `/webhook/whatsapp` → verificación exitosa → probá mandar mensaje al número.
+
+---
+
+## 3b. Twilio — WhatsApp (chat del bot en producción)
+
+**Para qué:** hoy el bot **recibe** los mensajes del usuario y **responde** por la API de Twilio (`WhatsAppService` en `apps/api`). Si el webhook de Twilio no llega a tu API, **el bot nunca arranca** (no es la landing ni Meta).
+
+**Qué hacer:**
+
+1. En [Twilio Console](https://console.twilio.com/), abrí el **número / sender de WhatsApp** que compraste (no solo SMS).
+2. En **“When a message comes in”** (mensaje entrante), configurá la URL **HTTPS** de tu API, método **POST**, exactamente:
+
+   `https://TU-API-PUBLICA/webhook/twilio`
+
+   (misma base que usás en `API_PUBLIC_URL` en Railway, sin path extra).
+
+3. En **`apps/api/.env`** (o variables en Railway):
+
+   ```env
+   TWILIO_ACCOUNT_SID=...
+   TWILIO_AUTH_TOKEN=...
+   TWILIO_PHONE_NUMBER=+1...   # o whatsapp:+1... — el mismo sender de WhatsApp
+   ```
+
+4. **Probar que la URL existe:** en el navegador abrí  
+   `https://TU-API-PUBLICA/webhook/twilio`  
+   Deberías ver texto plano tipo “Servy: webhook Twilio OK…”. Si da 404 o error de DNS/SSL, Twilio tampoco va a poder hacer POST.
+
+5. **Logs de la API** al mandar un WhatsApp al número de Servy: debería aparecer `[twilio] parse` y luego `[twilio] mensaje`. Si ves `[twilio] parse: empty or skipped`, el body no llegó (proxy, URL equivocada, etc.).
+
+6. **Twilio Debugger** (consola): mirá si el intento de webhook a tu URL falla (timeout, 403, 404, SSL).
+
+**Checklist:** sender WhatsApp en Twilio → webhook POST a `/webhook/twilio` → GET a esa URL responde OK → variables `TWILIO_*` en el servicio de la API → probá mensaje y revisá logs.
 
 ---
 
