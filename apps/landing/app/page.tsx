@@ -26,10 +26,13 @@ export default function Home() {
                     {/* Texto */}
                     <div className="flex-1 max-w-md flex flex-col items-start text-left">
                         <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 max-w-xl animate-slide-up">
-                            ¿Se te rompió algo en casa y no sabés a quién llamar?
+                            ¿Se te rompió algo en casa y no sabés{' '}
+                            <span className="text-servy-600">a quién llamar?</span>
                         </h1>
                         <p className="mt-6 text-lg md:text-xl text-slate-600 max-w-lg animate-fade-in delay-150">
-                            Canilla que pierde, se fue la luz, te quedaste afuera? Contale a Servy por WhatsApp. En minutos tenés un técnico verificado que ya sabe qué hacer. Precio cerrado antes de que llegue. Sin apps, sin llamadas, sin vueltas.
+                            Canilla que pierde, se fue la luz, te quedaste afuera? Contale a Servy por WhatsApp. En minutos tenés un técnico verificado que ya sabe qué hacer.{' '}
+                            <span className="font-semibold text-slate-900">Precio cerrado antes de que llegue.</span>{' '}
+                            Sin apps, sin llamadas, sin vueltas.
                         </p>
                         <div className="mt-10 animate-slide-up delay-300">
                             <a
@@ -38,7 +41,7 @@ export default function Home() {
                                 rel="noopener noreferrer"
                                 className="bg-servy-600 text-white px-8 py-4 rounded-full font-bold shadow-xl shadow-servy-500/30 hover:shadow-2xl hover:bg-servy-500 hover:-translate-y-1 transition-all duration-300"
                             >
-                                Resolver mi problema ahora
+                                Hablar con Servy
                             </a>
                         </div>
                     </div>
