@@ -34,15 +34,12 @@ export const getDashboard = async (req: Request, res: Response) => {
             prisma.payment.aggregate({ _sum: { amount: true }, where: { status: 'approved', paid_at: { gte: firstDayOfMonth } } }),
         ]);
 
-        const totalUsers = await prisma.user.count();
-
         res.json({
             success: true,
             data: {
                 active_conversations: activeConversations,
                 delayed_quotes: delayedQuotes,
                 active_professionals: activePros,
-                total_users: totalUsers,
                 gmv: {
                     day: gmvDay._sum.amount || 0,
                     week: gmvWeek._sum.amount || 0,
@@ -63,50 +60,6 @@ export const getConversations = async (req: Request, res: Response) => {
         res.json({ success: true, data: sessions });
     } catch (error) {
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Error fetching conversations' } });
-    }
-};
-
-export const getConversationMessages = async (req: Request, res: Response) => {
-    try {
-        const { phone } = req.params;
-
-        const user = await prisma.user.findUnique({
-            where: { phone },
-            select: { name: true, phone: true },
-        });
-
-        const professional = await prisma.professional.findUnique({
-            where: { phone },
-            select: { name: true, phone: true },
-        });
-
-        const session = await prisma.whatsappSession.findUnique({
-            where: { phone },
-        });
-
-        const requests = await prisma.serviceRequest.findMany({
-            where: { user_phone: phone },
-            orderBy: { created_at: 'desc' },
-            take: 20,
-            select: {
-                id: true,
-                category: true,
-                description: true,
-                created_at: true,
-            },
-        });
-
-        res.json({
-            success: true,
-            data: {
-                user: user || professional,
-                session,
-                requests,
-                messages: [],
-            },
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, error: { message: 'Error fetching messages' } });
     }
 };
 

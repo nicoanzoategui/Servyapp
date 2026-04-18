@@ -35,7 +35,7 @@ export const createProfessionalLead = async (req: Request, res: Response) => {
         return res.status(400).json({
             success: false,
             error: {
-                code: result.code,
+                code: (result as any).code,
                 message: 'Este número de teléfono ya está registrado. Si ya tenés cuenta, iniciá sesión en el portal.',
             },
         });

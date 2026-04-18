@@ -19,7 +19,7 @@ export const registerProfessional = async (req: Request, res: Response) => {
             password: String(password ?? ''),
         });
         if (!result.ok) {
-            return res.status(result.status).json({ success: false, error: { message: result.message } });
+            return res.status((result as any).status).json({ success: false, error: { message: (result as any).message } });
         }
         res.status(201).json({ success: true, data: { id: result.id } });
     } catch (error) {

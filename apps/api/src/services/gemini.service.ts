@@ -58,7 +58,7 @@ Mensaje del usuario: "${description}"`;
             }
 
             const data = await response.json();
-            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const text = (data as any)?.candidates?.[0]?.content?.parts?.[0]?.text || '';
             console.log('[Gemini response]', text);
             const clean = text.replace(/```json|```/g, '').trim();
 
