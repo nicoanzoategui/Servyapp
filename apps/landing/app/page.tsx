@@ -26,13 +26,11 @@ export default function Home() {
                     {/* Texto */}
                     <div className="flex-1 max-w-md flex flex-col items-start text-left">
                         <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 max-w-xl animate-slide-up">
-                            ¿Se te rompió algo en casa y no sabés{' '}
-                            <span className="text-servy-600">a quién llamar?</span>
+                            Arreglá tu hogar en minutos.{' '}
+                            <span className="text-servy-600">Por WhatsApp.</span>
                         </h1>
                         <p className="mt-6 text-lg md:text-xl text-slate-600 max-w-lg animate-fade-in delay-150">
-                            Canilla que pierde, se fue la luz, te quedaste afuera? Contale a Servy por WhatsApp. En minutos tenés un técnico verificado que ya sabe qué hacer.{' '}
-                            <span className="font-semibold text-slate-900">Precio cerrado antes de que llegue.</span>{' '}
-                            Sin apps, sin llamadas, sin vueltas.
+                            Canilla que pierde, se fue la luz, te quedaste afuera? Mandá mensaje a Servy. Recibí la cotización en minutos y tenés un técnico verificado camino a tu casa. Precio cerrado antes de que llegue. Sin apps nuevas, sin llamadas, sin vueltas.
                         </p>
                         <div className="mt-10 animate-slide-up delay-300">
                             <a
@@ -143,32 +141,39 @@ export default function Home() {
 
             {/* Cómo Funciona */}
             <section id="como-funciona" className="w-full py-24 px-6 md:px-12 bg-white flex flex-col items-center relative">
-                <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-16">De &apos;se me rompió&apos; a &apos;ya está solucionado&apos; en 3 pasos</h2>
+                <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-16">Así funciona Servy</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full">
                     {/* Step 1 */}
                     <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
                         <div className="w-16 h-16 rounded-2xl bg-servy-100 text-servy-600 flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
-                            {/* Un icono de chat / telefono mock */}
                             <span className="text-2xl font-black">1</span>
                         </div>
-                        <h3 className="text-xl font-bold mb-3">Contale</h3>
-                        <p className="text-slate-600">Contale a Servy qué pasó en tu casa. Texto, fotos, lo que tengas.</p>
+                        <h3 className="text-xl font-bold mb-3">Contale y elegí tu técnico</h3>
+                        <p className="text-slate-600">
+                            Mandá mensaje con tu problema (texto o foto). Te mostramos 2 opciones: técnico URGENTE (llega hoy) o PROGRAMADO (más económico). Ambos con calificaciones reales.
+                        </p>
                     </div>
+
                     {/* Step 2 */}
                     <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
                         <div className="w-16 h-16 rounded-2xl bg-servy-100 text-servy-600 flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
                             <span className="text-2xl font-black">2</span>
                         </div>
-                        <h3 className="text-xl font-bold mb-3">Elegí</h3>
-                        <p className="text-slate-600">Te mostramos dos opciones: urgente para hoy o programado más económico. Vos decidís.</p>
+                        <h3 className="text-xl font-bold mb-3">Recibí la cotización y reservá</h3>
+                        <p className="text-slate-600">
+                            El técnico que elegiste te manda el precio exacto. Si te cierra, reservás con pago protegido por Mercado Pago. El dinero queda congelado hasta que estés conforme.
+                        </p>
                     </div>
+
                     {/* Step 3 */}
-                    <div className="relative p-8 rounded-3xl bg-servy-600 text-white shadow-lg hover:shadow-xl transition-all hover:-translate-y-2 group flex flex-col items-center text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-white/20 flex justify-center items-center mb-6">
+                    <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
+                        <div className="w-16 h-16 rounded-2xl bg-servy-100 text-servy-600 flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
                             <span className="text-2xl font-black">3</span>
                         </div>
-                        <h3 className="text-xl font-bold mb-3">Pagá seguro</h3>
-                        <p className="text-white/80">Aceptás la cotización, pagás por Mercado Pago y el profesional ya sabe que va.</p>
+                        <h3 className="text-xl font-bold mb-3">Recibí el arreglo y liberá el pago</h3>
+                        <p className="text-slate-600">
+                            El técnico va, arregla y te muestra el resultado. Cuando estés conforme, escaneás el QR y ahí se libera el pago. Vos tenés el control.
+                        </p>
                     </div>
                 </div>
             </section>
@@ -269,6 +274,15 @@ export default function Home() {
                             </p>
                         </div>
                     </div>
+                    <div className="flex gap-6 p-6">
+                        <ShieldCheck className="text-servy-600 shrink-0" size={40} />
+                        <div>
+                            <h3 className="font-bold text-xl mb-2">Tu plata protegida hasta el final</h3>
+                            <p className="text-slate-600">
+                                El técnico no cobra hasta que vos escanees el QR. Si algo sale mal, el dinero vuelve a tu cuenta. Cero riesgo.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -366,27 +380,27 @@ export default function Home() {
                             ¿Qué pasa si el técnico no llega?
                         </h3>
                         <p className="text-slate-600 leading-relaxed">
-                            Te reembolsamos el 100% y te conseguimos otro técnico gratis. Si hubo un problema, lo resolvemos nosotros, no vos.
+                            Te mandamos otro técnico sin cargo adicional. Como el pago solo se libera cuando escaneás el QR, tu dinero está protegido. Si hubo un problema, lo resolvemos nosotros, no vos.
                         </p>
                     </div>
 
                     {/* Pregunta 2 */}
                     <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100">
                         <h3 className="font-bold text-xl mb-3 text-slate-900">
-                            ¿Y si hace mal el trabajo?
+                            ¿Puedo ver las reviews antes de contratar?
                         </h3>
                         <p className="text-slate-600 leading-relaxed">
-                            Tenés 7 días de garantía en todos los trabajos. Si no quedás conforme, el técnico vuelve sin costo adicional. Y si el problema persiste, te devolvemos el dinero.
+                            Sí. Te mostramos el perfil del técnico, sus calificaciones y reviews de otros clientes antes de que confirmes. Así sabés con quién estás contratando.
                         </p>
                     </div>
 
                     {/* Pregunta 3 */}
                     <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100">
                         <h3 className="font-bold text-xl mb-3 text-slate-900">
-                            ¿Puedo ver las reviews antes de contratar?
+                            ¿Y si hace mal el trabajo?
                         </h3>
                         <p className="text-slate-600 leading-relaxed">
-                            Sí. Te mostramos el perfil del técnico, sus calificaciones y reviews de otros clientes antes de que confirmes. Así sabés con quién estás contratando.
+                            Tenés 7 días de garantía en todos los trabajos. Si no quedás conforme, el técnico vuelve sin costo adicional. Y si el problema persiste, te devolvemos el dinero.
                         </p>
                     </div>
 
