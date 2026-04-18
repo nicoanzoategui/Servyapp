@@ -374,7 +374,7 @@ export default function Home() {
             </section>
 
             {/* Dudas / FAQ */}
-            <section className="w-full py-24 px-6 md:px-12 bg-white flex flex-col items-center">
+            <section id="dudas" className="w-full py-24 px-6 md:px-12 bg-white flex flex-col items-center">
                 <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-16">
                     ¿Dudas?
                 </h2>
@@ -443,13 +443,92 @@ export default function Home() {
             </section>
 
             {/* Footer */}
-            <footer className="w-full bg-slate-50 py-12 px-6 md:px-12 flex flex-col items-center border-t border-slate-200">
-                <div className="text-2xl font-black text-servy-600 tracking-tighter mb-6">Servy.</div>
-                <div className="flex gap-6 text-slate-500 font-medium">
-                    <Link href="#">Términos y Condiciones</Link>
-                    <Link href="#">Privacidad</Link>
+            <footer className="w-full bg-slate-50 py-16 px-6 md:px-12 border-t border-slate-200">
+                <div className="max-w-6xl mx-auto">
+                    {/* Grid de columnas */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                        {/* Columna 1: Logo + descripción */}
+                        <div className="md:col-span-1">
+                            <div className="text-2xl font-black text-servy-600 tracking-tighter mb-4">Servy.</div>
+                            <p className="text-slate-600 text-sm">
+                                Arreglá tu hogar en minutos. Todo por WhatsApp.
+                            </p>
+                        </div>
+
+                        {/* Columna 2: Producto */}
+                        <div>
+                            <h4 className="font-bold text-slate-900 mb-4">Producto</h4>
+                            <ul className="space-y-3 text-slate-600 text-sm">
+                                <li>
+                                    <a href="#como-funciona" className="hover:text-servy-600 transition">
+                                        Cómo Funciona
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="#categorias" className="hover:text-servy-600 transition">
+                                        Servicios
+                                    </a>
+                                </li>
+                                <li>
+                                    <Link href="/tecnicos" className="hover:text-servy-600 transition">
+                                        Soy técnico
+                                    </Link>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* Columna 3: Legal */}
+                        <div>
+                            <h4 className="font-bold text-slate-900 mb-4">Legal</h4>
+                            <ul className="space-y-3 text-slate-600 text-sm">
+                                <li>
+                                    <Link href="/terminos" className="hover:text-servy-600 transition">
+                                        Términos y Condiciones
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link href="/privacidad" className="hover:text-servy-600 transition">
+                                        Política de Privacidad
+                                    </Link>
+                                </li>
+                                <li>
+                                    <a href="#dudas" className="hover:text-servy-600 transition">
+                                        Preguntas Frecuentes
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* Columna 4: Contacto */}
+                        <div>
+                            <h4 className="font-bold text-slate-900 mb-4">Contacto</h4>
+                            <ul className="space-y-3 text-slate-600 text-sm">
+                                <li>
+                                    <a
+                                        href={WA_LINK}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="hover:text-servy-600 transition"
+                                    >
+                                        Hablar con Servy
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="mailto:soporte@servy.lat" className="hover:text-servy-600 transition">
+                                        soporte@servy.lat
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {/* Separador */}
+                    <div className="border-t border-slate-200 pt-8">
+                        <p className="text-slate-500 text-sm text-center">
+                            © {new Date().getFullYear()} Servy. Todos los derechos reservados.
+                        </p>
+                    </div>
                 </div>
-                <p className="text-slate-400 mt-8 text-sm">© {new Date().getFullYear()} Servy. Todos los derechos reservados.</p>
             </footer>
         </main>
     );
