@@ -454,6 +454,7 @@ export const completeOnboarding = async (req: Request, res: Response) => {
                 categories: categories.map((c: unknown) => String(c).trim()).filter(Boolean),
                 onboarding_completed: true,
                 onboarding_step: 1,
+                status: 'active',
             },
         });
         await recomputeProfileOperationalCompleteAndNotify(professionalId);
