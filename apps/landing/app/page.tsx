@@ -403,20 +403,30 @@ export default function Home() {
                     {/* Pregunta 3 */}
                     <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100">
                         <h3 className="font-bold text-xl mb-3 text-slate-900">
-                            ¿Y si hace mal el trabajo?
+                            ¿Es seguro recibir a alguien en mi casa?
                         </h3>
                         <p className="text-slate-600 leading-relaxed">
-                            Tenés 7 días de garantía en todos los trabajos. Si no quedás conforme, el técnico vuelve sin costo adicional. Y si el problema persiste, te devolvemos el dinero.
+                            Totalmente. Te enviamos los documentos de la persona que va a tu casa. Todos los técnicos pasan por un proceso de verificación de antecedentes y experiencia antes de entrar a Servy.
                         </p>
                     </div>
 
                     {/* Pregunta 4 */}
                     <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100">
                         <h3 className="font-bold text-xl mb-3 text-slate-900">
+                            ¿Los técnicos están calificados?
+                        </h3>
+                        <p className="text-slate-600 leading-relaxed">
+                            Sí. Todos los técnicos pasan un proceso de verificación donde chequeamos su experiencia, antecedentes y capacitación. No dejamos entrar a cualquiera.
+                        </p>
+                    </div>
+
+                    {/* Pregunta 5 */}
+                    <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100">
+                        <h3 className="font-bold text-xl mb-3 text-slate-900">
                             ¿Cuánto tarda en llegar el técnico?
                         </h3>
                         <p className="text-slate-600 leading-relaxed">
-                            Si elegís &quot;urgente&quot;, llega el mismo día (generalmente en 2-4 horas). Si elegís &quot;programado&quot;, podés agendarlo para el día que mejor te venga y sale más económico.
+                            Si elegís &quot;urgente&quot;, llega dentro de las 24 horas. Si elegís &quot;programado&quot;, podés agendarlo para el día que mejor te venga y sale más económico.
                         </p>
                     </div>
                 </div>
