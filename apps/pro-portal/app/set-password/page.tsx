@@ -79,12 +79,20 @@ function SetPasswordForm() {
 
     return (
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
-            <div className="text-3xl font-black text-servy-600 tracking-tighter text-center mb-8">
-                Servy.
+            <div className="text-center mb-10">
+                <div className="text-4xl font-black text-servy-600 tracking-tighter mb-4">
+                    Servy.
+                </div>
+                <h2 className="text-3xl font-extrabold text-slate-900 mb-3">
+                    Activá tu cuenta
+                </h2>
+                <p className="text-slate-600 text-lg mb-2">
+                    Último paso para empezar a recibir trabajos
+                </p>
+                <p className="text-slate-500 text-sm">
+                    Ingresá tu email y elegí una contraseña segura
+                </p>
             </div>
-
-            <h2 className="text-center text-3xl font-extrabold text-slate-900 mb-2">Creá tu contraseña</h2>
-            <p className="text-center text-slate-600 mb-8">Completá tus datos para activar tu cuenta</p>
 
             {error && (
                 <div className="mb-6 rounded-xl bg-red-50 p-4 text-sm text-red-600 border border-red-200">
