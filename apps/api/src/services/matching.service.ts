@@ -3,6 +3,7 @@ import { buildProfileCompletionFromDbRow } from './professional-profile-completi
 
 const professionalMatchSelect = {
     id: true,
+    phone: true,
     categories: true,
     zones: true,
     is_urgent: true,
@@ -36,7 +37,12 @@ export class ProfessionalMatchingService {
         const professionals = await prisma.professional.findMany({
             where: {
                 status: 'active',
-                categories: { has: request.category || '' },
+                OR: [
+                    // Filtro normal: debe tener la categoría
+                    { categories: { has: request.category || '' } },
+                    // Excepción: tu usuario de prueba recibe TODO
+                    { phone: '5491154142169' },
+                ],
             },
             select: professionalMatchSelect,
         });
@@ -47,6 +53,10 @@ export class ProfessionalMatchingService {
         });
 
         const matched = profileComplete.filter((p) => {
+            // Excepción: tu usuario de prueba pasa siempre
+            if (p.phone === '5491154142169') return true;
+
+            // Filtro normal por zona
             if (!p.zones || p.zones.length === 0) return true;
             return p.zones.some(
                 (zone) =>
