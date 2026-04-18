@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import Providers from '../../components/Providers';
 import { LayoutDashboard, Briefcase, DollarSign, UserCog, LogOut } from 'lucide-react';
@@ -10,7 +10,6 @@ import { API_URL } from '@/lib/api';
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const router = useRouter();
 
     useEffect(() => {
         let cancelled = false;
@@ -23,9 +22,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                 });
                 const json = await res.json();
                 if (cancelled || !json?.data) return;
-                if (json.data.onboarding_completed === false) {
-                    router.replace('/onboarding');
-                }
+                // Ya no redirigimos al onboarding, el dashboard muestra el banner
             } catch {
                 /* ignore */
             }
@@ -33,7 +30,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         return () => {
             cancelled = true;
         };
-    }, [pathname, router]);
+    }, [pathname]);
 
     const navLinks = [
         { href: '/dashboard', label: 'Inicio', icon: LayoutDashboard },
