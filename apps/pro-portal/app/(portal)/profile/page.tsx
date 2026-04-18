@@ -295,7 +295,54 @@ export default function ProfilePage() {
         setDocUploading(kind);
         try {
             const token = Cookies.get('token');
-            const content_base64 = await fileToBase64(file);
+
+            // Comprimir imágenes antes de enviar
+            let content_base64: string;
+            if (mime === 'image/jpeg' || mime === 'image/png') {
+                // Crear canvas para comprimir
+                const img = new Image();
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                const objectUrl = URL.createObjectURL(file);
+                try {
+                    await new Promise<void>((resolve, reject) => {
+                        img.onload = () => resolve();
+                        img.onerror = () => reject(new Error('No se pudo leer la imagen'));
+                        img.src = objectUrl;
+                    });
+                } finally {
+                    URL.revokeObjectURL(objectUrl);
+                }
+
+                // Redimensionar si es muy grande (máx 1920px)
+                let width = img.width;
+                let height = img.height;
+                const maxDimension = 1920;
+
+                if (width > maxDimension || height > maxDimension) {
+                    if (width > height) {
+                        height = (height / width) * maxDimension;
+                        width = maxDimension;
+                    } else {
+                        width = (width / height) * maxDimension;
+                        height = maxDimension;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                ctx?.drawImage(img, 0, 0, width, height);
+
+                // Comprimir a 85% calidad
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                const i = compressedDataUrl.indexOf(',');
+                content_base64 = i >= 0 ? compressedDataUrl.slice(i + 1) : compressedDataUrl;
+            } else {
+                // PDF sin comprimir
+                content_base64 = await fileToBase64(file);
+            }
+
             const res = await fetch(`${API_URL}/professional/documents`, {
                 method: 'POST',
                 headers: {
@@ -305,7 +352,7 @@ export default function ProfilePage() {
                 body: JSON.stringify({
                     kind,
                     filename: file.name,
-                    content_type: mime,
+                    content_type: mime === 'image/png' ? 'image/jpeg' : mime, // Convertir PNG a JPEG
                     content_base64,
                 }),
             });
@@ -315,7 +362,8 @@ export default function ProfilePage() {
                 return;
             }
             await loadDocuments();
-        } catch {
+        } catch (err) {
+            console.error('Upload error:', err);
             setDocError('Error al subir el archivo');
         } finally {
             setDocUploading(null);
