@@ -577,6 +577,78 @@ export const updateProfile = async (req: Request, res: Response) => {
             select: PROFESSIONAL_PROFILE_SELECT,
         });
 
+        // Sincronizar schedule_json con provider_schedules
+        if ('schedule_json' in b && b.schedule_json && typeof b.schedule_json === 'object') {
+            const scheduleJson = b.schedule_json as Record<string, unknown>;
+
+            // Convertir schedule_json a formato provider_schedules
+            const workDays: string[] = [];
+            let shiftStart: string | null = null;
+            let shiftEnd: string | null = null;
+
+            const dayMap: Record<string, string> = {
+                mon: 'monday',
+                tue: 'tuesday',
+                wed: 'wednesday',
+                thu: 'thursday',
+                fri: 'friday',
+                sat: 'saturday',
+                sun: 'sunday',
+            };
+
+            // Extraer días activos y horarios
+            for (const [key, value] of Object.entries(scheduleJson)) {
+                if (value && typeof value === 'object' && (value as { enabled?: boolean }).enabled === true) {
+                    const dayName = dayMap[key];
+                    if (dayName) {
+                        workDays.push(dayName);
+                        // Usar el primer horario encontrado como referencia
+                        const slot = value as { from?: string; to?: string };
+                        if (!shiftStart && slot.from) {
+                            shiftStart = slot.from;
+                            shiftEnd = slot.to ?? null;
+                        }
+                    }
+                }
+            }
+
+            // Crear o actualizar provider_schedules
+            if (workDays.length > 0 && shiftStart && shiftEnd) {
+                try {
+                    // Buscar schedule existente
+                    const existing = await prisma.providerSchedule.findFirst({
+                        where: { provider_id: professionalId },
+                    });
+
+                    if (existing) {
+                        await prisma.providerSchedule.update({
+                            where: { id: existing.id },
+                            data: {
+                                work_days: workDays,
+                                shift_start: shiftStart,
+                                shift_end: shiftEnd,
+                                is_active: true,
+                                updated_at: new Date(),
+                            },
+                        });
+                    } else {
+                        await prisma.providerSchedule.create({
+                            data: {
+                                provider_id: professionalId,
+                                work_days: workDays,
+                                shift_start: shiftStart,
+                                shift_end: shiftEnd,
+                                timezone: 'America/Argentina/Buenos_Aires',
+                                is_active: true,
+                            },
+                        });
+                    }
+                } catch (err) {
+                    console.error('[updateProfile] Error syncing provider_schedules:', err);
+                }
+            }
+        }
+
         await recomputeProfileOperationalCompleteAndNotify(professionalId);
         res.json({ success: true, data: updated });
     } catch (error) {
