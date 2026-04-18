@@ -10,6 +10,24 @@ export interface GeminiClassification {
     understood: boolean;
 }
 
+/** Si el modelo corta el JSON (MAX_TOKENS), extrae lo mínimo con regex. */
+function parseClassificationFromPartialJson(clean: string): GeminiClassification | null {
+    const catM = clean.match(/"category"\s*:\s*"([^"]*)/);
+    const category =
+        catM?.[1]?.trim() ? catM[1].trim() : null;
+
+    const urgM = clean.match(/"urgency"\s*:\s*"([a-z]*)/);
+    const u = urgM?.[1];
+    const urgency: UrgencyLevel = u === 'alta' || u === 'media' || u === 'baja' ? u : 'media';
+
+    const undM = clean.match(/"understood"\s*:\s*(true|false)/);
+    // Si el JSON se cortó antes de "understood" pero hay categoría, seguimos el flujo
+    const understood = undM ? undM[1] === 'true' : !!category;
+
+    if (!category && !urgM) return null;
+    return { category, urgency, understood };
+}
+
 export class GeminiService {
     static async classifyProblem(description: string): Promise<GeminiClassification> {
         try {
@@ -42,7 +60,7 @@ Mensaje del usuario: "${description}"`;
                         contents: [{ parts: [{ text: prompt }] }],
                         generationConfig: {
                             temperature: 0.1,
-                            maxOutputTokens: 256, // Aumentar de 150 a 256
+                            maxOutputTokens: 512,
                         },
                     }),
                 }
@@ -55,6 +73,10 @@ Mensaje del usuario: "${description}"`;
             }
 
             const data = await response.json();
+            const candidate = (data as { candidates?: { finishReason?: string }[] })?.candidates?.[0];
+            if (candidate?.finishReason === 'MAX_TOKENS') {
+                console.warn('[Gemini] Respuesta truncada (MAX_TOKENS); se intenta parseo parcial');
+            }
             const parts = (data as any)?.candidates?.[0]?.content?.parts || [];
             // Concatenar todos los parts por si viene fragmentado
             const text = parts.map((p: { text?: string }) => p.text || '').join('').trim();
@@ -68,22 +90,33 @@ Mensaje del usuario: "${description}"`;
             }
 
             const jsonMatch = clean.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) {
-                console.error('[Gemini] No se encontró JSON en la respuesta:', clean);
-                return { category: null, urgency: 'media', understood: false };
+            if (jsonMatch) {
+                try {
+                    const raw = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+                    const u = raw.urgency;
+                    const urgency: UrgencyLevel =
+                        u === 'alta' || u === 'media' || u === 'baja' ? u : 'media';
+                    const category =
+                        typeof raw.category === 'string' && raw.category.trim()
+                            ? raw.category.trim()
+                            : null;
+                    return {
+                        category,
+                        urgency,
+                        understood: raw.understood === true,
+                    };
+                } catch {
+                    /* intentar parseo parcial */
+                }
             }
 
-            const raw = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
-            const u = raw.urgency;
-            const urgency: UrgencyLevel =
-                u === 'alta' || u === 'media' || u === 'baja' ? u : 'media';
-            const category =
-                typeof raw.category === 'string' && raw.category.trim() ? raw.category.trim() : null;
-            return {
-                category,
-                urgency,
-                understood: raw.understood === true,
-            };
+            const partial = parseClassificationFromPartialJson(clean);
+            if (partial) {
+                return partial;
+            }
+
+            console.error('[Gemini] No se pudo parsear la respuesta:', clean);
+            return { category: null, urgency: 'media', understood: false };
         } catch (err) {
             console.error('Gemini error:', err);
             return { category: null, urgency: 'media', understood: false };

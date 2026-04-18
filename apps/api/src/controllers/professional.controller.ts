@@ -625,32 +625,26 @@ export const updateProfile = async (req: Request, res: Response) => {
                     });
 
                     if (existing) {
-                        await prisma.$executeRaw`
-                            UPDATE provider_schedules
-                            SET
-                                work_days = ${plainWorkDays}::text[],
-                                shift_start = ${shiftStart}::time,
-                                shift_end = ${shiftEnd}::time,
-                                is_active = true,
-                                updated_at = now()
-                            WHERE id = ${existing.id}::uuid
-                        `;
+                        await prisma.providerSchedule.update({
+                            where: { id: existing.id },
+                            data: {
+                                work_days: plainWorkDays,
+                                shift_start: shiftStart,
+                                shift_end: shiftEnd,
+                                is_active: true,
+                            },
+                        });
                     } else {
-                        await prisma.$executeRaw`
-                            INSERT INTO provider_schedules (
-                                id, provider_id, work_days, shift_start, shift_end, timezone, is_active, created_at, updated_at
-                            ) VALUES (
-                                gen_random_uuid(),
-                                ${professionalId}::text,
-                                ${plainWorkDays}::text[],
-                                ${shiftStart}::time,
-                                ${shiftEnd}::time,
-                                'America/Argentina/Buenos_Aires',
-                                true,
-                                now(),
-                                now()
-                            )
-                        `;
+                        await prisma.providerSchedule.create({
+                            data: {
+                                provider_id: professionalId,
+                                work_days: plainWorkDays,
+                                shift_start: shiftStart,
+                                shift_end: shiftEnd,
+                                timezone: 'America/Argentina/Buenos_Aires',
+                                is_active: true,
+                            },
+                        });
                     }
                 } catch (err) {
                     console.error('[updateProfile] Error syncing provider_schedules:', err);
