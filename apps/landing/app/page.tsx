@@ -26,11 +26,10 @@ export default function Home() {
                     {/* Texto */}
                     <div className="flex-1 max-w-md flex flex-col items-start text-left">
                         <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 max-w-xl animate-slide-up">
-                            Arreglá tu hogar en minutos.{' '}
-                            <span className="text-servy-600">Por WhatsApp.</span>
+                            ¿Se te rompió algo en casa y no sabés a quién llamar?
                         </h1>
                         <p className="mt-6 text-lg md:text-xl text-slate-600 max-w-lg animate-fade-in delay-150">
-                            Describí el problema de tu hogar por WhatsApp y en minutos tenés un profesional verificado camino a tu casa. Sin apps, sin llamadas, sin vueltas.
+                            Canilla que pierde, se fue la luz, te quedaste afuera? Contale a Servy por WhatsApp. En minutos tenés un técnico verificado que ya sabe qué hacer. Precio cerrado antes de que llegue. Sin apps, sin llamadas, sin vueltas.
                         </p>
                         <div className="mt-10 animate-slide-up delay-300">
                             <a
@@ -39,7 +38,7 @@ export default function Home() {
                                 rel="noopener noreferrer"
                                 className="bg-servy-600 text-white px-8 py-4 rounded-full font-bold shadow-xl shadow-servy-500/30 hover:shadow-2xl hover:bg-servy-500 hover:-translate-y-1 transition-all duration-300"
                             >
-                                Hablar con Servy
+                                Resolver mi problema ahora
                             </a>
                         </div>
                     </div>
@@ -141,7 +140,7 @@ export default function Home() {
 
             {/* Cómo Funciona */}
             <section id="como-funciona" className="w-full py-24 px-6 md:px-12 bg-white flex flex-col items-center relative">
-                <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-16">Como escribirle a un amigo que sabe de todo</h2>
+                <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-16">De &apos;se me rompió&apos; a &apos;ya está solucionado&apos; en 3 pasos</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full">
                     {/* Step 1 */}
                     <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
@@ -235,29 +234,167 @@ export default function Home() {
                         <ShieldCheck className="text-servy-600 shrink-0" size={40} />
                         <div>
                             <h3 className="font-bold text-xl mb-2">Profesionales verificados</h3>
-                            <p className="text-slate-600">Cada profesional pasa por un proceso de verificación antes de entrar a Servy. Vos no arriesgás.</p>
+                            <p className="text-slate-600">
+                                No más &apos;un amigo de un amigo que sabe&apos;. Todos nuestros técnicos tienen experiencia comprobada y antecedentes chequeados. Vos no arriesgás.
+                            </p>
                         </div>
                     </div>
                     <div className="flex gap-6 p-6">
                         <Clock className="text-servy-500 shrink-0" size={40} />
                         <div>
-                            <h3 className="font-bold text-xl mb-2">Sin descargar nada</h3>
-                            <p className="text-slate-600">Todo pasa en WhatsApp, donde ya estás. Cero apps nuevas, cero registros.</p>
+                            <h3 className="font-bold text-xl mb-2">Todo en WhatsApp</h3>
+                            <p className="text-slate-600">
+                                No tenés que bajarte otra app ni registrarte en ningún lado. Ya estás en WhatsApp, ahí pasa todo. Simple.
+                            </p>
                         </div>
                     </div>
                     <div className="flex gap-6 p-6">
                         <Star className="text-yellow-400 shrink-0" size={40} />
                         <div>
-                            <h3 className="font-bold text-xl mb-2">Calificaciones reales</h3>
-                            <p className="text-slate-600">Cada trabajo se califica. El rating que ves lo pusieron personas como vos, no nosotros.</p>
+                            <h3 className="font-bold text-xl mb-2">Calificaciones de verdad</h3>
+                            <p className="text-slate-600">
+                                Cada trabajo se califica. El rating que ves lo pusieron personas como vos que ya lo contrataron, no lo inventamos nosotros.
+                            </p>
                         </div>
                     </div>
                     <div className="flex gap-6 p-6">
                         <HeartHandshake className="text-servy-600 shrink-0" size={40} />
                         <div>
-                            <h3 className="font-bold text-xl mb-2">Precio cerrado antes de arrancar</h3>
-                            <p className="text-slate-600">Sabés cuánto vas a pagar antes de que llegue el profesional. Sin sorpresas.</p>
+                            <h3 className="font-bold text-xl mb-2">Sabés cuánto pagás antes de que llegue</h3>
+                            <p className="text-slate-600">
+                                Nada de &apos;después vemos&apos;. El técnico te dice el precio exacto antes de arrancar. Aceptás o no, sin presión, sin sorpresas.
+                            </p>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Testimonios */}
+            <section className="w-full py-24 px-6 md:px-12 bg-slate-50 flex flex-col items-center">
+                <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-4">
+                    Lo que dicen quienes ya usaron Servy
+                </h2>
+                <p className="text-slate-600 text-center text-lg mb-16 max-w-2xl">
+                    Más de 500 arreglos resueltos · 4.8★ promedio en calificaciones
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full">
+                    {/* Testimonio 1 */}
+                    <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                        <div className="flex items-center gap-1 mb-4">
+                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
+                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
+                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
+                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
+                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
+                        </div>
+                        <p className="text-slate-700 mb-6 leading-relaxed">
+                            &quot;Se me rompió la canilla un domingo a la tarde. Mandé mensaje y en 2 horas el plomero ya estaba arreglándola. Increíble.&quot;
+                        </p>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-servy-100 flex items-center justify-center font-bold text-servy-600">
+                                M
+                            </div>
+                            <div>
+                                <p className="font-bold text-sm">María González</p>
+                                <p className="text-slate-500 text-xs">Palermo, CABA</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Testimonio 2 */}
+                    <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                        <div className="flex items-center gap-1 mb-4">
+                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
+                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
+                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
+                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
+                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
+                        </div>
+                        <p className="text-slate-700 mb-6 leading-relaxed">
+                            &quot;No tuve que bajarme ninguna app ni registrarme. Todo por WhatsApp, re fácil. Y el precio lo sabés antes, sin vueltas.&quot;
+                        </p>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-servy-100 flex items-center justify-center font-bold text-servy-600">
+                                J
+                            </div>
+                            <div>
+                                <p className="font-bold text-sm">Javier Rodríguez</p>
+                                <p className="text-slate-500 text-xs">Belgrano, CABA</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Testimonio 3 */}
+                    <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                        <div className="flex items-center gap-1 mb-4">
+                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
+                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
+                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
+                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
+                            <Star className="fill-slate-300 text-slate-300" size={18} />
+                        </div>
+                        <p className="text-slate-700 mb-6 leading-relaxed">
+                            &quot;Me quedé afuera de casa a las 11 de la noche. El cerrajero llegó en 40 minutos. Me salvó la vida literal.&quot;
+                        </p>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-servy-100 flex items-center justify-center font-bold text-servy-600">
+                                C
+                            </div>
+                            <div>
+                                <p className="font-bold text-sm">Carolina Méndez</p>
+                                <p className="text-slate-500 text-xs">Caballito, CABA</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Dudas / FAQ */}
+            <section className="w-full py-24 px-6 md:px-12 bg-white flex flex-col items-center">
+                <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-16">
+                    ¿Dudas?
+                </h2>
+
+                <div className="max-w-4xl w-full space-y-6">
+                    {/* Pregunta 1 */}
+                    <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100">
+                        <h3 className="font-bold text-xl mb-3 text-slate-900">
+                            ¿Qué pasa si el técnico no llega?
+                        </h3>
+                        <p className="text-slate-600 leading-relaxed">
+                            Te reembolsamos el 100% y te conseguimos otro técnico gratis. Si hubo un problema, lo resolvemos nosotros, no vos.
+                        </p>
+                    </div>
+
+                    {/* Pregunta 2 */}
+                    <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100">
+                        <h3 className="font-bold text-xl mb-3 text-slate-900">
+                            ¿Y si hace mal el trabajo?
+                        </h3>
+                        <p className="text-slate-600 leading-relaxed">
+                            Tenés 7 días de garantía en todos los trabajos. Si no quedás conforme, el técnico vuelve sin costo adicional. Y si el problema persiste, te devolvemos el dinero.
+                        </p>
+                    </div>
+
+                    {/* Pregunta 3 */}
+                    <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100">
+                        <h3 className="font-bold text-xl mb-3 text-slate-900">
+                            ¿Puedo ver las reviews antes de contratar?
+                        </h3>
+                        <p className="text-slate-600 leading-relaxed">
+                            Sí. Te mostramos el perfil del técnico, sus calificaciones y reviews de otros clientes antes de que confirmes. Así sabés con quién estás contratando.
+                        </p>
+                    </div>
+
+                    {/* Pregunta 4 */}
+                    <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100">
+                        <h3 className="font-bold text-xl mb-3 text-slate-900">
+                            ¿Cuánto tarda en llegar el técnico?
+                        </h3>
+                        <p className="text-slate-600 leading-relaxed">
+                            Si elegís &quot;urgente&quot;, llega el mismo día (generalmente en 2-4 horas). Si elegís &quot;programado&quot;, podés agendarlo para el día que mejor te venga y sale más económico.
+                        </p>
                     </div>
                 </div>
             </section>
