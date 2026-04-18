@@ -30,7 +30,13 @@ export default function Home() {
                             <span className="text-servy-600">Por WhatsApp.</span>
                         </h1>
                         <p className="mt-6 text-lg md:text-xl text-slate-600 max-w-lg animate-fade-in delay-150">
-                            Canilla que pierde, se fue la luz, te quedaste afuera? Mandá mensaje a Servy. Recibí la cotización en minutos y tenés un técnico verificado camino a tu casa. Precio cerrado antes de que llegue. Sin apps nuevas, sin llamadas, sin vueltas.
+                            Canilla que pierde, se fue la luz, te quedaste afuera?{' '}
+                            <span className="font-semibold text-slate-900">Mandá mensaje a Servy.</span>{' '}
+                            Recibí la cotización en minutos y tenés un técnico verificado camino a tu casa.
+                        </p>
+                        <p className="mt-4 text-lg md:text-xl text-slate-600 max-w-lg animate-fade-in delay-200">
+                            <span className="font-semibold text-slate-900">Precio cerrado antes de que llegue.</span>{' '}
+                            Sin apps nuevas, sin llamadas, sin vueltas.
                         </p>
                         <div className="mt-10 animate-slide-up delay-300">
                             <a
