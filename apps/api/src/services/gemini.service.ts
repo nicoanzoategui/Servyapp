@@ -48,7 +48,7 @@ Mensaje del usuario: "${description}"`;
                         contents: [{ parts: [{ text: prompt }] }],
                         generationConfig: {
                             temperature: 0.1,
-                            maxOutputTokens: 150,
+                            maxOutputTokens: 256, // Aumentar de 150 a 256
                         },
                     }),
                 }
@@ -61,9 +61,17 @@ Mensaje del usuario: "${description}"`;
             }
 
             const data = await response.json();
-            const text = (data as any)?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const parts = (data as any)?.candidates?.[0]?.content?.parts || [];
+            // Concatenar todos los parts por si viene fragmentado
+            const text = parts.map((p: { text?: string }) => p.text || '').join('').trim();
             console.log('[Gemini response]', text);
-            const clean = text.replace(/```json|```/g, '').trim();
+            // Limpiar markdown y extraer JSON
+            let clean = text.replace(/```json|```/g, '').trim();
+            // Si empieza con texto antes del JSON, buscar desde la primera {
+            const firstBrace = clean.indexOf('{');
+            if (firstBrace > 0) {
+                clean = clean.slice(firstBrace);
+            }
 
             const jsonMatch = clean.match(/\{[\s\S]*\}/);
             if (!jsonMatch) {
