@@ -595,6 +595,7 @@ export const updateProfile = async (req: Request, res: Response) => {
                 sat: 'saturday',
                 sun: 'sunday',
             };
+            const allowedWeekdays = new Set(Object.values(dayMap));
 
             // Extraer días activos y horarios
             for (const [key, value] of Object.entries(scheduleJson)) {
@@ -612,8 +613,11 @@ export const updateProfile = async (req: Request, res: Response) => {
                 }
             }
 
+            // Solo strings planos conocidos (p. ej. ['monday','tuesday']), sin duplicados
+            const plainWorkDays: string[] = [...new Set(workDays)].filter((d) => allowedWeekdays.has(d));
+
             // Crear o actualizar provider_schedules
-            if (workDays.length > 0 && shiftStart && shiftEnd) {
+            if (plainWorkDays.length > 0 && shiftStart && shiftEnd) {
                 try {
                     // Buscar schedule existente
                     const existing = await prisma.providerSchedule.findFirst({
@@ -621,27 +625,32 @@ export const updateProfile = async (req: Request, res: Response) => {
                     });
 
                     if (existing) {
-                        await prisma.providerSchedule.update({
-                            where: { id: existing.id },
-                            data: {
-                                work_days: workDays,
-                                shift_start: shiftStart,
-                                shift_end: shiftEnd,
-                                is_active: true,
-                                updated_at: new Date(),
-                            },
-                        });
+                        await prisma.$executeRaw`
+                            UPDATE provider_schedules
+                            SET
+                                work_days = ${plainWorkDays}::text[],
+                                shift_start = ${shiftStart}::time,
+                                shift_end = ${shiftEnd}::time,
+                                is_active = true,
+                                updated_at = now()
+                            WHERE id = ${existing.id}::uuid
+                        `;
                     } else {
-                        await prisma.providerSchedule.create({
-                            data: {
-                                provider_id: professionalId,
-                                work_days: workDays,
-                                shift_start: shiftStart,
-                                shift_end: shiftEnd,
-                                timezone: 'America/Argentina/Buenos_Aires',
-                                is_active: true,
-                            },
-                        });
+                        await prisma.$executeRaw`
+                            INSERT INTO provider_schedules (
+                                id, provider_id, work_days, shift_start, shift_end, timezone, is_active, created_at, updated_at
+                            ) VALUES (
+                                gen_random_uuid(),
+                                ${professionalId}::text,
+                                ${plainWorkDays}::text[],
+                                ${shiftStart}::time,
+                                ${shiftEnd}::time,
+                                'America/Argentina/Buenos_Aires',
+                                true,
+                                now(),
+                                now()
+                            )
+                        `;
                     }
                 } catch (err) {
                     console.error('[updateProfile] Error syncing provider_schedules:', err);
