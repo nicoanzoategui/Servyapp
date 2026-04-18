@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { scrapePrices } from './scrape-prices';
 import { takeDemandSnapshot } from './demand-snapshot';
 import { runCheckinScheduler } from './checkin-scheduler';
+import { runMorningCheckin } from './morning-checkin';
 import { collectMetrics } from './metrics-collector';
 import { runQualityFollowup } from './quality-followup';
 import { runRetentionCheck } from './retention-check';
@@ -37,6 +38,11 @@ export function startCrons(): void {
 
     cron.schedule('* * * * *', () => {
         void runCheckinScheduler().catch((err) => console.error('[cron runCheckinScheduler]', err));
+    });
+
+    // Cron cada 15 minutos para check-in matutino
+    cron.schedule('*/15 * * * *', () => {
+        void runMorningCheckin().catch((err) => console.error('[cron runMorningCheckin]', err));
     });
 
     cron.schedule('0 10 * * *', () => {

@@ -74,6 +74,7 @@ model Professional {
   job_offers           JobOffer[]
   earnings             Earning[]
   documents            ProfessionalDocument[]
+  schedules            ProviderSchedule[]
 
   @@map("professionals")
 }
@@ -353,3 +354,23 @@ model MpReconciliation {
 
   @@map("mp_reconciliation")
 }
+
+model ProviderSchedule {
+  id            String   @id @default(uuid())
+  provider_id   String
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  work_days     String[] // ["monday", "tuesday", ...]
+  shift_start   String?  // "09:00"
+  shift_end     String?  // "18:00"
+  shift2_start  String?  // Para doble turno
+  shift2_end    String?
+  timezone      String   @default("America/Argentina/Buenos_Aires")
+  is_active     Boolean  @default(true)
+
+  professional Professional @relation(fields: [provider_id], references: [id])
+
+  @@map("provider_schedules")
+  @@index([provider_id])
+}
+
