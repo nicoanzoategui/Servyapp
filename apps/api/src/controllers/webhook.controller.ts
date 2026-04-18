@@ -130,7 +130,28 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
                     quotation_id: quotationId,
                     status: 'confirmed',
                 },
-                include: { quotation: { include: { job_offer: { include: { professional: true } } } } },
+                include: {
+                    quotation: {
+                        include: {
+                            job_offer: {
+                                include: {
+                                    professional: {
+                                        select: {
+                                            id: true,
+                                            name: true,
+                                            last_name: true,
+                                            phone: true,
+                                            dni: true,
+                                            bio: true,
+                                            skills: true,
+                                            categories: true,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
             });
 
             const userPhone = String(metadata.user_phone);
@@ -150,16 +171,29 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
             const fecha = serviceRequest?.scheduled_date
                 ? new Date(serviceRequest.scheduled_date).toLocaleDateString('es-AR')
                 : 'a confirmar';
-            const proNm = job.quotation.job_offer.professional.name.trim() || 'Tu técnico';
             const addr = serviceRequest?.address ?? 'Ver portal';
 
             const qrCopy = qrUrl
                 ? '🔒 *QR de liberación de pago*\nGuardá la imagen que te mandamos ahora. El técnico la escanea al terminar — ahí se libera el pago. Si algo no quedó bien, no lo muestres antes.'
                 : '🔒 *QR de liberación de pago*\nEn breve te enviamos el código. El técnico lo escanea al terminar para liberar el pago.';
 
+            const pro = job.quotation.job_offer.professional;
+            const proFullName = `${pro.name}${pro.last_name ? ' ' + pro.last_name : ''}`;
+            const proPhone = pro.phone;
+            const proPhoneFormatted = proPhone.startsWith('549')
+                ? `+${proPhone.slice(0, 2)} ${proPhone.slice(2, 4)} ${proPhone.slice(4)}`
+                : proPhone;
+            const proBio = pro.bio
+                ? `\n📝 ${pro.bio.slice(0, 150)}${pro.bio.length > 150 ? '...' : ''}`
+                : '';
+            const proSkills =
+                pro.skills && pro.skills.length > 0 ? `\n🔧 ${pro.skills.slice(0, 3).join(', ')}` : '';
+            const proCategories =
+                pro.categories && pro.categories.length > 0 ? `\n✅ ${pro.categories.join(', ')}` : '';
+
             await WhatsAppService.sendTextMessage(
                 userPhone,
-                `✅ *¡Pago confirmado!*\n\nTu técnico está reservado 🎉\n\n━━━━━━━━━━━━━━━\n👤 *${proNm}*\n📅 ${fecha} · ${franja}\n📍 ${addr}\n━━━━━━━━━━━━━━━\n\n${qrCopy}\n\n_Cualquier consulta escribí acá, te lo hacemos llegar._`
+                `✅ *¡Pago confirmado!*\n\nTu técnico está reservado 🎉\n\n━━━━━━━━━━━━━━━\n*DATOS DEL TÉCNICO*\n━━━━━━━━━━━━━━━\n👤 ${proFullName}\n📞 ${proPhoneFormatted}${pro.dni ? `\n🆔 DNI: ${pro.dni}` : ''}${proBio}${proSkills}${proCategories}\n━━━━━━━━━━━━━━━\n📅 ${fecha} · ${franja}\n📍 ${addr}\n━━━━━━━━━━━━━━━\n\n${qrCopy}\n\n_En breve te enviamos la documentación del técnico._`
             );
             if (qrUrl) {
                 await WhatsAppService.sendImageMessage(userPhone, qrUrl);
