@@ -103,7 +103,7 @@ app.use(
 );
 app.use('/webhook', webhookRoutes);
 
-app.use(express.json());
+app.use(express.json({ limit: '15mb' }));
 
 /** Rutas públicas del portal (register / forgot / set password) antes del router /auth genérico. */
 app.use('/auth/professional', authProfessionalRoutes);
