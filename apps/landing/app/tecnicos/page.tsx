@@ -68,7 +68,7 @@ export default function TecnicosPage() {
                         Dejá de buscar clientes en Facebook. Dejá de perseguir pagos. Recibí trabajos verificados, cobrá antes de salir y
                         enfocate en lo que sabés hacer.
                     </p>
-                    <div className="flex flex-col sm:flex-row gap-4 mt-4 animate-slide-up delay-300">
+                    <div className="flex justify-center mt-4 animate-slide-up delay-300">
                         <Link
                             href="/profesionales"
                             className="inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-full font-bold shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:bg-blue-500 hover:-translate-y-1 transition-all duration-300"
@@ -76,13 +76,6 @@ export default function TecnicosPage() {
                             Quiero sumarme
                             <ArrowRight size={20} />
                         </Link>
-                        <a
-                            href={MAIN_ORIGIN}
-                            className="inline-flex items-center justify-center px-8 py-4 rounded-full font-semibold text-slate-700 border border-slate-200 bg-white/80 hover:border-blue-300 hover:text-blue-700 transition"
-                            rel="noopener noreferrer"
-                        >
-                            Ver experiencia cliente
-                        </a>
                     </div>
                 </div>
             </section>
@@ -149,12 +142,12 @@ export default function TecnicosPage() {
                             Armás la cotización con alcance y precio. El cliente ve opciones cuando aplica (urgente vs programado).
                         </p>
                     </div>
-                    <div className="relative p-8 rounded-3xl bg-blue-600 text-white shadow-lg hover:shadow-xl transition-all hover:-translate-y-2 group flex flex-col items-center text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-white/20 flex justify-center items-center mb-6">
+                    <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
+                        <div className="w-16 h-16 rounded-2xl bg-blue-100 text-blue-600 flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
                             <Wallet size={28} />
                         </div>
                         <h3 className="text-xl font-bold mb-3">3. Cobrás seguro, siempre</h3>
-                        <p className="text-white/80">
+                        <p className="text-slate-600">
                             El cliente paga ANTES de que salgas de tu casa. El dinero queda retenido y se te libera cuando terminás el trabajo. No más
                             &quot;te pago después&quot; ni vueltas.
                         </p>

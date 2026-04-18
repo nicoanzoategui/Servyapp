@@ -1042,7 +1042,7 @@ export class ConversationService {
         const link = `${base}/set-password?token=${encodeURIComponent(result.token)}`;
         await WhatsAppService.sendTextMessage(
             phone,
-            `✅ *¡Perfecto ${result.firstName}!* Ya creamos tu perfil en Servy.\n\nPara activar tu cuenta y completar tu registro entrá acá:\n👉 ${link}\n\n_El link es válido por 24 horas._\n\nCuando actives tu cuenta vas a poder recibir trabajos en tu zona. 💪`
+            `✅ *¡Perfecto ${result.firstName}!* Ya creamos tu perfil en Servy.\n\nPara activar tu cuenta entrá acá:\n👉 ${link}\n\n_El link es válido por 24 horas._\n\n━━━━━━━━━━━━━━━\n*¿Qué sigue?*\n━━━━━━━━━━━━━━━\n\n1️⃣ Elegí tu contraseña\n2️⃣ Completá tu perfil (CBU, docs, disponibilidad)\n3️⃣ Esperá nuestra validación (24-48hs)\n4️⃣ Empezá a recibir trabajos 💪`
         );
     }
 

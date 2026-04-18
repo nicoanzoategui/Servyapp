@@ -105,3 +105,65 @@ export async function createProfessionalFromWhatsAppWizard(input: {
 
     return { ok: true, token, firstName: input.name.trim() };
 }
+
+/**
+ * Crea profesional parcial desde form web (sin email ni DNI).
+ * Genera token y devuelve datos para enviar WhatsApp.
+ */
+export async function createProfessionalFromWebForm(input: {
+    name: string;
+    phone: string;
+    categories: string[];
+    zones: string[];
+}): Promise<
+    | { ok: true; token: string; firstName: string; phone: string }
+    | { ok: false; code: 'duplicate_phone' }
+> {
+    const phoneNorm = normalizeProfessionalPhone(input.phone);
+
+    const existing = await prisma.professional.findFirst({
+        where: { phone: phoneNorm },
+    });
+    if (existing) {
+        return { ok: false, code: 'duplicate_phone' };
+    }
+
+    const randomPassword = crypto.randomBytes(32).toString('base64url');
+    const password_hash = await bcrypt.hash(randomPassword, 12);
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    const tempEmail = `temp_${phoneNorm}@servy.internal`;
+
+    await prisma.$transaction(async (tx) => {
+        await tx.professional.create({
+            data: {
+                name: input.name.trim(),
+                last_name: '',
+                email: tempEmail,
+                phone: phoneNorm,
+                password_hash,
+                dni: null,
+                categories: input.categories,
+                zones: input.zones,
+                status: 'pending',
+                onboarding_completed: false,
+            },
+        });
+        await tx.passwordToken.create({
+            data: {
+                token,
+                email: tempEmail,
+                type: 'set',
+                expires_at: expiresAt,
+            },
+        });
+    });
+
+    return {
+        ok: true,
+        token,
+        firstName: input.name.trim().split(' ')[0] || input.name.trim(),
+        phone: phoneNorm,
+    };
+}

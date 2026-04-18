@@ -1,13 +1,14 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { prisma } from '@servy/db';
+import { createProfessionalFromWebForm } from '../services/professional-registration.internal';
+import { WhatsAppService } from '../services/whatsapp.service';
+import { env } from '../utils/env';
 
 const leadSchema = z.object({
     name: z.string().min(1).max(200),
-    email: z.string().email().max(320),
     phone: z.string().min(6).max(40),
-    categories: z.array(z.string()).optional(),
-    zone: z.string().max(200).optional(),
+    categories: z.array(z.string()).min(1, 'Seleccioná al menos una categoría'),
+    zone: z.string().min(1).max(200),
 });
 
 export const createProfessionalLead = async (req: Request, res: Response) => {
@@ -19,17 +20,41 @@ export const createProfessionalLead = async (req: Request, res: Response) => {
         });
     }
 
-    const { name, email, phone, categories, zone } = parsed.data;
+    const { name, phone, categories, zone } = parsed.data;
 
-    await prisma.professionalLead.create({
-        data: {
-            name,
-            email,
-            phone,
-            categories: categories ?? [],
-            zone: zone ?? null,
-        },
+    const zones = zone.split(',').map((z) => z.trim()).filter(Boolean);
+
+    const result = await createProfessionalFromWebForm({
+        name,
+        phone,
+        categories,
+        zones,
     });
 
-    res.status(201).json({ success: true, message: 'Recibido correctamente' });
+    if (!result.ok) {
+        return res.status(400).json({
+            success: false,
+            error: {
+                code: result.code,
+                message: 'Este número de teléfono ya está registrado. Si ya tenés cuenta, iniciá sesión en el portal.',
+            },
+        });
+    }
+
+    const base = env.FRONTEND_PRO_URL.replace(/\/$/, '');
+    const link = `${base}/set-password?token=${encodeURIComponent(result.token)}`;
+
+    try {
+        await WhatsAppService.sendTextMessage(
+            result.phone,
+            `✅ *¡Hola ${result.firstName}!* Gracias por sumarte a Servy.\n\nPara activar tu cuenta y completar tu perfil entrá acá:\n👉 ${link}\n\n_El link es válido por 24 horas._\n\nCuando actives tu cuenta vas a poder recibir trabajos en tu zona. 💪`
+        );
+    } catch (error) {
+        console.error('[leads] Error enviando WhatsApp:', error);
+    }
+
+    res.status(201).json({
+        success: true,
+        message: 'Registro exitoso. Te enviamos un WhatsApp con el link para activar tu cuenta.',
+    });
 };
