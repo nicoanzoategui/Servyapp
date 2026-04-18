@@ -8,7 +8,6 @@ export interface GeminiClassification {
     category: string | null;
     urgency: UrgencyLevel;
     understood: boolean;
-    detected_problem: string;
 }
 
 export class GeminiService {
@@ -28,13 +27,8 @@ Niveles de urgencia:
 - media: algo roto pero funciona, goteras, problemas menores
 - baja: instalación nueva, mantenimiento, mejoras
 
-Respondé SOLO con JSON válido sin markdown ni texto extra:
-{
-  "category": "la categoría que mejor aplica",
-  "urgency": "alta | media | baja",
-  "understood": true,
-  "detected_problem": "descripción breve del problema en una línea"
-}
+Respondé SOLO con JSON válido en UNA LÍNEA sin espacios ni saltos:
+{"category":"categoría","urgency":"alta|media|baja","understood":true}
 
 Mensaje del usuario: "${description}"`;
 
@@ -57,7 +51,7 @@ Mensaje del usuario: "${description}"`;
             if (!response.ok) {
                 const err = await response.text();
                 console.error('[Gemini HTTP error]', response.status, err);
-                return { category: null, urgency: 'media', understood: false, detected_problem: '' };
+                return { category: null, urgency: 'media', understood: false };
             }
 
             const data = await response.json();
@@ -76,13 +70,23 @@ Mensaje del usuario: "${description}"`;
             const jsonMatch = clean.match(/\{[\s\S]*\}/);
             if (!jsonMatch) {
                 console.error('[Gemini] No se encontró JSON en la respuesta:', clean);
-                return { category: null, urgency: 'media', understood: false, detected_problem: '' };
+                return { category: null, urgency: 'media', understood: false };
             }
 
-            return JSON.parse(jsonMatch[0]);
+            const raw = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+            const u = raw.urgency;
+            const urgency: UrgencyLevel =
+                u === 'alta' || u === 'media' || u === 'baja' ? u : 'media';
+            const category =
+                typeof raw.category === 'string' && raw.category.trim() ? raw.category.trim() : null;
+            return {
+                category,
+                urgency,
+                understood: raw.understood === true,
+            };
         } catch (err) {
             console.error('Gemini error:', err);
-            return { category: null, urgency: 'media', understood: false, detected_problem: '' };
+            return { category: null, urgency: 'media', understood: false };
         }
     }
 }
