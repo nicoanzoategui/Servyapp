@@ -8,7 +8,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 function validatePassword(password: string) {
     const errors = [];
-    if (password.length < 12) errors.push('Mínimo 12 caracteres');
+    if (password.length < 8) errors.push('Mínimo 8 caracteres');
     if (!/[A-Z]/.test(password)) errors.push('Al menos una mayúscula');
     if (!/[a-z]/.test(password)) errors.push('Al menos una minúscula');
     if (!/[0-9]/.test(password)) errors.push('Al menos un número');
@@ -176,7 +176,7 @@ export default function RegisterPage() {
                             <input
                                 name="password"
                                 type="password"
-                                placeholder="Mínimo 12 caracteres"
+                                placeholder="Mínimo 8 caracteres"
                                 value={form.password}
                                 onChange={handleChange}
                                 required
@@ -185,7 +185,7 @@ export default function RegisterPage() {
                             {form.password.length > 0 && (
                                 <div className="mt-2 flex flex-col gap-1">
                                     {[
-                                        { label: 'Mínimo 12 caracteres', ok: form.password.length >= 12 },
+                                        { label: 'Mínimo 8 caracteres', ok: form.password.length >= 8 },
                                         { label: 'Una mayúscula', ok: /[A-Z]/.test(form.password) },
                                         { label: 'Una minúscula', ok: /[a-z]/.test(form.password) },
                                         { label: 'Un número', ok: /[0-9]/.test(form.password) },

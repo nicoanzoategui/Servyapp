@@ -9,7 +9,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 function validatePassword(password: string) {
     const rules = [
-        { label: 'Mínimo 12 caracteres', ok: password.length >= 12 },
+        { label: 'Mínimo 8 caracteres', ok: password.length >= 8 },
         { label: 'Una mayúscula', ok: /[A-Z]/.test(password) },
         { label: 'Una minúscula', ok: /[a-z]/.test(password) },
         { label: 'Un número', ok: /[0-9]/.test(password) },

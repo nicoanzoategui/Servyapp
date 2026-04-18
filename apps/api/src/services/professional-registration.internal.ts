@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { prisma } from '@servy/db';
 
-export const MIN_PROFESSIONAL_PASSWORD_LEN = 12;
+export const MIN_PROFESSIONAL_PASSWORD_LEN = 8;
 
 function normalizeProfessionalEmail(email: string): string {
     return String(email).trim().toLowerCase();

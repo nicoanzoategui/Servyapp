@@ -78,22 +78,69 @@ export const resetPassword = async (req: Request, res: Response) => {
 
 export const setPassword = async (req: Request, res: Response) => {
     try {
-        const { token, password } = req.body;
+        const { token, password, email } = req.body;
+
         if (!token || !password || typeof password !== 'string' || password.length < MIN_PROFESSIONAL_PASSWORD_LEN) {
             return res.status(400).json({
                 success: false,
                 error: { message: `Token y contraseña requeridos (mín. ${MIN_PROFESSIONAL_PASSWORD_LEN} caracteres)` },
             });
         }
+
+        // Email es opcional: si viene, debe ser válido
+        let emailNorm: string | null = null;
+        if (email && typeof email === 'string') {
+            const trimmed = email.trim().toLowerCase();
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+                return res.status(400).json({
+                    success: false,
+                    error: { message: 'Email inválido' },
+                });
+            }
+            emailNorm = trimmed;
+        }
+
         const record = await prisma.passwordToken.findUnique({ where: { token } });
         if (!record || record.used || record.expires_at < new Date() || record.type !== 'set') {
-            return res.status(400).json({ success: false, error: { message: 'Token inválido o expirado' } });
+            return res.status(400).json({
+                success: false,
+                error: { message: 'Token inválido o expirado' },
+            });
         }
+
+        if (emailNorm) {
+            const existingWithEmail = await prisma.professional.findUnique({
+                where: { email: emailNorm },
+            });
+
+            if (existingWithEmail && existingWithEmail.email !== record.email) {
+                return res.status(400).json({
+                    success: false,
+                    error: { message: 'Este email ya está registrado' },
+                });
+            }
+        }
+
         const password_hash = await bcrypt.hash(password, 12);
-        await prisma.professional.update({ where: { email: record.email }, data: { password_hash } });
-        await prisma.passwordToken.update({ where: { token }, data: { used: true } });
+        await prisma.professional.update({
+            where: { email: record.email },
+            data: {
+                password_hash,
+                ...(emailNorm ? { email: emailNorm } : {}),
+            },
+        });
+
+        await prisma.passwordToken.update({
+            where: { token },
+            data: { used: true },
+        });
+
         res.status(200).json({ success: true });
     } catch (error) {
-        res.status(500).json({ success: false, error: { message: 'Error al setear contraseña' } });
+        console.error('[setPassword] Error:', error);
+        res.status(500).json({
+            success: false,
+            error: { message: 'Error al activar la cuenta' },
+        });
     }
 };
