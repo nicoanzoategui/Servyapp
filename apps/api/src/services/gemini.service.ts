@@ -49,7 +49,6 @@ Mensaje del usuario: "${description}"`;
                         generationConfig: {
                             temperature: 0.1,
                             maxOutputTokens: 150,
-                            responseMimeType: 'application/json',
                         },
                     }),
                 }
