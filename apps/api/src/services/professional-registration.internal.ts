@@ -9,7 +9,32 @@ function normalizeProfessionalEmail(email: string): string {
 }
 
 function normalizeProfessionalPhone(phone: string): string {
-    return String(phone).replace(/\s/g, '').replace(/\D/g, '');
+    // Quitar todos los caracteres no numéricos
+    const digits = String(phone).replace(/\s/g, '').replace(/\D/g, '');
+
+    // Si empieza con 549 (Argentina con 9), ya está bien
+    if (digits.startsWith('549')) {
+        return digits;
+    }
+
+    // Si empieza con 54 pero no tiene el 9
+    if (digits.startsWith('54') && !digits.startsWith('549')) {
+        // Insertar el 9 después del 54
+        return '549' + digits.slice(2);
+    }
+
+    // Si empieza con 15 (formato local), agregar 54 y quitar el 15
+    if (digits.startsWith('15')) {
+        return '549' + digits.slice(2);
+    }
+
+    // Si es un número local de 10 dígitos (11XXXXXXXX)
+    if (digits.length === 10) {
+        return '549' + digits;
+    }
+
+    // Si no matchea nada, asumir que es local y agregar 549
+    return '549' + digits;
 }
 
 export async function registerProfessionalViaHttp(body: {
