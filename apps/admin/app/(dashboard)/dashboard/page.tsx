@@ -29,7 +29,7 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-8 animate-fade-in">
             <h1 className="text-3xl font-bold text-slate-900">Panel Principal</h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-slate-500 font-medium">Conversaciones Activas</h3>
@@ -52,6 +52,14 @@ export default function DashboardPage() {
                         <Users className="text-green-500" />
                     </div>
                     <p className="text-3xl font-bold text-slate-800">{data?.active_professionals || 0}</p>
+                </div>
+
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-slate-500 font-medium">Usuarios Registrados</h3>
+                        <Users className="text-blue-400" />
+                    </div>
+                    <p className="text-3xl font-bold text-slate-800">{data?.total_users || 0}</p>
                 </div>
 
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
