@@ -1,6 +1,6 @@
 import { redis } from '../utils/redis';
 import { prisma } from '@servy/db';
-import type { Professional } from '@servy/db';
+import type { Professional, User } from '@servy/db';
 import { insertAgentLog } from '../lib/agent-log';
 import { WhatsAppService } from './whatsapp.service';
 import { ProfessionalMatchingService } from './matching.service';
@@ -461,27 +461,7 @@ export class ConversationService {
                         data: { status: 'cancelled' },
                     });
 
-                    const selectedOffer = await prisma.jobOffer.findFirst({
-                        where: {
-                            request_id: requestId,
-                            priority: 'urgent',
-                            status: { not: 'cancelled' },
-                        },
-                        include: {
-                            professional: true,
-                            service_request: { include: { user: true } },
-                        },
-                    });
-
-                    if (selectedOffer?.service_request?.user) {
-                        const { ProfessionalConversationService } = await import('./professional.conversation.service');
-                        await ProfessionalConversationService.notifyNewJob(
-                            selectedOffer.professional,
-                            selectedOffer,
-                            selectedOffer.service_request,
-                            selectedOffer.service_request.user
-                        );
-                    }
+                    await ConversationService.notifyProfessionalJobSelected(requestId, 'urgent');
 
                     const now = new Date();
                     const hour = parseInt(
@@ -527,27 +507,7 @@ export class ConversationService {
                     session.data.selection = 'scheduled';
                     await prisma.jobOffer.updateMany({ where: { request_id: requestId, priority: 'urgent' }, data: { status: 'cancelled' } });
 
-                    const selectedOffer = await prisma.jobOffer.findFirst({
-                        where: {
-                            request_id: requestId,
-                            priority: 'scheduled',
-                            status: { not: 'cancelled' },
-                        },
-                        include: {
-                            professional: true,
-                            service_request: { include: { user: true } },
-                        },
-                    });
-
-                    if (selectedOffer?.service_request?.user) {
-                        const { ProfessionalConversationService } = await import('./professional.conversation.service');
-                        await ProfessionalConversationService.notifyNewJob(
-                            selectedOffer.professional,
-                            selectedOffer,
-                            selectedOffer.service_request,
-                            selectedOffer.service_request.user
-                        );
-                    }
+                    await ConversationService.notifyProfessionalJobSelected(requestId, 'scheduled');
 
                     await this.saveSession(phone, 'AWAITING_SCHEDULE_DAY', session.data);
                     await WhatsAppService.sendTextMessage(
@@ -1306,6 +1266,76 @@ export class ConversationService {
         return true;
     }
 
+    /** Tras elegir el cliente urgente vs programado: avisar al técnico (WhatsApp + sesión pro). */
+    private static async notifyProfessionalJobSelected(requestId: string, priority: 'urgent' | 'scheduled'): Promise<void> {
+        const selectedOffer = await prisma.jobOffer.findFirst({
+            where: {
+                request_id: requestId,
+                priority,
+                status: { not: 'cancelled' },
+            },
+            include: {
+                professional: true,
+                service_request: { include: { user: true } },
+            },
+        });
+        if (!selectedOffer?.professional || !selectedOffer.service_request) {
+            console.error('[notifyProfessionalJobSelected] sin oferta o relación', { requestId, priority });
+            return;
+        }
+
+        let userForNotify: User | null = selectedOffer.service_request.user;
+        if (!userForNotify) {
+            userForNotify = await prisma.user.findUnique({
+                where: { phone: selectedOffer.service_request.user_phone },
+            });
+        }
+        if (!userForNotify) {
+            userForNotify = {
+                phone: selectedOffer.service_request.user_phone,
+                name: null,
+                last_name: null,
+            } as User;
+            console.warn('[notifyProfessionalJobSelected] User no encontrado; aviso con datos mínimos', {
+                requestId,
+                phone: selectedOffer.service_request.user_phone,
+            });
+        }
+
+        const { ProfessionalConversationService } = await import('./professional.conversation.service');
+        await ProfessionalConversationService.notifyNewJob(
+            selectedOffer.professional,
+            selectedOffer,
+            { ...selectedOffer.service_request, user: userForNotify },
+            userForNotify
+        );
+    }
+
+    /** Aviso temprano: hay pedido y oferta en portal; el mensaje “aceptás” llega cuando el cliente elige modalidad. */
+    private static async pingProfessionalsNewRequest(
+        matchRes: { urgent: { id: string; phone: string } | null; scheduled: { id: string; phone: string } | null },
+        categoryLabel: string
+    ): Promise<void> {
+        const baseUrl = env.FRONTEND_PRO_URL.replace(/\/$/, '');
+        const list = [matchRes.urgent, matchRes.scheduled].filter(Boolean) as {
+            id: string;
+            phone: string;
+        }[];
+        const seen = new Set<string>();
+        for (const pro of list) {
+            if (seen.has(pro.id)) continue;
+            seen.add(pro.id);
+            try {
+                await WhatsAppService.sendTextMessage(
+                    pro.phone,
+                    `🔔 *Servy* — Hay un cliente con pedido de *${categoryLabel || 'servicio'}*. Está eligiendo la modalidad; en cuanto confirme te vamos a pedir por acá si aceptás el trabajo.\n\n📱 Podés ver el pedido en: ${baseUrl}/dashboard`
+                );
+            } catch (e) {
+                console.error('[pingProfessionalsNewRequest]', pro.id, e);
+            }
+        }
+    }
+
     private static async createRequestAndMatch(phone: string, sessionData: Record<string, unknown>, user: { name: string | null; address: string | null }) {
         const address = (sessionData.serviceAddress as string) || user.address || '';
 
@@ -1347,6 +1377,11 @@ export class ConversationService {
             hasScheduled,
             ...sessionData,
         });
+
+        await ConversationService.pingProfessionalsNewRequest(
+            matchRes,
+            String((sessionData.category as string) || 'servicio')
+        );
 
         if (hasUrgent && hasScheduled) {
             const u = matchRes.urgent!;
