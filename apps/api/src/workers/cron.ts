@@ -1,17 +1,19 @@
 import cron from 'node-cron';
 import { prisma } from '@servy/db';
 import { WhatsAppService } from '../services/whatsapp.service';
+import { env } from '../utils/env';
 
 export const startCronJobs = () => {
     cron.schedule('*/5 * * * *', async () => {
-        console.log('[CRON] Ofertas sin cotizar > 30 min...');
-        const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
+        const expireMin = env.JOB_OFFER_PENDING_EXPIRE_MINUTES;
+        console.log(`[CRON] Ofertas pending sin actividad > ${expireMin} min...`);
+        const cutoff = new Date(Date.now() - expireMin * 60 * 1000);
 
         try {
             const expiredOffers = await prisma.jobOffer.findMany({
                 where: {
                     status: 'pending',
-                    created_at: { lt: thirtyMinsAgo },
+                    created_at: { lt: cutoff },
                 },
                 include: {
                     service_request: { include: { user: true } },
@@ -30,7 +32,7 @@ export const startCronJobs = () => {
                 if (offer.professional) {
                     await WhatsAppService.sendTextMessage(
                         offer.professional.phone,
-                        'La oportunidad de trabajo expiró (30 min sin cotizar).'
+                        `La oportunidad de trabajo expiró (${expireMin} min sin avance en la oferta).`
                     );
                 }
 

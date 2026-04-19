@@ -62,6 +62,17 @@ const envSchema = z.object({
         .string()
         .optional()
         .transform((v) => v === 'true'),
+    /**
+     * Ofertas `pending` más viejas que esto se cancelan (cron cada 5 min).
+     * Default 180: da margen a que el cliente elija técnico y al pro aceptar/cotizar.
+     */
+    JOB_OFFER_PENDING_EXPIRE_MINUTES: z
+        .string()
+        .optional()
+        .transform((v) => {
+            const n = parseInt(String(v || ''), 10);
+            return Number.isFinite(n) && n >= 15 ? n : 180;
+        }),
 });
 
 const _env = envSchema.safeParse(process.env);

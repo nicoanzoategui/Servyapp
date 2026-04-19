@@ -92,7 +92,11 @@ export const getDashboard = async (req: Request, res: Response) => {
         const professionalId = req.user!.userId;
 
         const pendingOffers = await prisma.jobOffer.count({
-            where: { professional_id: professionalId, status: 'pending' },
+            where: {
+                professional_id: professionalId,
+                status: { in: ['pending', 'accepted'] },
+                quotations: { none: {} },
+            },
         });
 
         const confirmedJobs = await prisma.job.count({
@@ -375,6 +379,12 @@ export const createQuote = async (req: Request, res: Response) => {
 
         if (offer.status === 'cancelled' || offer.status === 'rejected') {
             return res.status(400).json({ success: false, error: { code: 'INVALID_STATE', message: 'Esta oferta ya no está activa' } });
+        }
+        if (offer.status !== 'pending' && offer.status !== 'accepted') {
+            return res.status(400).json({
+                success: false,
+                error: { code: 'INVALID_STATE', message: 'Solo se puede cotizar una oferta pendiente o ya aceptada por vos' },
+            });
         }
 
         const existing = await prisma.quotation.findUnique({ where: { job_offer_id: jobOfferId } });

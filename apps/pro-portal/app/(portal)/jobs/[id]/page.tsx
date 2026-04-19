@@ -124,7 +124,7 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
                     <span
                         className={`text-xs font-bold px-3 py-1 uppercase rounded-md tracking-wider
                   ${
-                      status === 'pending'
+                      status === 'pending' || status === 'accepted'
                           ? 'bg-yellow-100 text-yellow-800'
                           : status === 'quoted'
                             ? 'bg-blue-100 text-blue-800'
@@ -179,7 +179,7 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
                         </div>
                     )}
 
-                    {isOffer && data.data.status === 'pending' && (
+                    {isOffer && (data.data.status === 'pending' || data.data.status === 'accepted') && (
                         <div className="mt-4 border-t border-slate-100 pt-6">
                             {quoting ? (
                                 <div className="flex flex-col gap-3">

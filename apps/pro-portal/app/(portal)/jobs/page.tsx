@@ -57,7 +57,7 @@ export default function ProJobsPage() {
                                     <span
                                         className={`text-xs font-bold px-2 py-1 uppercase rounded-md tracking-wider
                   ${
-                      offer.status === 'pending'
+                      offer.status === 'pending' || offer.status === 'accepted'
                           ? 'bg-yellow-100 text-yellow-800'
                           : offer.status === 'quoted'
                             ? 'bg-blue-100 text-blue-800'
