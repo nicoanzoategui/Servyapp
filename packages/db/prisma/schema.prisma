@@ -164,15 +164,17 @@ model Payment {
 }
 
 model Job {
-  id             String    @id @default(cuid())
-  quotation_id   String    @unique
-  scheduled_at   DateTime?
-  completed_at   DateTime?
-  status         String    @default("confirmed") // confirmed, in_progress, completed, cancelled
-  rating         Int?
-  review         String?
-  reminder_sent  Boolean   @default(false)
-  updated_at     DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  quotation_id         String    @unique
+  scheduled_at         DateTime?
+  completed_at         DateTime?
+  status               String    @default("confirmed") // confirmed, in_progress, completed, cancelled
+  rating               Int?
+  review               String?
+  reminder_sent        Boolean   @default(false)
+  updated_at           DateTime  @updatedAt
+  /// Cuando el cliente liberó el pago vía QR / link público.
+  payment_released_at  DateTime?
 
   quotation Quotation @relation(fields: [quotation_id], references: [id])
   earnings  Earning[]
