@@ -445,14 +445,15 @@ export class ConversationService {
                 const requestId = session.data.requestId as string;
                 const hasUrgent = Boolean(session.data.hasUrgent);
                 const hasScheduled = Boolean(session.data.hasScheduled);
-                const lc = content.toLowerCase().trim();
+                const raw = content.trim();
+                const lc = raw.toLowerCase();
 
                 const pickUrgent =
-                    (hasUrgent && hasScheduled && (content === 'btn_urgent' || content === '1')) ||
-                    (hasUrgent && !hasScheduled && (content === 'btn_urgent' || content === '1' || lc === 'si' || lc === 'sí'));
+                    (hasUrgent && hasScheduled && (raw === 'btn_urgent' || raw === '1')) ||
+                    (hasUrgent && !hasScheduled && (raw === 'btn_urgent' || raw === '1' || lc === 'si' || lc === 'sí'));
                 const pickScheduled =
-                    (hasScheduled && hasUrgent && (content === 'btn_sched' || content === '2')) ||
-                    (hasScheduled && !hasUrgent && (content === 'btn_sched' || content === '1' || lc === 'si' || lc === 'sí'));
+                    (hasScheduled && hasUrgent && (raw === 'btn_sched' || raw === '2')) ||
+                    (hasScheduled && !hasUrgent && (raw === 'btn_sched' || raw === '1' || lc === 'si' || lc === 'sí'));
 
                 if (pickUrgent) {
                     session.data.selection = 'urgent';
@@ -515,7 +516,13 @@ export class ConversationService {
                         '¿Qué día preferís?\n\n1. Mañana\n2. Pasado mañana\n3. En 3 días'
                     );
                 } else {
-                    await WhatsAppService.sendTextMessage(phone, 'Por favor respondé *1* o *2* para elegir una opción.');
+                    const hint =
+                        hasUrgent && hasScheduled
+                            ? 'Solo hay dos opciones: *1* (urgente) o *2* (programado).'
+                            : hasUrgent || hasScheduled
+                              ? 'Escribí *sí* o *1* para seguir con la opción que te mostramos.'
+                              : 'Por favor respondé *1* o *2* para elegir una opción.';
+                    await WhatsAppService.sendTextMessage(phone, hint);
                 }
                 break;
             }
@@ -777,10 +784,17 @@ export class ConversationService {
     }
 
     private static async handleReview(phone: string, content: string, data: Record<string, unknown>) {
+        const t = content.trim();
         const ratingMap: Record<string, number> = { '⭐': 1, '⭐⭐': 2, '⭐⭐⭐': 3, '⭐⭐⭐⭐': 4, '⭐⭐⭐⭐⭐': 5 };
         const numMap: Record<string, number> = { '1': 1, '2': 2, '3': 3, '4': 4, '5': 5 };
-        const rating = ratingMap[content] || numMap[content];
-        if (!rating) return;
+        const rating = ratingMap[t] || numMap[t];
+        if (!rating) {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'Respondé con un número del *1* al *5* según las estrellas que te mostramos arriba (1 = muy malo, 5 = excelente).'
+            );
+            return;
+        }
 
         const jobId = data.jobId as string;
         const job = await prisma.job.update({
