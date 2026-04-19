@@ -1,24 +1,27 @@
 import QRCode from 'qrcode';
 import { StorageService } from './storage.service';
+import { env } from '../utils/env';
 
 export class QRService {
     static async generateAndUpload(jobId: string): Promise<string> {
-        const data = `servy:qr:${jobId}`;
-        const buffer = await QRCode.toBuffer(data, {
+        const base = env.API_PUBLIC_URL.replace(/\/$/, '');
+        const releaseUrl = `${base}/jobs/${jobId}/release`;
+        const buffer = await QRCode.toBuffer(releaseUrl, {
             type: 'png',
             width: 400,
             margin: 2,
         });
         const key = `qrcodes/${jobId}.png`;
         await StorageService.uploadFile(key, buffer, 'image/png');
-        const url = await StorageService.getSignedUrl(key, 60 * 60 * 24 * 7);
-        return url;
+        return StorageService.getSignedUrl(key, 60 * 60 * 24 * 7);
     }
 
+    /** Extrae jobId de `servy:qr:…` o de URL `/jobs/:id/release`. */
     static parseQR(data: string): string | null {
-        const prefix = 'servy:qr:';
         const t = data.trim();
-        if (!t.startsWith(prefix)) return null;
-        return t.slice(prefix.length);
+        const prefix = 'servy:qr:';
+        if (t.startsWith(prefix)) return t.slice(prefix.length);
+        const m = t.match(/\/jobs\/([^/]+)\/release\/?(?:\?.*)?$/i);
+        return m?.[1] ?? null;
     }
 }
