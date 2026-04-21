@@ -57,10 +57,10 @@ export default function RootLayout({
   if(w[n])return;
   w[n]=function(){(w[n].q=w[n].q||[]).push(arguments)};
   var j=d.createElement(s);
-  j.async=1;j.src='https://ux-encuestas-api.new-feats.redtecnologica.org/sdk.js';
+  j.async=1;j.src='https://ux-encuestas-api.new-feats.redtecnologica.org/scripts/sv.min.js';
   d.head.appendChild(j);
 })(window,document,'script','_uxr');
-_uxr('init',{token:'pk_live_a4083ad36c741f6b0fc2899f'});
+_uxr('init',{token:'pk_live_8f8e56c7a63a3e58213a8ee3'});
             `,
                     }}
                 />
