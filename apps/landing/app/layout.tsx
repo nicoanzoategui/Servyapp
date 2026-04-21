@@ -47,6 +47,23 @@ export default function RootLayout({
             `,
                     }}
                 />
+                {/* UXR Survey SDK */}
+                <Script
+                    id="uxr-survey-sdk"
+                    strategy="afterInteractive"
+                    dangerouslySetInnerHTML={{
+                        __html: `
+(function(w,d,s,n){
+  if(w[n])return;
+  w[n]=function(){(w[n].q=w[n].q||[]).push(arguments)};
+  var j=d.createElement(s);
+  j.async=1;j.src='https://ux-encuestas-api.new-feats.redtecnologica.org/sdk.js';
+  d.head.appendChild(j);
+})(window,document,'script','_uxr');
+_uxr('init',{token:'pk_live_a4083ad36c741f6b0fc2899f'});
+            `,
+                    }}
+                />
             </body>
         </html>
     );
