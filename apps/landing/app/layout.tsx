@@ -1,14 +1,27 @@
 // @ts-ignore
 import './globals.css';
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Epilogue, Inter } from 'next/font/google';
 import Script from 'next/script';
 
-const inter = Inter({ subsets: ['latin'] });
+const epilogue = Epilogue({
+    subsets: ['latin'],
+    weight: ['700', '900'],
+    variable: '--font-epilogue',
+    display: 'swap',
+});
+
+const inter = Inter({
+    subsets: ['latin'],
+    weight: ['400', '500', '600', '700'],
+    variable: '--font-inter',
+    display: 'swap',
+});
 
 export const metadata: Metadata = {
     title: 'Servy | Tu solución rápida para servicios del hogar',
-    description: 'Conectamos a profesionales de plomería, cerrajería y electricidad en tu zona con tus problemas urgentes de hogar. ¡Cotizaciones rápidas vía WhatsApp!',
+    description:
+        'Conectamos a profesionales de plomería, cerrajería y electricidad en tu zona con tus problemas urgentes de hogar. ¡Cotizaciones rápidas vía WhatsApp!',
     openGraph: {
         title: 'Servy | Tu solución rápida',
         description: 'Encuentra a los mejores profesionales aprobados para tu hogar al instante.',
@@ -25,8 +38,8 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="es">
-            <body className={inter.className}>
+        <html lang="es" className={`${epilogue.variable} ${inter.variable}`}>
+            <body>
                 {children}
                 {/* Google Analytics 4 */}
                 <Script
