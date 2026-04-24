@@ -1,10 +1,15 @@
 // @ts-ignore
 import './globals.css';
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Poppins } from 'next/font/google';
 import Script from 'next/script';
 
-const inter = Inter({ subsets: ['latin'] });
+const poppins = Poppins({
+    subsets: ['latin'],
+    weight: ['400', '700'],
+    variable: '--font-poppins',
+    display: 'swap',
+});
 
 export const metadata: Metadata = {
     title: 'Servy | Tu solución rápida para servicios del hogar',
@@ -25,8 +30,8 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="es">
-            <body className={inter.className}>
+        <html lang="es" className={poppins.variable}>
+            <body className="antialiased">
                 {children}
                 {/* Google Analytics 4 */}
                 <Script

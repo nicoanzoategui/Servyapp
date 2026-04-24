@@ -12,30 +12,30 @@ export default function Home() {
         <main className="flex min-h-screen flex-col items-center overflow-hidden">
             {/* Navbar Minimalista */}
             <header className="w-full h-20 flex items-center justify-between px-6 md:px-12 bg-white/80 backdrop-blur fixed top-0 z-50 border-b border-slate-100">
-                <div className="text-2xl font-black text-servy-600 tracking-tighter">Servy.</div>
-                <nav className="gap-6 hidden md:flex font-medium text-slate-600 text-sm">
-                    <a href="#como-funciona" className="hover:text-servy-500 transition">Cómo Funciona</a>
-                    <a href="#categorias" className="hover:text-servy-500 transition">Servicios</a>
-                    <Link href="/tecnicos" className="hover:text-servy-500 transition">Soy técnico</Link>
+                <div className="text-2xl font-bold text-[#0D4638] tracking-tighter">servy.</div>
+                <nav className="gap-6 hidden md:flex font-medium text-[#0D4638]/80 text-sm">
+                    <a href="#como-funciona" className="hover:text-[#A7E23C] transition">Cómo Funciona</a>
+                    <a href="#categorias" className="hover:text-[#A7E23C] transition">Servicios</a>
+                    <Link href="/tecnicos" className="hover:text-[#A7E23C] transition">Soy técnico</Link>
                 </nav>
             </header>
 
             {/* Hero Section */}
-            <section className="w-full pt-32 pb-20 px-6 md:px-12 bg-gradient-to-br from-servy-50 via-white to-servy-100/50 mt-10">
+            <section className="w-full pt-32 pb-20 px-6 md:px-12 bg-gradient-to-br from-[#F2F9EF] via-white to-[#C6F6DB]/30 mt-10">
                 <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-center gap-16">
                     {/* Texto */}
                     <div className="flex-1 max-w-md flex flex-col items-start text-left">
-                        <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 max-w-xl animate-slide-up">
+                        <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-[#0B3A31] max-w-xl animate-slide-up">
                             Arreglá tu hogar en minutos.{' '}
-                            <span className="text-servy-600">Por WhatsApp.</span>
+                            <span className="text-[#A7E23C]">Por WhatsApp.</span>
                         </h1>
-                        <p className="mt-6 text-lg md:text-xl text-slate-600 max-w-lg animate-fade-in delay-150">
+                        <p className="mt-6 text-lg md:text-xl text-[#0D4638]/80 max-w-lg animate-fade-in delay-150">
                             Canilla que pierde, se fue la luz, te quedaste afuera?{' '}
-                            <span className="font-semibold text-slate-900">Mandá mensaje a Servy.</span>{' '}
+                            <span className="font-semibold text-[#0D4638]">Mandá mensaje a Servy.</span>{' '}
                             Recibí la cotización en minutos y tenés un técnico verificado camino a tu casa.
                         </p>
-                        <p className="mt-4 text-lg md:text-xl text-slate-600 max-w-lg animate-fade-in delay-200">
-                            <span className="font-semibold text-slate-900">Precio cerrado antes de que llegue.</span>{' '}
+                        <p className="mt-4 text-lg md:text-xl text-[#0D4638]/80 max-w-lg animate-fade-in delay-200">
+                            <span className="font-semibold text-[#0D4638]">Precio cerrado antes de que llegue.</span>{' '}
                             Sin apps nuevas, sin llamadas, sin vueltas.
                         </p>
                         <div className="mt-10 animate-slide-up delay-300">
@@ -43,7 +43,7 @@ export default function Home() {
                                 href={WA_LINK}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="bg-servy-600 text-white px-8 py-4 rounded-full font-bold shadow-xl shadow-servy-500/30 hover:shadow-2xl hover:bg-servy-500 hover:-translate-y-1 transition-all duration-300"
+                                className="bg-[#A7E23C] text-[#0D4638] px-8 py-4 rounded-full font-bold shadow-xl shadow-[#A7E23C]/20 hover:shadow-2xl hover:shadow-[#A7E23C]/20 hover:bg-[#A7E23C]/90 hover:-translate-y-1 transition-all duration-300"
                             >
                                 Hablar con Servy
                             </a>
@@ -147,37 +147,37 @@ export default function Home() {
 
             {/* Cómo Funciona */}
             <section id="como-funciona" className="w-full py-24 px-6 md:px-12 bg-white flex flex-col items-center relative">
-                <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-16">Así funciona Servy</h2>
+                <h2 className="text-3xl md:text-5xl font-bold text-[#0B3A31] text-center mb-16">Así funciona Servy</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full">
                     {/* Step 1 */}
-                    <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-servy-100 text-servy-600 flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
+                    <div className="relative p-8 rounded-3xl bg-[#F2F9EF]/50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
+                        <div className="w-16 h-16 rounded-2xl bg-[#C6F6DB]/30 text-[#0D4638] flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
                             <span className="text-2xl font-black">1</span>
                         </div>
-                        <h3 className="text-xl font-bold mb-3">Contale y elegí tu técnico</h3>
-                        <p className="text-slate-600">
+                        <h3 className="text-xl font-bold mb-3 text-[#0B3A31]">Contale y elegí tu técnico</h3>
+                        <p className="text-[#0D4638]/80">
                             Mandá mensaje con tu problema (texto o foto). Te mostramos 2 opciones: técnico URGENTE (llega hoy) o PROGRAMADO (más económico). Ambos con calificaciones reales.
                         </p>
                     </div>
 
                     {/* Step 2 */}
-                    <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-servy-100 text-servy-600 flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
+                    <div className="relative p-8 rounded-3xl bg-[#F2F9EF]/50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
+                        <div className="w-16 h-16 rounded-2xl bg-[#C6F6DB]/30 text-[#0D4638] flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
                             <span className="text-2xl font-black">2</span>
                         </div>
-                        <h3 className="text-xl font-bold mb-3">Recibí la cotización y reservá</h3>
-                        <p className="text-slate-600">
+                        <h3 className="text-xl font-bold mb-3 text-[#0B3A31]">Recibí la cotización y reservá</h3>
+                        <p className="text-[#0D4638]/80">
                             El técnico que elegiste te manda el precio exacto. Si te cierra, reservás con pago protegido por Mercado Pago. El dinero queda congelado hasta que estés conforme.
                         </p>
                     </div>
 
                     {/* Step 3 */}
-                    <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-servy-100 text-servy-600 flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
+                    <div className="relative p-8 rounded-3xl bg-[#F2F9EF]/50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
+                        <div className="w-16 h-16 rounded-2xl bg-[#C6F6DB]/30 text-[#0D4638] flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
                             <span className="text-2xl font-black">3</span>
                         </div>
-                        <h3 className="text-xl font-bold mb-3">Recibí el arreglo y liberá el pago</h3>
-                        <p className="text-slate-600">
+                        <h3 className="text-xl font-bold mb-3 text-[#0B3A31]">Recibí el arreglo y liberá el pago</h3>
+                        <p className="text-[#0D4638]/80">
                             El técnico va, arregla y te muestra el resultado. Cuando estés conforme, escaneás el QR y ahí se libera el pago. Vos tenés el control.
                         </p>
                     </div>
@@ -185,55 +185,55 @@ export default function Home() {
             </section>
 
             {/* Categorías */}
-            <section id="categorias" className="w-full py-24 px-6 md:px-12 bg-slate-50 flex flex-col items-center">
-                <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-16">Servicios Disponibles</h2>
+            <section id="categorias" className="w-full py-24 px-6 md:px-12 bg-[#F2F9EF]/50 flex flex-col items-center">
+                <h2 className="text-3xl md:text-5xl font-bold text-[#0B3A31] text-center mb-16">Servicios Disponibles</h2>
                 <div className="max-w-5xl w-full">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-6">
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-servy-300 flex items-start gap-4 transition-colors cursor-default">
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#0D4638]/20 flex items-start gap-4 transition-colors cursor-default">
                             <div className="bg-blue-50 text-blue-600 p-4 rounded-xl shrink-0">
                                 <Wrench size={28} />
                             </div>
                             <div>
-                                <h3 className="text-lg font-bold mb-1">Plomería</h3>
-                                <p className="text-sm text-slate-500">Canillas, cañerías, pérdidas de agua e inodoros.</p>
+                                <h3 className="text-lg font-bold mb-1 text-[#0B3A31]">Plomería</h3>
+                                <p className="text-sm text-[#0D4638]/70">Canillas, cañerías, pérdidas de agua e inodoros.</p>
                             </div>
                         </div>
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-servy-300 flex items-start gap-4 transition-colors cursor-default">
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#0D4638]/20 flex items-start gap-4 transition-colors cursor-default">
                             <div className="bg-yellow-50 text-yellow-500 p-4 rounded-xl shrink-0">
                                 <Zap size={28} />
                             </div>
                             <div>
-                                <h3 className="text-lg font-bold mb-1">Electricidad</h3>
-                                <p className="text-sm text-slate-500">Cortocircuitos, enchufes, tableros e instalaciones.</p>
+                                <h3 className="text-lg font-bold mb-1 text-[#0B3A31]">Electricidad</h3>
+                                <p className="text-sm text-[#0D4638]/70">Cortocircuitos, enchufes, tableros e instalaciones.</p>
                             </div>
                         </div>
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-servy-300 flex items-start gap-4 transition-colors cursor-default">
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#0D4638]/20 flex items-start gap-4 transition-colors cursor-default">
                             <div className="bg-slate-100 text-slate-700 p-4 rounded-xl shrink-0">
                                 <Key size={28} />
                             </div>
                             <div>
-                                <h3 className="text-lg font-bold mb-1">Cerrajería</h3>
-                                <p className="text-sm text-slate-500">Puertas trabadas, cambio de cerradura y aperturas de emergencia.</p>
+                                <h3 className="text-lg font-bold mb-1 text-[#0B3A31]">Cerrajería</h3>
+                                <p className="text-sm text-[#0D4638]/70">Puertas trabadas, cambio de cerradura y aperturas de emergencia.</p>
                             </div>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-servy-300 flex items-start gap-4 transition-colors cursor-default">
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#0D4638]/20 flex items-start gap-4 transition-colors cursor-default">
                             <div className="bg-orange-50 text-orange-500 p-4 rounded-xl shrink-0">
                                 <Flame size={28} />
                             </div>
                             <div>
-                                <h3 className="text-lg font-bold mb-1">Gas</h3>
-                                <p className="text-sm text-slate-500">Pérdidas de gas, calefones, cocinas y estufas.</p>
+                                <h3 className="text-lg font-bold mb-1 text-[#0B3A31]">Gas</h3>
+                                <p className="text-sm text-[#0D4638]/70">Pérdidas de gas, calefones, cocinas y estufas.</p>
                             </div>
                         </div>
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-servy-300 flex items-start gap-4 transition-colors cursor-default">
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#0D4638]/20 flex items-start gap-4 transition-colors cursor-default">
                             <div className="bg-cyan-50 text-cyan-500 p-4 rounded-xl shrink-0">
                                 <Wind size={28} />
                             </div>
                             <div>
-                                <h3 className="text-lg font-bold mb-1">Aires acondicionados</h3>
-                                <p className="text-sm text-slate-500">Instalación, reparación y limpieza de filtros.</p>
+                                <h3 className="text-lg font-bold mb-1 text-[#0B3A31]">Aires acondicionados</h3>
+                                <p className="text-sm text-[#0D4638]/70">Instalación, reparación y limpieza de filtros.</p>
                             </div>
                         </div>
                     </div>
@@ -242,22 +242,22 @@ export default function Home() {
 
             {/* Por qué Servy */}
             <section className="w-full py-24 px-6 md:px-12 bg-white flex flex-col items-center">
-                <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-16">Por qué elegir Servy</h2>
+                <h2 className="text-3xl md:text-5xl font-bold text-[#0B3A31] text-center mb-16">Por qué elegir Servy</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-5xl w-full">
                     <div className="flex gap-6 p-6">
-                        <ShieldCheck className="text-servy-600 shrink-0" size={40} />
+                        <ShieldCheck className="text-[#0D4638] shrink-0" size={40} />
                         <div>
-                            <h3 className="font-bold text-xl mb-2">Profesionales verificados</h3>
-                            <p className="text-slate-600">
+                            <h3 className="font-bold text-xl mb-2 text-[#0B3A31]">Profesionales verificados</h3>
+                            <p className="text-[#0D4638]/80">
                                 No más &apos;un amigo de un amigo que sabe&apos;. Todos nuestros técnicos tienen experiencia comprobada y antecedentes chequeados. Vos no arriesgás.
                             </p>
                         </div>
                     </div>
                     <div className="flex gap-6 p-6">
-                        <Clock className="text-servy-500 shrink-0" size={40} />
+                        <Clock className="text-[#0D4638] shrink-0" size={40} />
                         <div>
-                            <h3 className="font-bold text-xl mb-2">Todo en WhatsApp</h3>
-                            <p className="text-slate-600">
+                            <h3 className="font-bold text-xl mb-2 text-[#0B3A31]">Todo en WhatsApp</h3>
+                            <p className="text-[#0D4638]/80">
                                 No tenés que bajarte otra app ni registrarte en ningún lado. Ya estás en WhatsApp, ahí pasa todo. Simple.
                             </p>
                         </div>
@@ -265,26 +265,26 @@ export default function Home() {
                     <div className="flex gap-6 p-6">
                         <Star className="text-yellow-400 shrink-0" size={40} />
                         <div>
-                            <h3 className="font-bold text-xl mb-2">Calificaciones de verdad</h3>
-                            <p className="text-slate-600">
+                            <h3 className="font-bold text-xl mb-2 text-[#0B3A31]">Calificaciones de verdad</h3>
+                            <p className="text-[#0D4638]/80">
                                 Cada trabajo se califica. El rating que ves lo pusieron personas como vos que ya lo contrataron, no lo inventamos nosotros.
                             </p>
                         </div>
                     </div>
                     <div className="flex gap-6 p-6">
-                        <HeartHandshake className="text-servy-600 shrink-0" size={40} />
+                        <HeartHandshake className="text-[#0D4638] shrink-0" size={40} />
                         <div>
-                            <h3 className="font-bold text-xl mb-2">Sabés cuánto pagás antes de que llegue</h3>
-                            <p className="text-slate-600">
+                            <h3 className="font-bold text-xl mb-2 text-[#0B3A31]">Sabés cuánto pagás antes de que llegue</h3>
+                            <p className="text-[#0D4638]/80">
                                 Nada de &apos;después vemos&apos;. El técnico te dice el precio exacto antes de arrancar. Aceptás o no, sin presión, sin sorpresas.
                             </p>
                         </div>
                     </div>
                     <div className="flex gap-6 p-6">
-                        <ShieldCheck className="text-servy-600 shrink-0" size={40} />
+                        <ShieldCheck className="text-[#0D4638] shrink-0" size={40} />
                         <div>
-                            <h3 className="font-bold text-xl mb-2">Tu plata protegida hasta el final</h3>
-                            <p className="text-slate-600">
+                            <h3 className="font-bold text-xl mb-2 text-[#0B3A31]">Tu plata protegida hasta el final</h3>
+                            <p className="text-[#0D4638]/80">
                                 El técnico no cobra hasta que vos escanees el QR. Si algo sale mal, el dinero vuelve a tu cuenta. Cero riesgo.
                             </p>
                         </div>
@@ -293,11 +293,11 @@ export default function Home() {
             </section>
 
             {/* Testimonios */}
-            <section className="w-full py-24 px-6 md:px-12 bg-slate-50 flex flex-col items-center">
-                <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-4">
+            <section className="w-full py-24 px-6 md:px-12 bg-[#F2F9EF]/50 flex flex-col items-center">
+                <h2 className="text-3xl md:text-5xl font-bold text-[#0B3A31] text-center mb-4">
                     Lo que dicen quienes ya usaron Servy
                 </h2>
-                <p className="text-slate-600 text-center text-lg mb-16 max-w-2xl">
+                <p className="text-[#0D4638]/80 text-center text-lg mb-16 max-w-2xl">
                     Más de 500 arreglos resueltos · 4.8★ promedio en calificaciones
                 </p>
 
@@ -311,16 +311,16 @@ export default function Home() {
                             <Star className="fill-yellow-400 text-yellow-400" size={18} />
                             <Star className="fill-yellow-400 text-yellow-400" size={18} />
                         </div>
-                        <p className="text-slate-700 mb-6 leading-relaxed">
+                        <p className="text-[#0B3A31] mb-6 leading-relaxed">
                             &quot;Se me rompió la canilla un domingo a la tarde. Mandé mensaje y en 2 horas el plomero ya estaba arreglándola. Increíble.&quot;
                         </p>
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-servy-100 flex items-center justify-center font-bold text-servy-600">
+                            <div className="w-10 h-10 rounded-full bg-[#C6F6DB]/30 flex items-center justify-center font-bold text-[#0D4638]">
                                 M
                             </div>
                             <div>
-                                <p className="font-bold text-sm">María González</p>
-                                <p className="text-slate-500 text-xs">Palermo, CABA</p>
+                                <p className="font-bold text-sm text-[#0B3A31]">María González</p>
+                                <p className="text-[#0D4638]/60 text-xs">Palermo, CABA</p>
                             </div>
                         </div>
                     </div>
@@ -334,16 +334,16 @@ export default function Home() {
                             <Star className="fill-yellow-400 text-yellow-400" size={18} />
                             <Star className="fill-yellow-400 text-yellow-400" size={18} />
                         </div>
-                        <p className="text-slate-700 mb-6 leading-relaxed">
+                        <p className="text-[#0B3A31] mb-6 leading-relaxed">
                             &quot;No tuve que bajarme ninguna app ni registrarme. Todo por WhatsApp, re fácil. Y el precio lo sabés antes, sin vueltas.&quot;
                         </p>
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-servy-100 flex items-center justify-center font-bold text-servy-600">
+                            <div className="w-10 h-10 rounded-full bg-[#C6F6DB]/30 flex items-center justify-center font-bold text-[#0D4638]">
                                 J
                             </div>
                             <div>
-                                <p className="font-bold text-sm">Javier Rodríguez</p>
-                                <p className="text-slate-500 text-xs">Belgrano, CABA</p>
+                                <p className="font-bold text-sm text-[#0B3A31]">Javier Rodríguez</p>
+                                <p className="text-[#0D4638]/60 text-xs">Belgrano, CABA</p>
                             </div>
                         </div>
                     </div>
@@ -357,16 +357,16 @@ export default function Home() {
                             <Star className="fill-yellow-400 text-yellow-400" size={18} />
                             <Star className="fill-slate-300 text-slate-300" size={18} />
                         </div>
-                        <p className="text-slate-700 mb-6 leading-relaxed">
+                        <p className="text-[#0B3A31] mb-6 leading-relaxed">
                             &quot;Me quedé afuera de casa a las 11 de la noche. El cerrajero llegó en 40 minutos. Me salvó la vida literal.&quot;
                         </p>
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-servy-100 flex items-center justify-center font-bold text-servy-600">
+                            <div className="w-10 h-10 rounded-full bg-[#C6F6DB]/30 flex items-center justify-center font-bold text-[#0D4638]">
                                 C
                             </div>
                             <div>
-                                <p className="font-bold text-sm">Carolina Méndez</p>
-                                <p className="text-slate-500 text-xs">Caballito, CABA</p>
+                                <p className="font-bold text-sm text-[#0B3A31]">Carolina Méndez</p>
+                                <p className="text-[#0D4638]/60 text-xs">Caballito, CABA</p>
                             </div>
                         </div>
                     </div>
@@ -375,57 +375,57 @@ export default function Home() {
 
             {/* Dudas / FAQ */}
             <section id="dudas" className="w-full py-24 px-6 md:px-12 bg-white flex flex-col items-center">
-                <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-16">
+                <h2 className="text-3xl md:text-5xl font-bold text-[#0B3A31] text-center mb-16">
                     ¿Dudas?
                 </h2>
 
                 <div className="max-w-4xl w-full space-y-6">
                     {/* Pregunta 1 */}
-                    <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100">
-                        <h3 className="font-bold text-xl mb-3 text-slate-900">
+                    <div className="bg-[#F2F9EF]/50 p-8 rounded-2xl border border-slate-100">
+                        <h3 className="font-bold text-xl mb-3 text-[#0B3A31]">
                             ¿Qué pasa si el técnico no llega?
                         </h3>
-                        <p className="text-slate-600 leading-relaxed">
+                        <p className="text-[#0D4638]/80 leading-relaxed">
                             Te mandamos otro técnico sin cargo adicional. Como el pago solo se libera cuando escaneás el QR, tu dinero está protegido. Si hubo un problema, lo resolvemos nosotros, no vos.
                         </p>
                     </div>
 
                     {/* Pregunta 2 */}
-                    <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100">
-                        <h3 className="font-bold text-xl mb-3 text-slate-900">
+                    <div className="bg-[#F2F9EF]/50 p-8 rounded-2xl border border-slate-100">
+                        <h3 className="font-bold text-xl mb-3 text-[#0B3A31]">
                             ¿Puedo ver las reviews antes de contratar?
                         </h3>
-                        <p className="text-slate-600 leading-relaxed">
+                        <p className="text-[#0D4638]/80 leading-relaxed">
                             Sí. Te mostramos el perfil del técnico, sus calificaciones y reviews de otros clientes antes de que confirmes. Así sabés con quién estás contratando.
                         </p>
                     </div>
 
                     {/* Pregunta 3 */}
-                    <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100">
-                        <h3 className="font-bold text-xl mb-3 text-slate-900">
+                    <div className="bg-[#F2F9EF]/50 p-8 rounded-2xl border border-slate-100">
+                        <h3 className="font-bold text-xl mb-3 text-[#0B3A31]">
                             ¿Es seguro recibir a alguien en mi casa?
                         </h3>
-                        <p className="text-slate-600 leading-relaxed">
+                        <p className="text-[#0D4638]/80 leading-relaxed">
                             Totalmente. Te enviamos los documentos de la persona que va a tu casa. Todos los técnicos pasan por un proceso de verificación de antecedentes y experiencia antes de entrar a Servy.
                         </p>
                     </div>
 
                     {/* Pregunta 4 */}
-                    <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100">
-                        <h3 className="font-bold text-xl mb-3 text-slate-900">
+                    <div className="bg-[#F2F9EF]/50 p-8 rounded-2xl border border-slate-100">
+                        <h3 className="font-bold text-xl mb-3 text-[#0B3A31]">
                             ¿Los técnicos están calificados?
                         </h3>
-                        <p className="text-slate-600 leading-relaxed">
+                        <p className="text-[#0D4638]/80 leading-relaxed">
                             Sí. Todos los técnicos pasan un proceso de verificación donde chequeamos su experiencia, antecedentes y capacitación. No dejamos entrar a cualquiera.
                         </p>
                     </div>
 
                     {/* Pregunta 5 */}
-                    <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100">
-                        <h3 className="font-bold text-xl mb-3 text-slate-900">
+                    <div className="bg-[#F2F9EF]/50 p-8 rounded-2xl border border-slate-100">
+                        <h3 className="font-bold text-xl mb-3 text-[#0B3A31]">
                             ¿Cuánto tarda en llegar el técnico?
                         </h3>
-                        <p className="text-slate-600 leading-relaxed">
+                        <p className="text-[#0D4638]/80 leading-relaxed">
                             Si elegís &quot;urgente&quot;, llega dentro de las 24 horas. Si elegís &quot;programado&quot;, podés agendarlo para el día que mejor te venga y sale más económico.
                         </p>
                     </div>
@@ -433,44 +433,47 @@ export default function Home() {
             </section>
 
             {/* Para profesionales */}
-            <section className="w-full py-24 px-6 md:px-12 bg-slate-900 text-white flex flex-col items-center text-center relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-servy-500/20 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2"></div>
-                <h2 className="text-4xl md:text-5xl font-bold mb-6 relative z-10">¿Sos profesional del hogar?</h2>
-                <p className="text-xl text-slate-300 max-w-2xl mb-10 relative z-10">Recibí trabajos sin salir a buscarlos. Cotizá desde tu celular, cobrá antes de arrancar y manejá todo desde tu portal.</p>
-                <Link href="/tecnicos" className="relative z-10 bg-servy-500 hover:bg-servy-400 text-white px-8 py-4 rounded-full font-bold shadow-xl transition-all">
+            <section className="w-full py-24 px-6 md:px-12 bg-[#0D4638] text-white flex flex-col items-center text-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-[#A7E23C]/20 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2"></div>
+                <h2 className="text-4xl md:text-5xl font-bold mb-6 relative z-10 text-white">¿Sos profesional del hogar?</h2>
+                <p className="text-xl text-[#C6F6DB] max-w-2xl mb-10 relative z-10">Recibí trabajos sin salir a buscarlos. Cotizá desde tu celular, cobrá antes de arrancar y manejá todo desde tu portal.</p>
+                <Link
+                    href="/tecnicos"
+                    className="relative z-10 bg-[#A7E23C] text-[#0D4638] hover:bg-[#A7E23C]/90 px-8 py-4 rounded-full font-bold shadow-xl shadow-[#A7E23C]/20 transition-all"
+                >
                     Unirme a Servy
                 </Link>
             </section>
 
             {/* Footer */}
-            <footer className="w-full bg-slate-50 py-16 px-6 md:px-12 border-t border-slate-200">
+            <footer className="w-full bg-[#F2F9EF]/50 py-16 px-6 md:px-12 border-t border-slate-200">
                 <div className="max-w-6xl mx-auto">
                     {/* Grid de columnas */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
                         {/* Columna 1: Logo + descripción */}
                         <div className="md:col-span-1">
-                            <div className="text-2xl font-black text-servy-600 tracking-tighter mb-4">Servy.</div>
-                            <p className="text-slate-600 text-sm">
+                            <div className="text-2xl font-bold text-[#0D4638] tracking-tighter mb-4">servy.</div>
+                            <p className="text-[#0D4638]/80 text-sm">
                                 Arreglá tu hogar en minutos. Todo por WhatsApp.
                             </p>
                         </div>
 
                         {/* Columna 2: Producto */}
                         <div>
-                            <h4 className="font-bold text-slate-900 mb-4">Producto</h4>
-                            <ul className="space-y-3 text-slate-600 text-sm">
+                            <h4 className="font-bold text-[#0B3A31] mb-4">Producto</h4>
+                            <ul className="space-y-3 text-[#0D4638]/80 text-sm">
                                 <li>
-                                    <a href="#como-funciona" className="hover:text-servy-600 transition">
+                                    <a href="#como-funciona" className="hover:text-[#A7E23C] transition">
                                         Cómo Funciona
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="#categorias" className="hover:text-servy-600 transition">
+                                    <a href="#categorias" className="hover:text-[#A7E23C] transition">
                                         Servicios
                                     </a>
                                 </li>
                                 <li>
-                                    <Link href="/tecnicos" className="hover:text-servy-600 transition">
+                                    <Link href="/tecnicos" className="hover:text-[#A7E23C] transition">
                                         Soy técnico
                                     </Link>
                                 </li>
@@ -479,20 +482,20 @@ export default function Home() {
 
                         {/* Columna 3: Legal */}
                         <div>
-                            <h4 className="font-bold text-slate-900 mb-4">Legal</h4>
-                            <ul className="space-y-3 text-slate-600 text-sm">
+                            <h4 className="font-bold text-[#0B3A31] mb-4">Legal</h4>
+                            <ul className="space-y-3 text-[#0D4638]/80 text-sm">
                                 <li>
-                                    <Link href="/terminos" className="hover:text-servy-600 transition">
+                                    <Link href="/terminos" className="hover:text-[#A7E23C] transition">
                                         Términos y Condiciones
                                     </Link>
                                 </li>
                                 <li>
-                                    <Link href="/privacidad" className="hover:text-servy-600 transition">
+                                    <Link href="/privacidad" className="hover:text-[#A7E23C] transition">
                                         Política de Privacidad
                                     </Link>
                                 </li>
                                 <li>
-                                    <a href="#dudas" className="hover:text-servy-600 transition">
+                                    <a href="#dudas" className="hover:text-[#A7E23C] transition">
                                         Preguntas Frecuentes
                                     </a>
                                 </li>
@@ -501,20 +504,20 @@ export default function Home() {
 
                         {/* Columna 4: Contacto */}
                         <div>
-                            <h4 className="font-bold text-slate-900 mb-4">Contacto</h4>
-                            <ul className="space-y-3 text-slate-600 text-sm">
+                            <h4 className="font-bold text-[#0B3A31] mb-4">Contacto</h4>
+                            <ul className="space-y-3 text-[#0D4638]/80 text-sm">
                                 <li>
                                     <a
                                         href={WA_LINK}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="hover:text-servy-600 transition"
+                                        className="hover:text-[#A7E23C] transition"
                                     >
                                         Hablar con Servy
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="mailto:soporte@servy.lat" className="hover:text-servy-600 transition">
+                                    <a href="mailto:soporte@servy.lat" className="hover:text-[#A7E23C] transition">
                                         soporte@servy.lat
                                     </a>
                                 </li>
@@ -524,7 +527,7 @@ export default function Home() {
 
                     {/* Separador */}
                     <div className="border-t border-slate-200 pt-8">
-                        <p className="text-slate-500 text-sm text-center">
+                        <p className="text-[#0D4638]/60 text-sm text-center">
                             © {new Date().getFullYear()} Servy. Todos los derechos reservados.
                         </p>
                     </div>

@@ -7,8 +7,14 @@
     scroll-behavior: smooth;
   }
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
-    font-family: 'Inter', sans-serif;
+    @apply bg-slate-50 antialiased;
+    font-family: var(--font-poppins), system-ui, sans-serif;
+    color: #0b3a31;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-poppins), system-ui, sans-serif;
+    font-weight: 700;
   }
 
   @keyframes slide-up {

@@ -5,10 +5,10 @@ export default function PrivacidadPage() {
         <main className="flex min-h-screen flex-col items-center bg-white">
             {/* Navbar */}
             <header className="w-full h-20 flex items-center justify-between px-6 md:px-12 bg-white border-b border-slate-100">
-                <Link href="/" className="text-2xl font-black text-servy-600 tracking-tighter">
-                    Servy.
+                <Link href="/" className="text-2xl font-bold text-[#0D4638] tracking-tighter">
+                    servy.
                 </Link>
-                <Link href="/" className="text-slate-600 hover:text-servy-600 transition text-sm font-medium">
+                <Link href="/" className="text-slate-600 hover:text-[#A7E23C] transition text-sm font-medium">
                     Volver al inicio
                 </Link>
             </header>
@@ -93,7 +93,7 @@ export default function PrivacidadPage() {
                         </ul>
                         <p className="text-slate-600 leading-relaxed mt-4">
                             Para ejercer estos derechos, escribinos a{' '}
-                            <a href="mailto:privacidad@servy.lat" className="text-servy-600 hover:underline">
+                            <a href="mailto:privacidad@servy.lat" className="text-[#0D4638] hover:text-[#A7E23C] hover:underline">
                                 privacidad@servy.lat
                             </a>
                         </p>
@@ -130,7 +130,7 @@ export default function PrivacidadPage() {
                         <h2 className="text-2xl font-bold text-slate-900 mb-4">10. Contacto</h2>
                         <p className="text-slate-600 leading-relaxed">
                             Para consultas sobre esta política de privacidad, escribinos a{' '}
-                            <a href="mailto:privacidad@servy.lat" className="text-servy-600 hover:underline">
+                            <a href="mailto:privacidad@servy.lat" className="text-[#0D4638] hover:text-[#A7E23C] hover:underline">
                                 privacidad@servy.lat
                             </a>
                         </p>
