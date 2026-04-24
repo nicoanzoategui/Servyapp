@@ -223,7 +223,7 @@ export default function Home() {
             </section>
 
             {/* Cómo Funciona */}
-            <section id="como-funciona" className="w-full py-24 px-6 md:px-12 bg-white flex flex-col items-center relative">
+            <section id="como-funciona" className="relative flex w-full flex-col items-center bg-[#F2F9EF] px-6 py-24 md:px-12">
                 <h2
                     className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-16"
                 >
@@ -231,9 +231,9 @@ export default function Home() {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full">
                     {/* Step 1 */}
-                    <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-[#C6F6DB] text-[#0D4638] flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
-                            <span className="text-2xl font-black">1</span>
+                    <div className="relative flex flex-col items-center rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-sm transition-shadow hover:shadow-xl">
+                        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-[#A7E23C]">
+                            <span className="text-3xl font-bold text-[#0D4638]">1</span>
                         </div>
                         <h3
                             className="text-xl font-bold mb-3"
@@ -246,9 +246,9 @@ export default function Home() {
                     </div>
 
                     {/* Step 2 */}
-                    <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-[#C6F6DB] text-[#0D4638] flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
-                            <span className="text-2xl font-black">2</span>
+                    <div className="relative flex flex-col items-center rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-sm transition-shadow hover:shadow-xl">
+                        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-[#A7E23C]">
+                            <span className="text-3xl font-bold text-[#0D4638]">2</span>
                         </div>
                         <h3
                             className="text-xl font-bold mb-3"
@@ -261,9 +261,9 @@ export default function Home() {
                     </div>
 
                     {/* Step 3 */}
-                    <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-[#C6F6DB] text-[#0D4638] flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
-                            <span className="text-2xl font-black">3</span>
+                    <div className="relative flex flex-col items-center rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-sm transition-shadow hover:shadow-xl">
+                        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-[#A7E23C]">
+                            <span className="text-3xl font-bold text-[#0D4638]">3</span>
                         </div>
                         <h3
                             className="text-xl font-bold mb-3"
