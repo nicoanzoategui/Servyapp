@@ -30,9 +30,11 @@ export default function Home() {
         <main className="flex min-h-screen flex-col items-center overflow-hidden">
             {/* Navbar Minimalista */}
             <header className="fixed top-0 z-50 flex h-20 w-full items-center justify-between gap-4 border-b border-slate-100 bg-white/80 px-4 backdrop-blur sm:px-6 md:px-12">
-                <div className="text-2xl font-bold tracking-tighter text-[#0D4638]">servy.</div>
+                <div className="text-[1.65rem] font-bold leading-none tracking-tighter text-[#0D4638] md:text-[1.75rem]">
+                    servy.
+                </div>
                 <div className="flex flex-1 items-center justify-end gap-4 md:gap-8">
-                    <nav className="hidden gap-6 text-sm font-medium text-slate-600 md:flex">
+                    <nav className="hidden gap-6 text-sm font-bold text-[#0D4638] md:flex">
                         <a href="#como-funciona" className="transition hover:text-[#A7E23C]">
                             Cómo Funciona
                         </a>
