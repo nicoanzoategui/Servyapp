@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import {
     Wrench,
@@ -122,102 +123,17 @@ export default function Home() {
                         </div>
                     </div>
 
-                    {/* iPhone mockup */}
-                    <div className="relative hidden w-[272px] shrink-0 md:block">
-                        {/* Cuerpo iPhone */}
-                        <div
-                                className="bg-[#1a1a1a] rounded-[44px] p-[14px] shadow-2xl"
-                                style={{ boxShadow: '0 0 0 2px #3a3a3a, 0 30px 80px rgba(0,0,0,0.35)' }}
-                            >
-                                {/* Botones laterales izquierda */}
-                                <div className="absolute left-[-3px] top-[80px] w-[3px] h-[28px] bg-[#2a2a2a] rounded-l-sm"></div>
-                                <div className="absolute left-[-3px] top-[118px] w-[3px] h-[44px] bg-[#2a2a2a] rounded-l-sm"></div>
-                                <div className="absolute left-[-3px] top-[172px] w-[3px] h-[44px] bg-[#2a2a2a] rounded-l-sm"></div>
-                                {/* Botón derecha */}
-                                <div className="absolute right-[-3px] top-[130px] w-[3px] h-[64px] bg-[#2a2a2a] rounded-r-sm"></div>
-
-                                {/* Pantalla */}
-                                <div className="bg-white rounded-[32px] overflow-hidden">
-                                    {/* Status bar */}
-                                    <div className="bg-[#075E54] px-5 pt-2 pb-0 flex justify-between items-start">
-                                        <span className="text-white text-[11px] font-bold pt-1">9:41</span>
-                                        <div className="w-[80px] h-[20px] bg-[#1a1a1a] rounded-b-[12px]"></div>
-                                        <div className="flex gap-1 items-center pt-1">
-                                            <div className="flex gap-[1px] items-end">
-                                                <div className="w-[3px] h-[5px] bg-white rounded-sm"></div>
-                                                <div className="w-[3px] h-[8px] bg-white rounded-sm"></div>
-                                                <div className="w-[3px] h-[11px] bg-white rounded-sm"></div>
-                                                <div className="w-[3px] h-[14px] bg-white rounded-sm"></div>
-                                            </div>
-                                            <div className="w-[14px] h-[8px] border-[1.5px] border-white rounded-sm relative ml-1">
-                                                <div className="absolute right-[-4px] top-1/2 -translate-y-1/2 w-[2px] h-[5px] bg-white rounded-r-sm"></div>
-                                                <div className="w-[9px] h-[4px] bg-white rounded-sm m-[1px]"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* WhatsApp header */}
-                                    <div className="bg-[#075E54] px-3 pb-3 flex items-center gap-2">
-                                        <span className="text-white text-lg">←</span>
-                                        <div className="w-8 h-8 rounded-full bg-[#0D4638] flex items-center justify-center font-black text-xs text-white shrink-0">
-                                            S
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="m-0 flex items-center gap-1 text-[13px] font-bold text-white">
-                                                Servy
-                                                <span className="inline-flex shrink-0" title="Verificado" aria-hidden>
-                                                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="#25D366">
-                                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                                                    </svg>
-                                                </span>
-                                            </p>
-                                            <p className="m-0 text-[11px] text-green-200">en línea</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Chat body */}
-                                    <div className="bg-[#ECE5DD] px-3 py-3 flex flex-col gap-3 min-h-[360px]">
-                                        {/* Mensaje usuario */}
-                                        <div className="self-end bg-[#DCF8C6] rounded-2xl rounded-tr-sm px-3 py-2 max-w-[85%] shadow-sm">
-                                            <p className="text-slate-800 text-[13px] m-0">Se me rompió la canilla del baño</p>
-                                            <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:24 ✓✓</p>
-                                        </div>
-
-                                        {/* Respuesta Servy */}
-                                        <div className="self-start bg-[#FFFFFF] rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
-                                            <p className="text-slate-800 text-[13px] m-0 mb-1">Encontré 2 plomeros disponibles</p>
-                                            <p className="text-slate-600 text-[12px] m-0">
-                                                1 <strong>Urgente</strong> — hoy en 2hs
-                                            </p>
-                                            <p className="text-slate-600 text-[12px] m-0">
-                                                2 <strong>Programado</strong> — mañana
-                                            </p>
-                                            <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:24</p>
-                                        </div>
-
-                                        {/* Respuesta usuario */}
-                                        <div className="self-end bg-[#DCF8C6] rounded-2xl rounded-tr-sm px-3 py-2 max-w-[85%] shadow-sm">
-                                            <p className="text-slate-800 text-[13px] m-0">1</p>
-                                            <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:25 ✓✓</p>
-                                        </div>
-
-                                        {/* Respuesta Servy */}
-                                        <div className="self-start bg-[#FFFFFF] rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
-                                            <p className="text-slate-800 text-[13px] m-0">
-                                                Genial! La cotización está en camino. Te avisamos enseguida
-                                            </p>
-                                            <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:25</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Input bar */}
-                                    <div className="bg-[#F0F0F0] px-3 py-2 flex items-center gap-2 border-t border-slate-200">
-                                        <div className="flex-1 bg-white rounded-full px-4 py-2 text-slate-400 text-xs">
-                                            Escribí un mensaje...
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                    {/* Mock teléfono / WhatsApp → apps/landing/public/images/hero-phone.png */}
+                    <div className="relative hidden w-full max-w-[min(100%,360px)] shrink-0 md:block md:max-w-[400px]">
+                        <Image
+                            src="/images/hero-phone.png"
+                            alt="Chateá con Servy por WhatsApp y recibí cotización en minutos"
+                            width={1600}
+                            height={808}
+                            className="h-auto w-full drop-shadow-[0_24px_48px_rgba(13,70,56,0.18)]"
+                            sizes="(min-width: 768px) 400px, 100vw"
+                            priority
+                        />
                     </div>
                 </div>
             </section>
