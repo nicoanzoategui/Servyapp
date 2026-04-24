@@ -17,47 +17,81 @@ const NEXT_PUBLIC_WA_NUMBER = (
 ).replace(/\D/g, '');
 const WA_LINK = `https://wa.me/${NEXT_PUBLIC_WA_NUMBER}?text=Hola,%20necesito%20ayuda`;
 
+function WhatsAppIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.881 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+        </svg>
+    );
+}
+
 export default function Home() {
     return (
         <main className="flex min-h-screen flex-col items-center overflow-hidden">
             {/* Navbar Minimalista */}
-            <header className="w-full h-20 flex items-center justify-between px-6 md:px-12 bg-white/80 backdrop-blur fixed top-0 z-50 border-b border-slate-100">
-                <div className="text-2xl font-bold text-[#0D4638] tracking-tighter">servy.</div>
-                <nav className="gap-6 hidden md:flex font-medium text-slate-600 text-sm">
-                    <a href="#como-funciona" className="hover:text-[#A7E23C] transition">
-                        Cómo Funciona
+            <header className="fixed top-0 z-50 flex h-20 w-full items-center justify-between gap-4 border-b border-slate-100 bg-white/80 px-4 backdrop-blur sm:px-6 md:px-12">
+                <div className="text-2xl font-bold tracking-tighter text-[#0D4638]">servy.</div>
+                <div className="flex flex-1 items-center justify-end gap-4 md:gap-8">
+                    <nav className="hidden gap-6 text-sm font-medium text-slate-600 md:flex">
+                        <a href="#como-funciona" className="transition hover:text-[#A7E23C]">
+                            Cómo Funciona
+                        </a>
+                        <a href="#categorias" className="transition hover:text-[#A7E23C]">
+                            Servicios
+                        </a>
+                        <Link href="/tecnicos" className="transition hover:text-[#A7E23C]">
+                            Soy técnico
+                        </Link>
+                    </nav>
+                    <a
+                        href={WA_LINK}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[#0D4638] px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-[#0B3A31] md:px-5"
+                    >
+                        <WhatsAppIcon className="h-5 w-5" />
+                        <span className="max-w-[9rem] truncate sm:max-w-none">Hablar con Servy</span>
                     </a>
-                    <a href="#categorias" className="hover:text-[#A7E23C] transition">
-                        Servicios
-                    </a>
-                    <Link href="/tecnicos" className="hover:text-[#A7E23C] transition">
-                        Soy técnico
-                    </Link>
-                </nav>
+                </div>
             </header>
 
             {/* Hero Section */}
-            <section className="w-full pt-32 pb-20 px-6 md:px-12 bg-[#F2F9EF] mt-10">
-                <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-center gap-16">
+            <section className="relative mt-10 w-full overflow-hidden bg-[#F2F9EF] px-6 pb-24 pt-32 md:px-12 md:pb-28">
+                {/* Hoja decorativa (inferior izquierda) */}
+                <svg
+                    className="pointer-events-none absolute bottom-4 left-0 z-0 h-36 w-36 text-[#A7E23C]/30 md:h-44 md:w-44"
+                    viewBox="0 0 120 120"
+                    fill="currentColor"
+                    aria-hidden
+                >
+                    <path d="M98 108c-8-18-6-42 4-62 8-16 4-32-8-44-14-14-36-16-52-4-10 8-14 22-10 34 6 18 2 38-12 52-8 8-8 20 0 28s20 8 28 0c14-14 34-18 52-12 12 4 26 0 34-10 12-16 10-38-4-52-12-12-28-16-44-8-20 10-44 12-62 4z" />
+                </svg>
+
+                <div className="relative z-[1] mx-auto flex max-w-6xl flex-col items-center gap-14 md:flex-row md:items-center md:justify-between md:gap-10">
                     {/* Texto */}
-                    <div className="flex-1 max-w-md flex flex-col items-start text-left">
-                        <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-[#0D4638] max-w-xl">
+                    <div className="flex w-full max-w-md flex-1 flex-col items-start text-left">
+                        <h1 className="max-w-xl text-5xl font-bold tracking-tight text-[#0D4638] md:text-6xl">
                             Arreglá tu hogar en minutos. <span className="text-[#A7E23C]">Por WhatsApp.</span>
                         </h1>
-                        {/* Ícono destacado */}
-                        <div className="mt-8 flex w-full max-w-lg items-start gap-4 rounded-2xl border border-[#C6F6DB]/30 bg-white/60 p-4 backdrop-blur-sm">
+                        <p className="mt-6 max-w-lg animate-fade-in delay-150 text-lg text-[#0B3A31] md:text-xl">
+                            Canilla que pierde, se fue la luz, te quedaste afuera?{' '}
+                            <span className="font-semibold text-[#0D4638]">Mandá mensaje a Servy.</span>{' '}
+                            Recibí la cotización en minutos y tenés un técnico verificado camino a tu casa.
+                        </p>
+                        {/* Ícono destacado — justo arriba del CTA principal */}
+                        <div className="mt-8 flex w-full max-w-lg items-start gap-4 rounded-2xl border border-[#C6F6DB]/40 bg-white/70 p-4 shadow-sm backdrop-blur-sm">
                             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#A7E23C]">
                                 <svg
-                                    className="h-6 w-6 text-[#0D4638]"
+                                    className="h-6 w-6 text-white"
                                     fill="none"
                                     stroke="currentColor"
+                                    strokeWidth={2.25}
                                     viewBox="0 0 24 24"
                                     aria-hidden
                                 >
                                     <path
                                         strokeLinecap="round"
                                         strokeLinejoin="round"
-                                        strokeWidth={2.5}
                                         d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
                                     />
                                 </svg>
@@ -67,25 +101,21 @@ export default function Home() {
                                 <p className="mt-1 text-sm text-slate-600">Sin apps nuevas, sin llamadas, sin vueltas.</p>
                             </div>
                         </div>
-                        <p className="mt-6 max-w-lg animate-fade-in delay-150 text-lg md:text-xl text-[#0B3A31]">
-                            Canilla que pierde, se fue la luz, te quedaste afuera?{' '}
-                            <span className="font-semibold text-[#0D4638]">Mandá mensaje a Servy.</span>{' '}
-                            Recibí la cotización en minutos y tenés un técnico verificado camino a tu casa.
-                        </p>
-                        <div className="mt-10 animate-slide-up delay-300">
+                        <div className="mt-8 animate-slide-up delay-300">
                             <a
                                 href={WA_LINK}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="bg-[#0D4638] text-white px-8 py-4 rounded-full font-bold shadow-xl hover:bg-[#0B3A31] hover:-translate-y-1 transition-all duration-300"
+                                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0D4638] px-8 py-4 text-base font-bold text-white shadow-xl transition-all duration-300 hover:-translate-y-1 hover:bg-[#0B3A31]"
                             >
+                                <WhatsAppIcon className="h-6 w-6" />
                                 Hablar con Servy
                             </a>
                         </div>
                         {/* Badges debajo del CTA */}
-                        <div className="mt-6 flex items-center gap-6 text-sm text-[#0B3A31]">
+                        <div className="mt-6 flex flex-wrap items-center gap-4 text-sm text-[#0B3A31] sm:gap-6">
                             <div className="flex items-center gap-2">
-                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                                <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                                     <path
                                         strokeLinecap="round"
                                         strokeLinejoin="round"
@@ -100,9 +130,25 @@ export default function Home() {
                         </div>
                     </div>
 
-                    {/* iPhone Mockup */}
-                    <div className="shrink-0 hidden md:flex justify-center items-center">
-                        <div className="relative w-[272px]">
+                    {/* iPhone + blob decorativo */}
+                    <div className="relative hidden min-h-[420px] w-full max-w-[300px] shrink-0 items-center justify-center md:flex md:max-w-[380px]">
+                        {/* Forma orgánica detrás del teléfono */}
+                        <div
+                            className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[min(100vw,480px)] w-[min(92vw,440px)] -translate-x-[42%] -translate-y-1/2 bg-[#0D4638] md:h-[460px] md:w-[400px] md:-translate-x-[35%]"
+                            style={{ borderRadius: '46% 54% 42% 58% / 52% 48% 55% 45%' }}
+                            aria-hidden
+                        />
+                        {/* Textura de puntos (esquina superior del blob) */}
+                        <div
+                            className="pointer-events-none absolute right-2 top-8 z-[1] h-40 w-40 rounded-2xl opacity-[0.14]"
+                            style={{
+                                backgroundImage:
+                                    'radial-gradient(circle at center, rgba(255,255,255,0.95) 1.2px, transparent 1.2px)',
+                                backgroundSize: '11px 11px',
+                            }}
+                            aria-hidden
+                        />
+                        <div className="relative z-10 w-[272px]">
                             {/* Cuerpo iPhone */}
                             <div
                                 className="bg-[#1a1a1a] rounded-[44px] p-[14px] shadow-2xl"
@@ -141,9 +187,16 @@ export default function Home() {
                                         <div className="w-8 h-8 rounded-full bg-[#0D4638] flex items-center justify-center font-black text-xs text-white shrink-0">
                                             S
                                         </div>
-                                        <div className="flex-1">
-                                            <p className="text-white font-bold text-[13px] m-0">Servy</p>
-                                            <p className="text-green-200 text-[11px] m-0">en línea</p>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="m-0 flex items-center gap-1 text-[13px] font-bold text-white">
+                                                Servy
+                                                <span className="inline-flex shrink-0" title="Verificado" aria-hidden>
+                                                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="#25D366">
+                                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                                                    </svg>
+                                                </span>
+                                            </p>
+                                            <p className="m-0 text-[11px] text-green-200">en línea</p>
                                         </div>
                                     </div>
 
