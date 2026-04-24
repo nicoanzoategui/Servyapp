@@ -124,16 +124,18 @@ export default function Home() {
                     </div>
 
                     {/* Mock teléfono / WhatsApp → apps/landing/public/images/hero-phone.png */}
-                    <div className="relative hidden w-full max-w-[min(100%,360px)] shrink-0 md:block md:max-w-[400px]">
-                        <Image
-                            src="/images/hero-phone.png"
-                            alt="Chateá con Servy por WhatsApp y recibí cotización en minutos"
-                            width={1600}
-                            height={808}
-                            className="h-auto w-full drop-shadow-[0_24px_48px_rgba(13,70,56,0.18)]"
-                            sizes="(min-width: 768px) 400px, 100vw"
-                            priority
-                        />
+                    <div className="relative hidden w-full max-w-[min(100%,280px)] shrink-0 md:block md:max-w-[300px]">
+                        <div className="rounded-[2rem] bg-white p-2 shadow-[0_20px_50px_rgba(13,70,56,0.12)] ring-1 ring-slate-200/60">
+                            <Image
+                                src="/images/hero-phone.png"
+                                alt="Chateá con Servy por WhatsApp y recibí cotización en minutos"
+                                width={383}
+                                height={667}
+                                className="h-auto w-full rounded-[1.35rem]"
+                                sizes="(min-width: 768px) 300px, 100vw"
+                                priority
+                            />
+                        </div>
                     </div>
                 </div>
             </section>
