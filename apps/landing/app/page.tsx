@@ -9,7 +9,6 @@ import {
     HeartHandshake,
     Flame,
     Wind,
-    Check,
 } from 'lucide-react';
 
 /** E.164 sin + (wa.me). Env opcional en Railway: NEXT_PUBLIC_WA_NUMBER */
@@ -45,19 +44,33 @@ export default function Home() {
                         <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-[#0D4638] max-w-xl">
                             Arreglá tu hogar en minutos. <span className="text-[#A7E23C]">Por WhatsApp.</span>
                         </h1>
-                        <p className="mt-6 text-lg md:text-xl text-[#0B3A31] max-w-lg animate-fade-in delay-150">
+                        {/* Ícono destacado */}
+                        <div className="mt-8 flex w-full max-w-lg items-start gap-4 rounded-2xl border border-[#C6F6DB]/30 bg-white/60 p-4 backdrop-blur-sm">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#A7E23C]">
+                                <svg
+                                    className="h-6 w-6 text-[#0D4638]"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    aria-hidden
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2.5}
+                                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                                    />
+                                </svg>
+                            </div>
+                            <div>
+                                <p className="text-lg font-bold text-[#0D4638]">Precio cerrado antes de que llegue.</p>
+                                <p className="mt-1 text-sm text-slate-600">Sin apps nuevas, sin llamadas, sin vueltas.</p>
+                            </div>
+                        </div>
+                        <p className="mt-6 max-w-lg animate-fade-in delay-150 text-lg md:text-xl text-[#0B3A31]">
                             Canilla que pierde, se fue la luz, te quedaste afuera?{' '}
                             <span className="font-semibold text-[#0D4638]">Mandá mensaje a Servy.</span>{' '}
                             Recibí la cotización en minutos y tenés un técnico verificado camino a tu casa.
-                        </p>
-                        <p className="mt-4 text-lg md:text-xl text-[#0B3A31] max-w-lg animate-fade-in delay-200 flex gap-3 items-start">
-                            <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#A7E23C]">
-                                <Check className="text-[#0D4638]" size={18} strokeWidth={2.5} aria-hidden />
-                            </span>
-                            <span>
-                                <span className="font-semibold text-[#0D4638]">Precio cerrado antes de que llegue.</span>{' '}
-                                Sin apps nuevas, sin llamadas, sin vueltas.
-                            </span>
                         </p>
                         <div className="mt-10 animate-slide-up delay-300">
                             <a
@@ -68,6 +81,22 @@ export default function Home() {
                             >
                                 Hablar con Servy
                             </a>
+                        </div>
+                        {/* Badges debajo del CTA */}
+                        <div className="mt-6 flex items-center gap-6 text-sm text-[#0B3A31]">
+                            <div className="flex items-center gap-2">
+                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                                    />
+                                </svg>
+                                <span className="font-medium">Técnicos verificados</span>
+                            </div>
+                            <div className="text-slate-400">·</div>
+                            <span className="font-medium">Atención 24/7</span>
                         </div>
                     </div>
 
