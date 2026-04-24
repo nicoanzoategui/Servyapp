@@ -57,19 +57,9 @@ export default function Home() {
 
             {/* Hero Section */}
             <section className="relative mt-10 w-full overflow-hidden bg-[#F2F9EF] px-6 pb-24 pt-32 md:px-12 md:pb-28">
-                {/* Hoja decorativa (inferior izquierda) */}
-                <svg
-                    className="pointer-events-none absolute bottom-4 left-0 z-0 h-36 w-36 text-[#A7E23C]/30 md:h-44 md:w-44"
-                    viewBox="0 0 120 120"
-                    fill="currentColor"
-                    aria-hidden
-                >
-                    <path d="M98 108c-8-18-6-42 4-62 8-16 4-32-8-44-14-14-36-16-52-4-10 8-14 22-10 34 6 18 2 38-12 52-8 8-8 20 0 28s20 8 28 0c14-14 34-18 52-12 12 4 26 0 34-10 12-16 10-38-4-52-12-12-28-16-44-8-20 10-44 12-62 4z" />
-                </svg>
-
-                <div className="relative z-[1] mx-auto flex max-w-6xl flex-col items-center gap-14 md:flex-row md:items-center md:justify-between md:gap-10">
+                <div className="relative z-[1] mx-auto flex max-w-5xl flex-col items-center gap-10 md:flex-row md:items-center md:justify-center md:gap-8 lg:gap-10">
                     {/* Texto */}
-                    <div className="flex w-full max-w-md flex-1 flex-col items-start text-left">
+                    <div className="flex w-full max-w-md shrink-0 flex-col items-start text-left md:max-w-[28rem]">
                         <h1 className="max-w-xl text-5xl font-bold tracking-tight text-[#0D4638] md:text-6xl">
                             Arreglá tu hogar en minutos. <span className="text-[#A7E23C]">Por WhatsApp.</span>
                         </h1>
@@ -130,27 +120,10 @@ export default function Home() {
                         </div>
                     </div>
 
-                    {/* iPhone + blob decorativo */}
-                    <div className="relative hidden min-h-[420px] w-full max-w-[300px] shrink-0 items-center justify-center md:flex md:max-w-[380px]">
-                        {/* Forma orgánica detrás del teléfono */}
+                    {/* iPhone mockup */}
+                    <div className="relative hidden w-[272px] shrink-0 md:block">
+                        {/* Cuerpo iPhone */}
                         <div
-                            className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[min(100vw,480px)] w-[min(92vw,440px)] -translate-x-[42%] -translate-y-1/2 bg-[#0D4638] md:h-[460px] md:w-[400px] md:-translate-x-[35%]"
-                            style={{ borderRadius: '46% 54% 42% 58% / 52% 48% 55% 45%' }}
-                            aria-hidden
-                        />
-                        {/* Textura de puntos (esquina superior del blob) */}
-                        <div
-                            className="pointer-events-none absolute right-2 top-8 z-[1] h-40 w-40 rounded-2xl opacity-[0.14]"
-                            style={{
-                                backgroundImage:
-                                    'radial-gradient(circle at center, rgba(255,255,255,0.95) 1.2px, transparent 1.2px)',
-                                backgroundSize: '11px 11px',
-                            }}
-                            aria-hidden
-                        />
-                        <div className="relative z-10 w-[272px]">
-                            {/* Cuerpo iPhone */}
-                            <div
                                 className="bg-[#1a1a1a] rounded-[44px] p-[14px] shadow-2xl"
                                 style={{ boxShadow: '0 0 0 2px #3a3a3a, 0 30px 80px rgba(0,0,0,0.35)' }}
                             >
@@ -243,7 +216,6 @@ export default function Home() {
                                     </div>
                                 </div>
                             </div>
-                        </div>
                     </div>
                 </div>
             </section>
