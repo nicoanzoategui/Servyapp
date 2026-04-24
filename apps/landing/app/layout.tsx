@@ -1,20 +1,13 @@
 // @ts-ignore
 import './globals.css';
 import type { Metadata } from 'next';
-import { Epilogue, Inter } from 'next/font/google';
+import { Poppins } from 'next/font/google';
 import Script from 'next/script';
 
-const epilogue = Epilogue({
+const poppins = Poppins({
     subsets: ['latin'],
-    weight: ['700', '900'],
-    variable: '--font-epilogue',
-    display: 'swap',
-});
-
-const inter = Inter({
-    subsets: ['latin'],
-    weight: ['400', '500', '600', '700'],
-    variable: '--font-inter',
+    weight: ['400', '700'],
+    variable: '--font-poppins',
     display: 'swap',
 });
 
@@ -38,7 +31,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="es" className={`${epilogue.variable} ${inter.variable}`}>
+        <html lang="es" className={poppins.variable}>
             <body>
                 {children}
                 {/* Google Analytics 4 */}

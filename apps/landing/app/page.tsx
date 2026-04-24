@@ -12,22 +12,22 @@ export default function Home() {
         <main className="flex min-h-screen flex-col items-center overflow-hidden">
             {/* Navbar Minimalista */}
             <header className="w-full h-20 flex items-center justify-between px-6 md:px-12 bg-white/80 backdrop-blur fixed top-0 z-50 border-b border-slate-100">
-                <div className="font-display text-2xl font-black text-[#065F46] tracking-tighter">Servy.</div>
+                <div className="text-2xl font-bold text-[#0D4638] tracking-tighter">servy.</div>
                 <nav className="gap-6 hidden md:flex font-medium text-slate-600 text-sm">
-                    <a href="#como-funciona" className="hover:text-[#047857] transition">
+                    <a href="#como-funciona" className="hover:text-[#A7E23C] transition">
                         Cómo Funciona
                     </a>
-                    <a href="#categorias" className="hover:text-[#047857] transition">
+                    <a href="#categorias" className="hover:text-[#A7E23C] transition">
                         Servicios
                     </a>
-                    <Link href="/tecnicos" className="hover:text-[#047857] transition">
+                    <Link href="/tecnicos" className="hover:text-[#A7E23C] transition">
                         Soy técnico
                     </Link>
                 </nav>
             </header>
 
             {/* Hero Section */}
-            <section className="w-full pt-32 pb-20 px-6 md:px-12 bg-gradient-to-br from-[#F8FAFC] via-white to-[#D1FAE5]/50 mt-10">
+            <section className="w-full pt-32 pb-20 px-6 md:px-12 bg-gradient-to-br from-[#F2F9EF] via-white to-[#C6F6DB]/30 mt-10">
                 <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-center gap-16">
                     {/* Texto */}
                     <div className="flex-1 max-w-md flex flex-col items-start text-left">
@@ -35,7 +35,7 @@ export default function Home() {
                             className="text-5xl md:text-6xl font-black tracking-tight text-slate-900 max-w-xl animate-slide-up"
                         >
                             Arreglá tu hogar en minutos.{' '}
-                            <span className="text-[#065F46]">Por WhatsApp.</span>
+                            <span className="text-[#A7E23C]">Por WhatsApp.</span>
                         </h1>
                         <p className="mt-6 text-lg md:text-xl text-slate-600 max-w-lg animate-fade-in delay-150">
                             Canilla que pierde, se fue la luz, te quedaste afuera?{' '}
@@ -51,7 +51,7 @@ export default function Home() {
                                 href={WA_LINK}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="bg-[#047857] text-white px-8 py-4 rounded-full font-bold shadow-xl shadow-[#047857]/30 hover:shadow-2xl hover:bg-[#065F46] hover:-translate-y-1 transition-all duration-300"
+                                className="bg-[#A7E23C] text-[#0D4638] px-8 py-4 rounded-full font-bold shadow-xl shadow-[#A7E23C]/20 hover:shadow-2xl hover:bg-[#A7E23C]/90 hover:-translate-y-1 transition-all duration-300"
                             >
                                 Hablar con Servy
                             </a>
@@ -163,7 +163,7 @@ export default function Home() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full">
                     {/* Step 1 */}
                     <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-[#D1FAE5] text-[#065F46] flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
+                        <div className="w-16 h-16 rounded-2xl bg-[#C6F6DB] text-[#0D4638] flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
                             <span className="text-2xl font-black">1</span>
                         </div>
                         <h3
@@ -178,7 +178,7 @@ export default function Home() {
 
                     {/* Step 2 */}
                     <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-[#D1FAE5] text-[#065F46] flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
+                        <div className="w-16 h-16 rounded-2xl bg-[#C6F6DB] text-[#0D4638] flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
                             <span className="text-2xl font-black">2</span>
                         </div>
                         <h3
@@ -193,7 +193,7 @@ export default function Home() {
 
                     {/* Step 3 */}
                     <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-[#D1FAE5] text-[#065F46] flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
+                        <div className="w-16 h-16 rounded-2xl bg-[#C6F6DB] text-[#0D4638] flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
                             <span className="text-2xl font-black">3</span>
                         </div>
                         <h3
@@ -217,7 +217,7 @@ export default function Home() {
                 </h2>
                 <div className="max-w-5xl w-full">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-6">
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#86EFAC] flex items-start gap-4 transition-colors cursor-default">
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#A7E23C] flex items-start gap-4 transition-colors cursor-default">
                             <div className="bg-blue-50 text-blue-600 p-4 rounded-xl shrink-0">
                                 <Wrench size={28} />
                             </div>
@@ -230,7 +230,7 @@ export default function Home() {
                                 <p className="text-sm text-slate-500">Canillas, cañerías, pérdidas de agua e inodoros.</p>
                             </div>
                         </div>
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#86EFAC] flex items-start gap-4 transition-colors cursor-default">
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#A7E23C] flex items-start gap-4 transition-colors cursor-default">
                             <div className="bg-yellow-50 text-yellow-500 p-4 rounded-xl shrink-0">
                                 <Zap size={28} />
                             </div>
@@ -243,7 +243,7 @@ export default function Home() {
                                 <p className="text-sm text-slate-500">Cortocircuitos, enchufes, tableros e instalaciones.</p>
                             </div>
                         </div>
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#86EFAC] flex items-start gap-4 transition-colors cursor-default">
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#A7E23C] flex items-start gap-4 transition-colors cursor-default">
                             <div className="bg-slate-100 text-slate-700 p-4 rounded-xl shrink-0">
                                 <Key size={28} />
                             </div>
@@ -258,7 +258,7 @@ export default function Home() {
                         </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#86EFAC] flex items-start gap-4 transition-colors cursor-default">
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#A7E23C] flex items-start gap-4 transition-colors cursor-default">
                             <div className="bg-orange-50 text-orange-500 p-4 rounded-xl shrink-0">
                                 <Flame size={28} />
                             </div>
@@ -271,7 +271,7 @@ export default function Home() {
                                 <p className="text-sm text-slate-500">Pérdidas de gas, calefones, cocinas y estufas.</p>
                             </div>
                         </div>
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#86EFAC] flex items-start gap-4 transition-colors cursor-default">
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#A7E23C] flex items-start gap-4 transition-colors cursor-default">
                             <div className="bg-cyan-50 text-cyan-500 p-4 rounded-xl shrink-0">
                                 <Wind size={28} />
                             </div>
@@ -297,7 +297,7 @@ export default function Home() {
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-5xl w-full">
                     <div className="flex gap-6 p-6">
-                        <ShieldCheck className="text-[#065F46] shrink-0" size={40} />
+                        <ShieldCheck className="text-[#0D4638] shrink-0" size={40} />
                         <div>
                             <h3
                                 className="font-bold text-xl mb-2"
@@ -310,7 +310,7 @@ export default function Home() {
                         </div>
                     </div>
                     <div className="flex gap-6 p-6">
-                        <Clock className="text-[#047857] shrink-0" size={40} />
+                        <Clock className="text-[#0D4638] shrink-0" size={40} />
                         <div>
                             <h3
                                 className="font-bold text-xl mb-2"
@@ -336,7 +336,7 @@ export default function Home() {
                         </div>
                     </div>
                     <div className="flex gap-6 p-6">
-                        <HeartHandshake className="text-[#065F46] shrink-0" size={40} />
+                        <HeartHandshake className="text-[#0D4638] shrink-0" size={40} />
                         <div>
                             <h3
                                 className="font-bold text-xl mb-2"
@@ -349,7 +349,7 @@ export default function Home() {
                         </div>
                     </div>
                     <div className="flex gap-6 p-6">
-                        <ShieldCheck className="text-[#065F46] shrink-0" size={40} />
+                        <ShieldCheck className="text-[#0D4638] shrink-0" size={40} />
                         <div>
                             <h3
                                 className="font-bold text-xl mb-2"
@@ -389,7 +389,7 @@ export default function Home() {
                             &quot;Se me rompió la canilla un domingo a la tarde. Mandé mensaje y en 2 horas el plomero ya estaba arreglándola. Increíble.&quot;
                         </p>
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-[#D1FAE5] flex items-center justify-center font-bold text-[#065F46]">
+                            <div className="w-10 h-10 rounded-full bg-[#C6F6DB] flex items-center justify-center font-bold text-[#0D4638]">
                                 M
                             </div>
                             <div>
@@ -412,7 +412,7 @@ export default function Home() {
                             &quot;No tuve que bajarme ninguna app ni registrarme. Todo por WhatsApp, re fácil. Y el precio lo sabés antes, sin vueltas.&quot;
                         </p>
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-[#D1FAE5] flex items-center justify-center font-bold text-[#065F46]">
+                            <div className="w-10 h-10 rounded-full bg-[#C6F6DB] flex items-center justify-center font-bold text-[#0D4638]">
                                 J
                             </div>
                             <div>
@@ -435,7 +435,7 @@ export default function Home() {
                             &quot;Me quedé afuera de casa a las 11 de la noche. El cerrajero llegó en 40 minutos. Me salvó la vida literal.&quot;
                         </p>
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-[#D1FAE5] flex items-center justify-center font-bold text-[#065F46]">
+                            <div className="w-10 h-10 rounded-full bg-[#C6F6DB] flex items-center justify-center font-bold text-[#0D4638]">
                                 C
                             </div>
                             <div>
@@ -519,17 +519,17 @@ export default function Home() {
             </section>
 
             {/* Para profesionales */}
-            <section className="w-full py-24 px-6 md:px-12 bg-slate-900 text-white flex flex-col items-center text-center relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-[#047857]/20 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2"></div>
+            <section className="w-full py-24 px-6 md:px-12 bg-[#0D4638] text-white flex flex-col items-center text-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-[#A7E23C]/20 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2"></div>
                 <h2
-                    className="text-4xl md:text-5xl font-bold mb-6 relative z-10"
+                    className="text-4xl md:text-5xl font-bold mb-6 relative z-10 text-white"
                 >
                     ¿Sos profesional del hogar?
                 </h2>
-                <p className="text-xl text-slate-300 max-w-2xl mb-10 relative z-10">Recibí trabajos sin salir a buscarlos. Cotizá desde tu celular, cobrá antes de arrancar y manejá todo desde tu portal.</p>
+                <p className="text-xl text-[#C6F6DB] max-w-2xl mb-10 relative z-10">Recibí trabajos sin salir a buscarlos. Cotizá desde tu celular, cobrá antes de arrancar y manejá todo desde tu portal.</p>
                 <Link
                     href="/tecnicos"
-                    className="relative z-10 bg-[#047857] hover:bg-[#065F46] text-white px-8 py-4 rounded-full font-bold shadow-xl transition-all"
+                    className="relative z-10 bg-[#A7E23C] text-[#0D4638] hover:bg-[#A7E23C]/90 px-8 py-4 rounded-full font-bold shadow-xl shadow-[#A7E23C]/20 transition-all"
                 >
                     Unirme a Servy
                 </Link>
@@ -542,7 +542,7 @@ export default function Home() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
                         {/* Columna 1: Logo + descripción */}
                         <div className="md:col-span-1">
-                            <div className="font-display text-2xl font-black text-[#065F46] tracking-tighter mb-4">Servy.</div>
+                            <div className="text-2xl font-bold text-[#0D4638] tracking-tighter mb-4">servy.</div>
                             <p className="text-slate-600 text-sm">
                                 Arreglá tu hogar en minutos. Todo por WhatsApp.
                             </p>
@@ -553,17 +553,17 @@ export default function Home() {
                             <h4 className="font-bold text-slate-900 mb-4">Producto</h4>
                             <ul className="space-y-3 text-slate-600 text-sm">
                                 <li>
-                                    <a href="#como-funciona" className="hover:text-[#065F46] transition">
+                                    <a href="#como-funciona" className="hover:text-[#A7E23C] transition">
                                         Cómo Funciona
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="#categorias" className="hover:text-[#065F46] transition">
+                                    <a href="#categorias" className="hover:text-[#A7E23C] transition">
                                         Servicios
                                     </a>
                                 </li>
                                 <li>
-                                    <Link href="/tecnicos" className="hover:text-[#065F46] transition">
+                                    <Link href="/tecnicos" className="hover:text-[#A7E23C] transition">
                                         Soy técnico
                                     </Link>
                                 </li>
@@ -575,17 +575,17 @@ export default function Home() {
                             <h4 className="font-bold text-slate-900 mb-4">Legal</h4>
                             <ul className="space-y-3 text-slate-600 text-sm">
                                 <li>
-                                    <Link href="/terminos" className="hover:text-[#065F46] transition">
+                                    <Link href="/terminos" className="hover:text-[#A7E23C] transition">
                                         Términos y Condiciones
                                     </Link>
                                 </li>
                                 <li>
-                                    <Link href="/privacidad" className="hover:text-[#065F46] transition">
+                                    <Link href="/privacidad" className="hover:text-[#A7E23C] transition">
                                         Política de Privacidad
                                     </Link>
                                 </li>
                                 <li>
-                                    <a href="#dudas" className="hover:text-[#065F46] transition">
+                                    <a href="#dudas" className="hover:text-[#A7E23C] transition">
                                         Preguntas Frecuentes
                                     </a>
                                 </li>
@@ -601,13 +601,13 @@ export default function Home() {
                                         href={WA_LINK}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="hover:text-[#065F46] transition"
+                                        className="hover:text-[#A7E23C] transition"
                                     >
                                         Hablar con Servy
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="mailto:soporte@servy.lat" className="hover:text-[#065F46] transition">
+                                    <a href="mailto:soporte@servy.lat" className="hover:text-[#A7E23C] transition">
                                         soporte@servy.lat
                                     </a>
                                 </li>

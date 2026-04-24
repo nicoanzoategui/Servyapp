@@ -22,8 +22,8 @@ const config: Config = {
                 },
             },
             fontFamily: {
-                sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-                display: ['var(--font-epilogue)', 'system-ui', 'sans-serif'],
+                sans: ['var(--font-poppins)', 'system-ui', 'sans-serif'],
+                display: ['var(--font-poppins)', 'system-ui', 'sans-serif'],
             },
             letterSpacing: {
                 tighter: '-0.05em',
