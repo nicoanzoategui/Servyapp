@@ -1,5 +1,16 @@
 import Link from 'next/link';
-import { Wrench, Zap, Key, ShieldCheck, Clock, Star, HeartHandshake, Flame, Wind } from 'lucide-react';
+import {
+    Wrench,
+    Zap,
+    Key,
+    ShieldCheck,
+    Clock,
+    Star,
+    HeartHandshake,
+    Flame,
+    Wind,
+    Check,
+} from 'lucide-react';
 
 /** E.164 sin + (wa.me). Env opcional en Railway: NEXT_PUBLIC_WA_NUMBER */
 const NEXT_PUBLIC_WA_NUMBER = (
@@ -27,31 +38,33 @@ export default function Home() {
             </header>
 
             {/* Hero Section */}
-            <section className="w-full pt-32 pb-20 px-6 md:px-12 bg-gradient-to-br from-[#F2F9EF] via-white to-[#C6F6DB]/30 mt-10">
+            <section className="w-full pt-32 pb-20 px-6 md:px-12 bg-[#F2F9EF] mt-10">
                 <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-center gap-16">
                     {/* Texto */}
                     <div className="flex-1 max-w-md flex flex-col items-start text-left">
-                        <h1
-                            className="text-5xl md:text-6xl font-black tracking-tight text-slate-900 max-w-xl animate-slide-up"
-                        >
-                            Arreglá tu hogar en minutos.{' '}
-                            <span className="text-[#A7E23C]">Por WhatsApp.</span>
+                        <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-[#0D4638] max-w-xl">
+                            Arreglá tu hogar en minutos. <span className="text-[#A7E23C]">Por WhatsApp.</span>
                         </h1>
-                        <p className="mt-6 text-lg md:text-xl text-slate-600 max-w-lg animate-fade-in delay-150">
+                        <p className="mt-6 text-lg md:text-xl text-[#0B3A31] max-w-lg animate-fade-in delay-150">
                             Canilla que pierde, se fue la luz, te quedaste afuera?{' '}
-                            <span className="font-semibold text-slate-900">Mandá mensaje a Servy.</span>{' '}
+                            <span className="font-semibold text-[#0D4638]">Mandá mensaje a Servy.</span>{' '}
                             Recibí la cotización en minutos y tenés un técnico verificado camino a tu casa.
                         </p>
-                        <p className="mt-4 text-lg md:text-xl text-slate-600 max-w-lg animate-fade-in delay-200">
-                            <span className="font-semibold text-slate-900">Precio cerrado antes de que llegue.</span>{' '}
-                            Sin apps nuevas, sin llamadas, sin vueltas.
+                        <p className="mt-4 text-lg md:text-xl text-[#0B3A31] max-w-lg animate-fade-in delay-200 flex gap-3 items-start">
+                            <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#A7E23C]">
+                                <Check className="text-[#0D4638]" size={18} strokeWidth={2.5} aria-hidden />
+                            </span>
+                            <span>
+                                <span className="font-semibold text-[#0D4638]">Precio cerrado antes de que llegue.</span>{' '}
+                                Sin apps nuevas, sin llamadas, sin vueltas.
+                            </span>
                         </p>
                         <div className="mt-10 animate-slide-up delay-300">
                             <a
                                 href={WA_LINK}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="bg-[#A7E23C] text-[#0D4638] px-8 py-4 rounded-full font-bold shadow-xl shadow-[#A7E23C]/20 hover:shadow-2xl hover:bg-[#A7E23C]/90 hover:-translate-y-1 transition-all duration-300"
+                                className="bg-[#0D4638] text-white px-8 py-4 rounded-full font-bold shadow-xl hover:bg-[#0B3A31] hover:-translate-y-1 transition-all duration-300"
                             >
                                 Hablar con Servy
                             </a>
@@ -96,7 +109,7 @@ export default function Home() {
                                     {/* WhatsApp header */}
                                     <div className="bg-[#075E54] px-3 pb-3 flex items-center gap-2">
                                         <span className="text-white text-lg">←</span>
-                                        <div className="w-8 h-8 rounded-full bg-[#25D366] flex items-center justify-center font-black text-xs text-white shrink-0">
+                                        <div className="w-8 h-8 rounded-full bg-[#0D4638] flex items-center justify-center font-black text-xs text-white shrink-0">
                                             S
                                         </div>
                                         <div className="flex-1">
@@ -114,7 +127,7 @@ export default function Home() {
                                         </div>
 
                                         {/* Respuesta Servy */}
-                                        <div className="self-start bg-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
+                                        <div className="self-start bg-[#FFFFFF] rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
                                             <p className="text-slate-800 text-[13px] m-0 mb-1">Encontré 2 plomeros disponibles</p>
                                             <p className="text-slate-600 text-[12px] m-0">
                                                 1 <strong>Urgente</strong> — hoy en 2hs
@@ -132,7 +145,7 @@ export default function Home() {
                                         </div>
 
                                         {/* Respuesta Servy */}
-                                        <div className="self-start bg-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
+                                        <div className="self-start bg-[#FFFFFF] rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
                                             <p className="text-slate-800 text-[13px] m-0">
                                                 Genial! La cotización está en camino. Te avisamos enseguida
                                             </p>
