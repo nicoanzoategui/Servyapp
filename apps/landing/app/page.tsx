@@ -73,9 +73,9 @@ export default function Home() {
                         <h1 className="max-w-xl text-5xl font-bold tracking-tight text-[#0D4638] md:text-6xl">
                             Arreglá tu hogar en minutos. <span className="text-[#A7E23C]">Por WhatsApp.</span>
                         </h1>
-                        <p className="mt-6 max-w-lg animate-fade-in delay-150 text-lg text-[#0B3A31] md:text-xl">
-                            Canilla que pierde, se fue la luz, te quedaste afuera?{' '}
-                            <span className="font-semibold text-[#0D4638]">Mandá mensaje a Servy.</span>{' '}
+                        <p className="mt-6 text-lg text-slate-600 max-w-lg md:text-xl">
+                            ¿Canilla que pierde? ¿Se te fue la luz? ¿Te quedaste afuera? ¿Necesitás un pintor?{' '}
+                            <span className="font-semibold text-slate-900">Mandá mensaje a Servy.</span>{' '}
                             Recibí la cotización en minutos y tenés un técnico verificado camino a tu casa.
                         </p>
                         {/* Ícono destacado — justo arriba del CTA principal */}
