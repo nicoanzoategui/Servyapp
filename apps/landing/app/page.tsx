@@ -59,7 +59,7 @@ export default function Home() {
 
             {/* Hero Section */}
             <section className="relative mt-10 w-full overflow-hidden bg-[#F2F9EF] px-6 pb-24 pt-32 md:px-12 md:pb-28">
-                <div className="relative z-[1] mx-auto flex max-w-5xl flex-col items-center gap-10 md:flex-row md:items-center md:justify-center md:gap-8 lg:gap-10">
+                <div className="relative z-[1] mx-auto flex max-w-5xl flex-col items-center gap-10 md:flex-row md:items-start md:justify-center md:gap-8 lg:gap-10">
                     {/* Texto */}
                     <div className="flex w-full max-w-md shrink-0 flex-col items-start text-left md:max-w-[28rem]">
                         <h1 className="max-w-xl text-5xl font-bold leading-[1.28] tracking-tight text-[#0D4638] md:text-6xl md:leading-[1.15]">
