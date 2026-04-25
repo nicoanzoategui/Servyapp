@@ -188,13 +188,51 @@ export class ProfessionalConversationService {
                         `✅ Visita aceptada\n\n━━━━━━━━━━━━━━━\n📅 ${dateStr}\n⏰ ${offer.service_request.scheduled_time || 'Horario a confirmar'}\n💵 $${DIAGNOSTIC_VISIT_PRICE.toLocaleString('es-AR')}\n━━━━━━━━━━━━━━━\n\nTe avisamos cuando el cliente confirme el pago.`
                     );
                 } else {
-                    await this.saveSession(phone, 'AWAITING_QUOTATION', {
-                        ...session.data,
-                        jobOfferId,
+                    // MODELO ONE-SHOT: Cotización automática (precio ya definido)
+                    const rawPrice = offer.service_request.visit_price;
+                    const price = rawPrice != null ? Number(rawPrice) : 0;
+
+                    const quotation = await prisma.quotation.create({
+                        data: {
+                            job_offer_id: jobOfferId,
+                            total_price: price,
+                            description: `${offer.service_request.category} - Servicio completo`,
+                            estimated_duration: '2 horas',
+                            items_json: [
+                                {
+                                    description: offer.service_request.category,
+                                    price: price,
+                                },
+                            ],
+                            status: 'pending',
+                        },
                     });
+
+                    await prisma.jobOffer.update({
+                        where: { id: jobOfferId },
+                        data: { status: 'quoted' },
+                    });
+
+                    await ConversationService.afterQuotationSent(offer.service_request.user_phone, {
+                        quotationId: quotation.id,
+                        jobOfferId,
+                        requestId: offer.service_request.id,
+                        totalPrice: price,
+                    });
+
+                    await this.clearSession(phone);
+
+                    const dateStr = offer.service_request.scheduled_date
+                        ? new Date(offer.service_request.scheduled_date).toLocaleDateString('es-AR', {
+                              weekday: 'long',
+                              day: '2-digit',
+                              month: '2-digit',
+                          })
+                        : 'fecha a confirmar';
+
                     await WhatsAppService.sendTextMessage(
                         phone,
-                        '✅ Trabajo aceptado\n\nEnviá tu cotización con este formato:\n\nTrabajo: [descripción]\nTiempo: [tiempo estimado]\nPrecio: [monto]'
+                        `✅ Trabajo aceptado\n\n━━━━━━━━━━━━━━━\n🔧 ${offer.service_request.category}\n📅 ${dateStr}\n⏰ ${offer.service_request.scheduled_time || 'Horario a confirmar'}\n💵 $${price.toLocaleString('es-AR')}\n━━━━━━━━━━━━━━━\n\nTe avisamos cuando el cliente confirme el pago.`
                     );
                 }
             } else if (content === `job_reject_${jobOfferId}` || content.toLowerCase().includes('paso') || content === '2') {

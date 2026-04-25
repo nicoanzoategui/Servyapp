@@ -10,7 +10,7 @@ import { GeminiService } from './gemini.service';
 import { mediationDirectionRedisKey, normalizeTwilioWhatsAppFrom, userRelayPauseRedisKey } from '../utils/twilio-phone';
 import { env } from '../utils/env';
 import { createProfessionalFromWhatsAppWizard } from './professional-registration.internal';
-import { getServiceType, DIAGNOSTIC_CATEGORIES, DIAGNOSTIC_VISIT_PRICE } from '../constants/pricing';
+import { getServiceType, DIAGNOSTIC_CATEGORIES, DIAGNOSTIC_VISIT_PRICE, ONE_SHOT_PRICING } from '../constants/pricing';
 
 const SESSION_TTL = 60 * 60 * 24;
 const REDIS_OP_TIMEOUT_MS = 500;
@@ -400,11 +400,35 @@ export class ConversationService {
                         `${emoji} *${classification.category}*\n\n¿Tenés una foto del problema? Le ayuda al técnico a entender mejor.\n\n1. Sí, mando una foto\n2. No, continuamos`
                     );
                 } else {
+                    // FLUJO ONE-SHOT: Pedir especificaciones según categoría
                     await this.saveSession(phone, 'AWAITING_PHOTOS', session.data);
-                    await WhatsAppService.sendTextMessage(
-                        phone,
-                        `${emoji} *${classification.category}*\n\n¿Tenés una foto? Es opcional pero ayuda.\n\n1. Sí, mando una foto\n2. No, continuamos`
-                    );
+
+                    if (classification.category === 'Lavado de Autos') {
+                        await this.saveSession(phone, 'AWAITING_VEHICLE_SIZE', session.data);
+                        await WhatsAppService.sendTextMessage(
+                            phone,
+                            `${emoji} *${classification.category}*\n\n🚗 ¿Qué tamaño tiene tu vehículo?\n\n1. Chico (auto pequeño)\n2. Mediano (sedan/SUV)\n3. Grande (camioneta/van)`
+                        );
+                    } else if (classification.category === 'Limpieza de Piscinas') {
+                        await this.saveSession(phone, 'AWAITING_POOL_SIZE', session.data);
+                        await WhatsAppService.sendTextMessage(
+                            phone,
+                            `${emoji} *${classification.category}*\n\n🏊 ¿Qué tamaño tiene tu piscina?\n\n1. Pequeña (0-20m²)\n2. Mediana (20-40m²)\n3. Grande (40m²+)`
+                        );
+                    } else if (classification.category === 'Jardinería') {
+                        await this.saveSession(phone, 'AWAITING_GARDEN_SERVICE', session.data);
+                        await WhatsAppService.sendTextMessage(
+                            phone,
+                            `${emoji} *${classification.category}*\n\n🌿 ¿Qué tipo de servicio necesitás?\n\n1. Básico (corte de pasto + limpieza)\n2. Completo (poda + corte + limpieza + paisajismo)`
+                        );
+                    } else {
+                        // Categoría one-shot sin specs definidas, ir directo a fotos
+                        await this.saveSession(phone, 'AWAITING_PHOTOS', session.data);
+                        await WhatsAppService.sendTextMessage(
+                            phone,
+                            `${emoji} *${classification.category}*\n\n¿Tenés una foto? Es opcional pero ayuda.\n\n1. Sí, mando una foto\n2. No, continuamos`
+                        );
+                    }
                 }
                 break;
             }
@@ -454,12 +478,7 @@ export class ConversationService {
                 if (String(session.data.serviceType) === 'diagnostic') {
                     await this.createDiagnosticRequest(phone, session.data, user);
                 } else if (String(session.data.serviceType) === 'one_shot') {
-                    await WhatsAppService.sendTextMessage(
-                        phone,
-                        '✅ Perfecto! Te enviamos la cotización...'
-                    );
-                    // TODO: Implementar one-shot flow
-                    await this.clearSession(phone);
+                    await this.createOneShotRequest(phone, session.data, user);
                 } else {
                     await this.createRequestAndMatch(phone, session.data, user);
                 }
@@ -601,13 +620,8 @@ export class ConversationService {
                         if (String(session.data.serviceType) === 'diagnostic') {
                             await this.createDiagnosticRequest(phone, session.data, user);
                         } else {
-                            // One-shot (Fase 2)
-                            await WhatsAppService.sendTextMessage(
-                                phone,
-                                '✅ Perfecto! Te enviamos la cotización...'
-                            );
-                            // TODO: Implementar one-shot flow
-                            await this.clearSession(phone);
+                            // One-shot: crear request con precio automático
+                            await this.createOneShotRequest(phone, session.data, user);
                         }
                     } else {
                         // No tiene dirección → pedirla
@@ -630,6 +644,80 @@ export class ConversationService {
                         'Por favor elegí 1 para confirmar o 2 para cambiar la fecha'
                     );
                 }
+                break;
+            }
+
+            case 'AWAITING_VEHICLE_SIZE': {
+                const sizeMap: Record<string, 'chico' | 'mediano' | 'grande'> = {
+                    '1': 'chico',
+                    '2': 'mediano',
+                    '3': 'grande',
+                };
+                const size = sizeMap[content.trim()];
+
+                if (!size) {
+                    await WhatsAppService.sendTextMessage(phone, 'Por favor elegí una opción válida (1, 2 o 3)');
+                    return;
+                }
+
+                const price = ONE_SHOT_PRICING['Lavado de Autos'][size];
+                session.data.vehicleSize = size;
+                session.data.price = price;
+
+                await this.saveSession(phone, 'AWAITING_SERVICE_DATE', session.data);
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    `✅ Lavado de auto ${size}: $${price.toLocaleString('es-AR')}\n\n¿Cuándo querés el servicio?\n\n1. Hoy (urgente)\n2. Mañana\n3. Pasado mañana\n4. Elegir fecha (formato: DD/MM)`
+                );
+                break;
+            }
+
+            case 'AWAITING_POOL_SIZE': {
+                const poolSizeMap: Record<string, '0-20m2' | '20-40m2' | '40m2+'> = {
+                    '1': '0-20m2',
+                    '2': '20-40m2',
+                    '3': '40m2+',
+                };
+                const poolSize = poolSizeMap[content.trim()];
+
+                if (!poolSize) {
+                    await WhatsAppService.sendTextMessage(phone, 'Por favor elegí una opción válida (1, 2 o 3)');
+                    return;
+                }
+
+                const price = ONE_SHOT_PRICING['Limpieza de Piscinas'][poolSize];
+                session.data.poolSize = poolSize;
+                session.data.price = price;
+
+                await this.saveSession(phone, 'AWAITING_SERVICE_DATE', session.data);
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    `✅ Limpieza de piscina (${poolSize}): $${price.toLocaleString('es-AR')}\n\n¿Cuándo querés el servicio?\n\n1. Hoy (urgente)\n2. Mañana\n3. Pasado mañana\n4. Elegir fecha (formato: DD/MM)`
+                );
+                break;
+            }
+
+            case 'AWAITING_GARDEN_SERVICE': {
+                const gardenTypeMap: Record<string, 'basico' | 'completo'> = {
+                    '1': 'basico',
+                    '2': 'completo',
+                };
+                const gardenType = gardenTypeMap[content.trim()];
+
+                if (!gardenType) {
+                    await WhatsAppService.sendTextMessage(phone, 'Por favor elegí una opción válida (1 o 2)');
+                    return;
+                }
+
+                const price = ONE_SHOT_PRICING['Jardinería'][gardenType];
+                session.data.gardenType = gardenType;
+                session.data.price = price;
+
+                await this.saveSession(phone, 'AWAITING_SERVICE_DATE', session.data);
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    `✅ Servicio de jardinería ${gardenType}: $${price.toLocaleString('es-AR')}\n\n¿Cuándo querés el servicio?\n\n1. Hoy (urgente)\n2. Mañana\n3. Pasado mañana\n4. Elegir fecha (formato: DD/MM)`
+                );
                 break;
             }
 
@@ -1579,6 +1667,50 @@ export class ConversationService {
         await WhatsAppService.sendTextMessage(
             phone,
             `✅ Solicitud creada\n\n🔍 Visita de diagnóstico: $${DIAGNOSTIC_VISIT_PRICE.toLocaleString('es-AR')}\n📅 ${dateFormatted} · ${sessionData.scheduledTime}\n\nEstamos buscando técnicos disponibles...\n\n⏳ Esto toma unos segundos`
+        );
+
+        await ConversationService.continueAfterServiceRequestCreate(phone, sessionData, serviceRequest.id);
+    }
+
+    private static async createOneShotRequest(phone: string, sessionData: Record<string, unknown>, user: User) {
+        const price = Number(sessionData.price);
+        const category = String(sessionData.category);
+
+        const address =
+            (sessionData.serviceAddress as string | undefined) ||
+            (sessionData.address as string | undefined) ||
+            user.address ||
+            '';
+
+        const serviceRequest = await prisma.serviceRequest.create({
+            data: {
+                user_phone: phone,
+                category,
+                description: String(sessionData.description),
+                service_type: 'one_shot',
+                phase: 'pending',
+                visit_price: price,
+                visit_status: 'pending',
+                scheduled_date: new Date(String(sessionData.scheduledDate)),
+                scheduled_time: String(sessionData.scheduledTime),
+                is_flexible: Boolean(sessionData.isFlexible),
+                photos: (sessionData.photos as string[]) || [],
+                address,
+                status: 'pending',
+            },
+        });
+
+        await this.clearSession(phone);
+
+        const dateFormatted = new Date(String(sessionData.scheduledDate)).toLocaleDateString('es-AR', {
+            weekday: 'long',
+            day: '2-digit',
+            month: '2-digit',
+        });
+
+        await WhatsAppService.sendTextMessage(
+            phone,
+            `✅ Solicitud creada\n\n🔧 ${category}: $${price.toLocaleString('es-AR')}\n📅 ${dateFormatted} · ${sessionData.scheduledTime}\n\nEstamos buscando profesionales disponibles...\n\n⏳ Esto toma unos segundos`
         );
 
         await ConversationService.continueAfterServiceRequestCreate(phone, sessionData, serviceRequest.id);
