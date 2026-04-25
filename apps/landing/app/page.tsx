@@ -176,20 +176,6 @@ export default function Home() {
                                             <p className="text-slate-600 text-[12px] m-0">2 📅 AGENDAR — Para más tarde o mañana ($35.000)</p>
                                             <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:24</p>
                                         </div>
-
-                                        {/* Respuesta usuario */}
-                                        <div className="self-end bg-[#DCF8C6] rounded-2xl rounded-tr-sm px-3 py-2 max-w-[85%] shadow-sm">
-                                            <p className="text-slate-800 text-[13px] m-0">1</p>
-                                            <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:25 ✓✓</p>
-                                        </div>
-
-                                        {/* Respuesta Servy */}
-                                        <div className="self-start bg-[#FFFFFF] rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
-                                            <p className="text-slate-800 text-[13px] m-0">
-                                                Excelente. Encontré un especialista a 5 min. Te paso el link de pago para bloquear el turno y retener tu pago seguro.
-                                            </p>
-                                            <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:25</p>
-                                        </div>
                                     </div>
 
                                     {/* Input bar */}
