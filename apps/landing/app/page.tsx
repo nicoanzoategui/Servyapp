@@ -63,34 +63,19 @@ export default function Home() {
                     {/* Texto */}
                     <div className="flex w-full max-w-md shrink-0 flex-col items-start text-left md:max-w-[28rem]">
                         <h1 className="max-w-xl text-5xl font-bold leading-[1.28] tracking-tight text-[#0D4638] md:text-6xl md:leading-[1.15]">
-                            Arreglá tu hogar en minutos. <span className="text-[#A7E23C]">Por WhatsApp.</span>
+                            Arreglá tu hogar sin dar vueltas ni sorpresas. <span className="text-[#A7E23C]">Por WhatsApp.</span>
                         </h1>
                         <p className="mt-6 text-lg text-slate-600 max-w-lg md:text-xl">
-                            ¿Canilla que pierde? ¿Se te fue la luz? ¿Te quedaste afuera? ¿Necesitás un pintor?{' '}
-                            <span className="font-semibold text-slate-900">Mandá mensaje a Servy.</span>{' '}
-                            Recibí la cotización en minutos y tenés un técnico verificado camino a tu casa.
+                            Plomeros, electricistas y técnicos verificados en tu zona. Pedí un especialista de urgencia o agendalo para mañana. Pagás en cuotas y tu plata está protegida hasta que el trabajo esté terminado.
                         </p>
                         {/* Ícono destacado — justo arriba del CTA principal */}
                         <div className="mt-8 flex w-full max-w-lg items-start gap-4 rounded-2xl border border-[#C6F6DB]/40 bg-white/70 p-4 shadow-sm backdrop-blur-sm">
                             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#A7E23C]">
-                                <svg
-                                    className="h-6 w-6 text-white"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth={2.25}
-                                    viewBox="0 0 24 24"
-                                    aria-hidden="true"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                                    />
-                                </svg>
+                                <ShieldCheck className="h-6 w-6 text-white" />
                             </div>
                             <div>
-                                <p className="text-lg font-bold text-[#0D4638]">Precio cerrado antes de que llegue.</p>
-                                <p className="mt-1 text-sm text-slate-600">Sin apps nuevas, sin llamadas, sin vueltas.</p>
+                                <p className="text-lg font-bold text-[#0D4638]">Tu plata protegida hasta el final.</p>
+                                <p className="mt-1 text-sm text-slate-600">El técnico cobra solo cuando escaneás el QR. Sin efectivo, sin riesgos.</p>
                             </div>
                         </div>
                         <div className="mt-8 animate-slide-up delay-300">
@@ -179,19 +164,16 @@ export default function Home() {
                                     <div className="bg-[#ECE5DD] px-3 py-3 flex flex-col gap-3 min-h-[360px]">
                                         {/* Mensaje usuario */}
                                         <div className="self-end bg-[#DCF8C6] rounded-2xl rounded-tr-sm px-3 py-2 max-w-[85%] shadow-sm">
-                                            <p className="text-slate-800 text-[13px] m-0">Se me rompió la canilla del baño</p>
+                                            <p className="text-slate-800 text-[13px] m-0">Se me rompió la canilla del baño y pierde agua.</p>
                                             <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:24 ✓✓</p>
                                         </div>
 
                                         {/* Respuesta Servy */}
                                         <div className="self-start bg-[#FFFFFF] rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
-                                            <p className="text-slate-800 text-[13px] m-0 mb-1">Encontré 2 plomeros disponibles</p>
-                                            <p className="text-slate-600 text-[12px] m-0">
-                                                1 <strong>Urgente</strong> — hoy en 2hs
-                                            </p>
-                                            <p className="text-slate-600 text-[12px] m-0">
-                                                2 <strong>Programado</strong> — mañana
-                                            </p>
+                                            <p className="text-slate-800 text-[13px] m-0 mb-1">¡Entendido! Para darte un presupuesto exacto y garantía, el especialista necesita evaluarlo en persona. La visita de diagnóstico cuesta $35.000.</p>
+                                            <p className="text-slate-800 text-[13px] m-0 mt-2">¿Con qué urgencia lo necesitás?</p>
+                                            <p className="text-slate-600 text-[12px] m-0">1 🚨 URGENTE — Voy ahora mismo ($50.000)</p>
+                                            <p className="text-slate-600 text-[12px] m-0">2 📅 AGENDAR — Para más tarde o mañana ($35.000)</p>
                                             <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:24</p>
                                         </div>
 
@@ -204,7 +186,7 @@ export default function Home() {
                                         {/* Respuesta Servy */}
                                         <div className="self-start bg-[#FFFFFF] rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
                                             <p className="text-slate-800 text-[13px] m-0">
-                                                Genial! La cotización está en camino. Te avisamos enseguida
+                                                Excelente. Encontré un especialista a 5 min. Te paso el link de pago para bloquear el turno y retener tu pago seguro.
                                             </p>
                                             <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:25</p>
                                         </div>
@@ -238,10 +220,10 @@ export default function Home() {
                         <h3
                             className="text-xl font-bold mb-3"
                         >
-                            Contale y elegí tu técnico
+                            Contanos el problema y elegí la urgencia
                         </h3>
                         <p className="text-slate-600">
-                            Mandá mensaje con tu problema (texto o foto). Te mostramos 2 opciones: técnico URGENTE (llega hoy) o PROGRAMADO (más económico). Ambos con calificaciones reales.
+                            Mandá un mensaje por WhatsApp. Elegí si necesitás un técnico URGENTE (llega hoy mismo) o PROGRAMADO (más económico para otro día). Ambos con calificaciones reales.
                         </p>
                     </div>
 
@@ -253,10 +235,10 @@ export default function Home() {
                         <h3
                             className="text-xl font-bold mb-3"
                         >
-                            Recibí la cotización y reservá
+                            Reservá tu visita con Pago Protegido
                         </h3>
                         <p className="text-slate-600">
-                            El técnico que elegiste te manda el precio exacto. Si te cierra, reservás con pago protegido por Mercado Pago. El dinero queda congelado hasta que estés conforme.
+                            Aboná la visita técnica para que el especialista vaya a tu domicilio. Tu plata queda retenida y segura en Servy. El técnico evalúa el problema ahí mismo y te da el presupuesto exacto del arreglo.
                         </p>
                     </div>
 
@@ -268,10 +250,10 @@ export default function Home() {
                         <h3
                             className="text-xl font-bold mb-3"
                         >
-                            Recibí el arreglo y liberá el pago
+                            Arreglo en cuotas y liberación con QR
                         </h3>
                         <p className="text-slate-600">
-                            El técnico va, arregla y te muestra el resultado. Cuando estés conforme, escaneás el QR y ahí se libera el pago. Vos tenés el control.
+                            Si aceptás el presupuesto, podés pagarlo en hasta 3 cuotas. Cuando el trabajo esté terminado y estés conforme, le mostrás tu Código QR secreto desde tu celular. El técnico lo escanea y recién ahí se libera el pago. Vos tenés el control.
                         </p>
                     </div>
                 </div>
@@ -520,7 +502,7 @@ export default function Home() {
                                 Profesionales verificados
                             </h3>
                             <p className="text-slate-600">
-                                No más &apos;un amigo de un amigo que sabe&apos;. Todos nuestros técnicos tienen experiencia comprobada y antecedentes chequeados. Vos no arriesgás.
+                                No más &quot;un amigo de un amigo que sabe&quot;. Validamos DNI, antecedentes y experiencia de cada técnico. Vos no arriesgás a quién metés en tu casa.
                             </p>
                         </div>
                     </div>
@@ -533,7 +515,7 @@ export default function Home() {
                                 Todo en WhatsApp
                             </h3>
                             <p className="text-slate-600">
-                                No tenés que bajarte otra app ni registrarte en ningún lado. Ya estás en WhatsApp, ahí pasa todo. Simple.
+                                No tenés que bajarte otra app ni registrarte con contraseñas. Ya estás en WhatsApp, ahí pasa todo. Simple y rápido.
                             </p>
                         </div>
                     </div>
@@ -556,10 +538,10 @@ export default function Home() {
                             <h3
                                 className="font-bold text-xl mb-2"
                             >
-                                Sabés cuánto pagás antes de que llegue
+                                Arreglos pesados, en cuotas
                             </h3>
                             <p className="text-slate-600">
-                                Nada de &apos;después vemos&apos;. El técnico te dice el precio exacto antes de arrancar. Aceptás o no, sin presión, sin sorpresas.
+                                ¿Se rompió algo caro a fin de mes? El técnico te arma el presupuesto y podés pagarlo en hasta 3 cuotas con Mercado Pago desde el chat.
                             </p>
                         </div>
                     </div>
@@ -601,7 +583,7 @@ export default function Home() {
                             <Star className="fill-yellow-400 text-yellow-400" size={18} />
                         </div>
                         <p className="text-slate-700 mb-6 leading-relaxed">
-                            &quot;Se me rompió la canilla un domingo a la tarde. Mandé mensaje y en 2 horas el plomero ya estaba arreglándola. Increíble.&quot;
+                            &quot;Pagué la visita urgente y el plomero estaba en casa en 45 minutos. Me pasó el presupuesto del caño roto y lo pagué en 3 cuotas. Un alivio total.&quot;
                         </p>
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-[#C6F6DB] flex items-center justify-center font-bold text-[#0D4638]">
@@ -609,7 +591,7 @@ export default function Home() {
                             </div>
                             <div>
                                 <p className="font-bold text-sm">María González</p>
-                                <p className="text-slate-500 text-xs">Palermo, CABA</p>
+                                <p className="text-slate-500 text-xs">Pilar</p>
                             </div>
                         </div>
                     </div>
@@ -624,7 +606,7 @@ export default function Home() {
                             <Star className="fill-yellow-400 text-yellow-400" size={18} />
                         </div>
                         <p className="text-slate-700 mb-6 leading-relaxed">
-                            &quot;No tuve que bajarme ninguna app ni registrarme. Todo por WhatsApp, re fácil. Y el precio lo sabés antes, sin vueltas.&quot;
+                            &quot;Me encanta el sistema del código QR. Hasta que no vi el enchufe terminado y funcionando perfecto, no le liberé la plata al electricista. Muy seguro.&quot;
                         </p>
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-[#C6F6DB] flex items-center justify-center font-bold text-[#0D4638]">
@@ -632,7 +614,7 @@ export default function Home() {
                             </div>
                             <div>
                                 <p className="font-bold text-sm">Javier Rodríguez</p>
-                                <p className="text-slate-500 text-xs">Belgrano, CABA</p>
+                                <p className="text-slate-500 text-xs">Olivos</p>
                             </div>
                         </div>
                     </div>
@@ -647,7 +629,7 @@ export default function Home() {
                             <Star className="fill-slate-300 text-slate-300" size={18} />
                         </div>
                         <p className="text-slate-700 mb-6 leading-relaxed">
-                            &quot;Me quedé afuera de casa a las 11 de la noche. El cerrajero llegó en 40 minutos. Me salvó la vida literal.&quot;
+                            &quot;No tuve que bajarme ninguna app ni registrarme. Todo por WhatsApp, re fácil. El diagnóstico inicial me dejó claro cuánto iba a salir todo sin sorpresas.&quot;
                         </p>
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-[#C6F6DB] flex items-center justify-center font-bold text-[#0D4638]">
@@ -655,7 +637,7 @@ export default function Home() {
                             </div>
                             <div>
                                 <p className="font-bold text-sm">Carolina Méndez</p>
-                                <p className="text-slate-500 text-xs">Caballito, CABA</p>
+                                <p className="text-slate-500 text-xs">San Isidro</p>
                             </div>
                         </div>
                     </div>
@@ -676,10 +658,10 @@ export default function Home() {
                         <h3
                             className="font-bold text-xl mb-3 text-slate-900"
                         >
-                            ¿Qué pasa si el técnico no llega?
+                            ¿Qué pasa si el técnico revisa y decido no hacer el arreglo?
                         </h3>
                         <p className="text-slate-600 leading-relaxed">
-                            Te mandamos otro técnico sin cargo adicional. Como el pago solo se libera cuando escaneás el QR, tu dinero está protegido. Si hubo un problema, lo resolvemos nosotros, no vos.
+                            No hay problema. Solo abonás el costo de la Visita de Diagnóstico ($35.000) por el tiempo y evaluación del profesional. El servicio se cierra como &quot;Solo Visita&quot; y no pagás nada extra.
                         </p>
                     </div>
 
@@ -703,7 +685,15 @@ export default function Home() {
                             ¿Es seguro recibir a alguien en mi casa?
                         </h3>
                         <p className="text-slate-600 leading-relaxed">
-                            Totalmente. Te enviamos los documentos de la persona que va a tu casa. Todos los técnicos pasan por un proceso de verificación de antecedentes y experiencia antes de entrar a Servy.
+                            Totalmente. Antes de que el técnico llegue, te enviamos el nombre, la foto y el DNI de la persona que va a tocar tu timbre. Todos pasan por un filtro estricto antes de entrar a Servy.
+                        </p>
+                    </div>
+
+                    {/* Pregunta — Garantía Servy */}
+                    <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100">
+                        <h3 className="font-bold text-xl mb-3 text-slate-900">¿Qué pasa si el trabajo queda mal?</h3>
+                        <p className="text-slate-600 leading-relaxed">
+                            Tenés la Garantía Servy de 30 días. Si el arreglo falla, nos mandás un mensaje y le abrimos un ticket al técnico para que vuelva a tu domicilio a solucionarlo sin cobrarte un peso de mano de obra.
                         </p>
                     </div>
 
@@ -727,7 +717,7 @@ export default function Home() {
                             ¿Cuánto tarda en llegar el técnico?
                         </h3>
                         <p className="text-slate-600 leading-relaxed">
-                            Si elegís &quot;urgente&quot;, llega dentro de las 24 horas. Si elegís &quot;programado&quot;, podés agendarlo para el día que mejor te venga y sale más económico.
+                            Depende de tu urgencia. Si elegís la opción &quot;Urgente&quot;, el sistema prioriza a los técnicos más cercanos para que lleguen en minutos. Si elegís &quot;Programado&quot;, podés agendarlo para el momento que mejor te venga a un costo menor.
                         </p>
                     </div>
                 </div>
@@ -739,9 +729,11 @@ export default function Home() {
                 <h2
                     className="text-4xl md:text-5xl font-bold mb-6 relative z-10 text-white"
                 >
-                    ¿Sos profesional del hogar?
+                    ¿Sos profesional del hogar? Cambiá tu forma de trabajar.
                 </h2>
-                <p className="text-xl text-[#C6F6DB] max-w-2xl mb-10 relative z-10">Recibí trabajos sin salir a buscarlos. Cotizá desde tu celular, cobrá antes de arrancar y manejá todo desde tu portal.</p>
+                <p className="text-xl text-[#C6F6DB] max-w-2xl mb-10 relative z-10">
+                    Dejá de perder tiempo y nafta pasando presupuestos gratis que no se concretan. En Servy cobrás la visita técnica garantizada solo por ir a diagnosticar. Manejá todo desde tu celular y recibí trabajos sin salir a buscarlos.
+                </p>
                 <Link
                     href="/tecnicos"
                     className="relative z-10 bg-[#A7E23C] text-[#0D4638] hover:bg-[#A7E23C]/90 px-8 py-4 rounded-full font-bold shadow-xl shadow-[#A7E23C]/20 transition-all"
