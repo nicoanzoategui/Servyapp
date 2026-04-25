@@ -219,11 +219,6 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
                         requestId: serviceRequest.id,
                     }
                 );
-
-                await WhatsAppService.sendTextMessage(
-                    job.quotation.job_offer.professional.phone,
-                    `\n📋 *Después de la visita*\n\nCuando termines de evaluar el problema, enviame el presupuesto del arreglo:\n\n*Precio: [monto]*\n\nEjemplo: Precio: 100000\n\nSi el cliente no quiere hacer el arreglo, escribí: *SOLO VISITA*`
-                );
             }
         } else if (status === 'rejected' || status === 'cancelled') {
             await prisma.payment.updateMany({

@@ -94,12 +94,24 @@ const CATEGORY_EMOJIS: Record<string, string> = {
 const PRO_ONBOARDING_CATEGORY_OPTIONS = [
     'Plomería',
     'Electricidad',
-    'Cerrajería',
     'Gas',
+    'Cerrajería',
     'Aires acondicionados',
+    'Pintura',
+    'Arregla Todo',
+    'Jardinería',
+    'Limpieza de Piscinas',
+    'Lavado de Autos',
 ] as const;
 
 const PRO_ONBOARDING_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function registeredUserServicePrompt(user: { name: string | null }): string {
+    const first = user.name?.trim().split(/\s+/)[0];
+    return first
+        ? `¡Perfecto, ${first}! Ya estás registrado.\n\nContame brevemente qué se rompió o qué necesitás arreglar.`
+        : `¡Perfecto! Ya estás registrado.\n\nContame brevemente qué se rompió o qué necesitás arreglar.`;
+}
 
 const ROLE_SELECTION_PROMPT =
     'Hola, soy Servy 👋\n\n¿Cómo puedo ayudarte?\n\n1. Necesito un técnico\n2. Soy técnico y quiero registrarme';
@@ -237,9 +249,14 @@ export class ConversationService {
         });
         const proName = offer?.professional?.name?.trim() || 'Tu técnico';
         const priceStr = payload.totalPrice.toLocaleString('es-AR');
+        const quotationRow = await prisma.quotation.findUnique({
+            where: { id: payload.quotationId },
+            select: { estimated_duration: true },
+        });
+        const duration = quotationRow?.estimated_duration?.trim() || '1 hora';
         await WhatsAppService.sendTextMessage(
             userPhone,
-            `💰 *Cotización recibida*\n\n━━━━━━━━━━━━━━━\n👤 *${proName}*\n💵 *$${priceStr}*\n⚠️ _Precio no incluye materiales_\n━━━━━━━━━━━━━━━\n\n🔒 _Tu dinero está protegido: el pago se retiene hasta que el trabajo esté terminado y vos lo confirmés._\n\n¿Aceptás?\n\n1. Sí, acepto\n2. No, prefiero otra opción`
+            `✅ *Encontramos tu especialista*\n\n━━━━━━━━━━━━━━━\n👤 *${proName}*\n💵 *$${priceStr}* (visita)\n⏱️ _Duración estimada: ${duration}_\n━━━━━━━━━━━━━━━\n\n🔒 _El pago se retiene hasta que confirmes que el trabajo está completo._\n\n¿Confirmás la visita?\n\n1. Sí, acepto\n2. No, prefiero otra opción`
         );
         await this.saveSession(userPhone, 'AWAITING_PAYMENT_DECISION', payload as unknown as Record<string, unknown>);
     }
@@ -363,11 +380,7 @@ export class ConversationService {
             case 'IDLE': {
                 await redis.del(userRelayPauseRedisKey(phone));
                 await this.saveSession(phone, 'AWAITING_PROBLEM_DESCRIPTION', {});
-                const nm = user.name?.trim();
-                const line = nm
-                    ? `*${nm}*, contame ¿qué necesitás?\n\n_Describime el problema — cuanto más detalle, mejor cotiza el técnico._`
-                    : `Contame ¿qué necesitás?\n\n_Describime el problema — cuanto más detalle, mejor cotiza el técnico._`;
-                await WhatsAppService.sendTextMessage(phone, line);
+                await WhatsAppService.sendTextMessage(phone, registeredUserServicePrompt(user));
                 break;
             }
 
@@ -394,7 +407,7 @@ export class ConversationService {
                     const greetLine = nm ? `Hola *${nm}* 👋\n\n` : `Hola 👋\n\n`;
                     await WhatsAppService.sendTextMessage(
                         phone,
-                        `${greetLine}Contame ¿qué necesitás?\n\n_Describime el problema — cuanto más detalle, mejor cotiza el técnico._`
+                        `${greetLine}Contame brevemente qué se rompió o qué necesitás arreglar.`
                     );
                     return;
                 }
@@ -973,11 +986,7 @@ export class ConversationService {
                 await this.clearSession(phone);
                 await this.saveSession(phone, 'IDLE', {});
                 {
-                    const nm = user.name?.trim();
-                    const line = nm
-                        ? `*${nm}*, contame ¿qué necesitás?\n\n_Describime el problema — cuanto más detalle, mejor cotiza el técnico._`
-                        : `Contame ¿qué necesitás?\n\n_Describime el problema — cuanto más detalle, mejor cotiza el técnico._`;
-                    await WhatsAppService.sendTextMessage(phone, line);
+                    await WhatsAppService.sendTextMessage(phone, registeredUserServicePrompt(user));
                 }
                 break;
 
@@ -1525,7 +1534,7 @@ export class ConversationService {
             await this.saveSession(phone, 'AWAITING_PROBLEM_DESCRIPTION', {});
             await WhatsAppService.sendTextMessage(
                 phone,
-                `*¡Listo ${userName}!* Ya tenés tu perfil. 🎉\n\nContame qué necesitás — plomería, electricidad, gas, cerrajería, aires acondicionados.\n\n_Cuanto más detalle des, mejor puede cotizar el técnico._`
+                `*¡Listo ${userName}!* Ya tenés tu perfil. 🎉\n\nContame brevemente qué se rompió o qué necesitás arreglar.`
             );
             return;
         }
@@ -1550,8 +1559,11 @@ export class ConversationService {
             (lc.includes('necesito') && !pickPro);
 
         if (pickPro) {
-            await this.saveSession(phone, 'PRO_ONBOARDING_NAME', {});
-            await WhatsAppService.sendTextMessage(phone, '¿Cuál es tu nombre?');
+            await this.saveSession(phone, 'PRO_ONBOARDING_ZONES', {});
+            await WhatsAppService.sendTextMessage(
+                phone,
+                `¡Qué grande! Bienvenido a la red de Servy 🛠️\n\nAcá no pasás presupuestos gratis:\n\n✅ Te pagamos $35.000 garantizados por cada diagnóstico\n✅ Si hay arreglo, el 95% es tuyo (solo 5% de comisión)\n✅ El cliente paga en cuotas, vos cobrás al toque\n\n¿En qué zona trabajás principalmente?\n\nEjemplo: Pilar, Olivos, Tigre`
+            );
             return;
         }
 
@@ -1627,6 +1639,55 @@ export class ConversationService {
         const text = content.trim();
 
         switch (session.state) {
+            case 'PRO_ONBOARDING_ZONES': {
+                const zones = zonesFromFreeText(text);
+                if (zones.length === 0) {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'Necesito al menos una zona.\n\n_Ej: Palermo, Belgrano, Villa Urquiza_'
+                    );
+                    return;
+                }
+                data.zones = zones;
+                await this.saveSession(phone, 'PRO_ONBOARDING_CATEGORIES', data);
+                const lines = PRO_ONBOARDING_CATEGORY_OPTIONS.map((c, i) => `${i + 1}. ${c}`).join('\n');
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    `¡Excelente zona! Tenemos mucha demanda ahí.\n\n¿Qué oficios manejás?\n\nEscribí los números separados por coma:\n\n${lines}\n\nEjemplo: 1,2`
+                );
+                return;
+            }
+            case 'PRO_ONBOARDING_CATEGORIES': {
+                const cats = parseProOnboardingCategorySelection(text);
+                if (!cats) {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'No entendí la selección. Respondé con números separados por coma.\n\n_Ej: 1,3_'
+                    );
+                    return;
+                }
+                data.categories = cats;
+                await this.saveSession(phone, 'PRO_ONBOARDING_DNI', data);
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    'Joya. El último paso para activar tu cuenta y mandarte el primer cliente es validar tu identidad por seguridad.\n\n¿Cuál es tu DNI?\n\n_Solo el número, sin puntos._'
+                );
+                return;
+            }
+            case 'PRO_ONBOARDING_DNI': {
+                const dni = dniDigitsOnly(text);
+                if (dni.length < 7 || dni.length > 8) {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'El DNI no parece válido. Enviá solo el número sin puntos.\n\n_Ej: 35421890_'
+                    );
+                    return;
+                }
+                data.dni = dni;
+                await this.saveSession(phone, 'PRO_ONBOARDING_NAME', data);
+                await WhatsAppService.sendTextMessage(phone, '¿Cuál es tu nombre?');
+                return;
+            }
             case 'PRO_ONBOARDING_NAME': {
                 if (!text) {
                     await WhatsAppService.sendTextMessage(phone, '¿Cuál es tu nombre?');
@@ -1643,60 +1704,8 @@ export class ConversationService {
                     return;
                 }
                 data.lastName = text;
-                await this.saveSession(phone, 'PRO_ONBOARDING_CATEGORIES', data);
-                const lines = PRO_ONBOARDING_CATEGORY_OPTIONS.map((c, i) => `${i + 1}. ${c}`).join('\n');
-                await WhatsAppService.sendTextMessage(
-                    phone,
-                    `¿A qué te dedicás? Podés elegir más de uno.\n\n${lines}\n\n_Respondé con los números separados por coma. Ej: 1,3_`
-                );
-                return;
-            }
-            case 'PRO_ONBOARDING_CATEGORIES': {
-                const cats = parseProOnboardingCategorySelection(text);
-                if (!cats) {
-                    await WhatsAppService.sendTextMessage(
-                        phone,
-                        'No entendí la selección. Respondé con números separados por coma.\n\n_Ej: 1,3_'
-                    );
-                    return;
-                }
-                data.categories = cats;
-                await this.saveSession(phone, 'PRO_ONBOARDING_ZONES', data);
-                await WhatsAppService.sendTextMessage(
-                    phone,
-                    '¿En qué zona o zonas trabajás?\n\n_Ej: Palermo, Belgrano, Villa Urquiza_'
-                );
-                return;
-            }
-            case 'PRO_ONBOARDING_ZONES': {
-                const zones = zonesFromFreeText(text);
-                if (zones.length === 0) {
-                    await WhatsAppService.sendTextMessage(
-                        phone,
-                        'Necesito al menos una zona.\n\n_Ej: Palermo, Belgrano, Villa Urquiza_'
-                    );
-                    return;
-                }
-                data.zones = zones;
-                await this.saveSession(phone, 'PRO_ONBOARDING_DNI', data);
-                await WhatsAppService.sendTextMessage(
-                    phone,
-                    '¿Cuál es tu DNI?\n\n_Solo el número, sin puntos._'
-                );
-                return;
-            }
-            case 'PRO_ONBOARDING_DNI': {
-                const dni = dniDigitsOnly(text);
-                if (dni.length < 7 || dni.length > 8) {
-                    await WhatsAppService.sendTextMessage(
-                        phone,
-                        'El DNI no parece válido. Enviá solo el número sin puntos.\n\n_Ej: 35421890_'
-                    );
-                    return;
-                }
-                data.dni = dni;
                 await this.saveSession(phone, 'PRO_ONBOARDING_EMAIL', data);
-                await WhatsAppService.sendTextMessage(phone, 'DNI recibido ✓\n\n¿Cuál es tu email?');
+                await WhatsAppService.sendTextMessage(phone, '¿Cuál es tu email?');
                 return;
             }
             case 'PRO_ONBOARDING_EMAIL': {
@@ -1973,7 +1982,7 @@ export class ConversationService {
 
         await WhatsAppService.sendTextMessage(
             phone,
-            `✅ Solicitud creada\n\n🔍 Visita de diagnóstico: $${DIAGNOSTIC_VISIT_PRICE.toLocaleString('es-AR')}\n📅 ${dateFormatted} · ${sessionData.scheduledTime}\n\nEstamos buscando técnicos disponibles...\n\n⏳ Esto toma unos segundos`
+            `¡Anotado! Para darte un presupuesto exacto del arreglo, el especialista necesita evaluar esto en persona.\n\n💵 Visita de diagnóstico: $${DIAGNOSTIC_VISIT_PRICE.toLocaleString('es-AR')}\n✅ Podés pagarlo en cuotas\n⏱️ Este costo cubre la primera hora de trabajo\n\n📅 Agendado: ${dateFormatted} · ${sessionData.scheduledTime}\n\nEstamos buscando tu especialista...`
         );
 
         await ConversationService.continueAfterServiceRequestCreate(phone, sessionData, serviceRequest.id);

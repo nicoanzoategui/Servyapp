@@ -63,6 +63,10 @@ export class ProfessionalConversationService {
         data: { jobId: string; userPhone: string; requestId: string }
     ) {
         await this.saveSession(professionalPhone, 'AWAITING_REPAIR_QUOTE', data);
+        await WhatsAppService.sendTextMessage(
+            professionalPhone,
+            `✅ Ya podés ir.\n\n━━━━━━━━━━━━━━━\n📋 *Tu machete para la visita:*\n━━━━━━━━━━━━━━━\n\nCuando termines de revisar el problema, mandame por acá el monto total del arreglo + repuestos.\n\nEjemplo: *Precio: 100000*\n\n💡 Yo le armo el link de Mercado Pago para que te pague en hasta *3 cuotas*. Nuestra comisión promocional es de solo el *5%*.\n\n✅ Asegurate el cobro y no fíes más.\n\nSi el cliente no quiere hacer el arreglo, escribí: *SOLO VISITA*`
+        );
     }
 
     static async notifyNewJob(
@@ -366,7 +370,7 @@ export class ProfessionalConversationService {
                 if (!priceMatch?.[1]) {
                     await WhatsAppService.sendTextMessage(
                         phone,
-                        'No entendí el precio. Por favor respondé:\n\n*Precio: [monto]*\n\nEjemplo: Precio: 100000\n\nO escribí *SOLO VISITA* si el cliente no quiere hacer el arreglo.'
+                        `No entendí el monto. Recordá:\n\n*Precio: [número]*\n\nEjemplo: Precio: 125000\n\n💡 Esto le permite al cliente pagar en *3 cuotas* con Mercado Pago. Vos cobrás el 95% al terminar.\n\nO escribí *SOLO VISITA* si no va el arreglo.`
                     );
                     return;
                 }
