@@ -9,6 +9,8 @@ import {
     HeartHandshake,
     Flame,
     Wind,
+    Paintbrush,
+    Hammer,
 } from 'lucide-react';
 
 /** E.164 sin + (wa.me). Env opcional en Railway: NEXT_PUBLIC_WA_NUMBER */
@@ -277,83 +279,116 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* Categorías */}
-            <section id="categorias" className="w-full py-24 px-6 md:px-12 bg-slate-50 flex flex-col items-center">
-                <h2
-                    className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-16"
-                >
-                    Servicios Disponibles
-                </h2>
-                <div className="max-w-5xl w-full">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-6">
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#A7E23C] flex items-start gap-4 transition-colors cursor-default">
-                            <div className="bg-blue-50 text-blue-600 p-4 rounded-xl shrink-0">
-                                <Wrench size={28} />
-                            </div>
-                            <div>
-                                <h3
-                                    className="text-lg font-bold mb-1"
-                                >
-                                    Plomería
-                                </h3>
-                                <p className="text-sm text-slate-500">Canillas, cañerías, pérdidas de agua e inodoros.</p>
-                            </div>
+            {/* Servicios Section */}
+            <section id="categorias" className="w-full bg-white px-6 py-20 md:px-12">
+                <div className="mx-auto max-w-6xl">
+                    {/* Badge y Título */}
+                    <div className="mb-16 text-center">
+                        <div className="mb-6 inline-block rounded-full border border-[#0D4638] px-4 py-2 text-sm font-medium text-[#0D4638]">
+                            SERVICIOS DISPONIBLES
                         </div>
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#A7E23C] flex items-start gap-4 transition-colors cursor-default">
-                            <div className="bg-yellow-50 text-yellow-500 p-4 rounded-xl shrink-0">
-                                <Zap size={28} />
+                        <h2 className="mb-4 text-4xl font-bold text-[#0D4638] md:text-5xl">
+                            Soluciones confiables para tu hogar
+                        </h2>
+                        <p className="mx-auto max-w-2xl text-lg text-slate-600">
+                            Profesionales verificados, atención 24/7 y precios transparentes.
+                            <br />
+                            Llegamos rápido cuando más nos necesitás.
+                        </p>
+                    </div>
+
+                    {/* Grid de Servicios Principales */}
+                    <div className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-3">
+                        {/* Plomería */}
+                        <div className="group rounded-3xl border border-slate-200 bg-white p-8 transition-all duration-300 hover:border-[#A7E23C] hover:shadow-xl">
+                            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#C6F6DB] transition-colors group-hover:bg-[#A7E23C]">
+                                <Wrench className="h-8 w-8 text-[#0D4638]" />
                             </div>
-                            <div>
-                                <h3
-                                    className="text-lg font-bold mb-1"
-                                >
-                                    Electricidad
-                                </h3>
-                                <p className="text-sm text-slate-500">Cortocircuitos, enchufes, tableros e instalaciones.</p>
-                            </div>
+                            <h3 className="mb-3 text-2xl font-bold text-[#0D4638]">Plomería</h3>
+                            <p className="mb-6 text-slate-600">Canillas, cañerías, pérdidas de agua e inodoros.</p>
                         </div>
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#A7E23C] flex items-start gap-4 transition-colors cursor-default">
-                            <div className="bg-slate-100 text-slate-700 p-4 rounded-xl shrink-0">
-                                <Key size={28} />
+
+                        {/* Electricidad */}
+                        <div className="group rounded-3xl border border-slate-200 bg-white p-8 transition-all duration-300 hover:border-[#A7E23C] hover:shadow-xl">
+                            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#A7E23C]/20 transition-colors group-hover:bg-[#A7E23C]">
+                                <Zap className="h-8 w-8 text-[#0D4638]" />
                             </div>
-                            <div>
-                                <h3
-                                    className="text-lg font-bold mb-1"
-                                >
-                                    Cerrajería
-                                </h3>
-                                <p className="text-sm text-slate-500">Puertas trabadas, cambio de cerradura y aperturas de emergencia.</p>
+                            <h3 className="mb-3 text-2xl font-bold text-[#0D4638]">Electricidad</h3>
+                            <p className="mb-6 text-slate-600">Cortocircuitos, enchufes, tableros e instalaciones.</p>
+                        </div>
+
+                        {/* Cerrajería */}
+                        <div className="group rounded-3xl border border-slate-200 bg-white p-8 transition-all duration-300 hover:border-[#A7E23C] hover:shadow-xl">
+                            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#C6F6DB] transition-colors group-hover:bg-[#A7E23C]">
+                                <Key className="h-8 w-8 text-[#0D4638]" />
                             </div>
+                            <h3 className="mb-3 text-2xl font-bold text-[#0D4638]">Cerrajería</h3>
+                            <p className="mb-6 text-slate-600">
+                                Puertas trabadas, cambio de cerradura y aperturas de emergencia.
+                            </p>
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#A7E23C] flex items-start gap-4 transition-colors cursor-default">
-                            <div className="bg-orange-50 text-orange-500 p-4 rounded-xl shrink-0">
-                                <Flame size={28} />
+
+                    {/* Segunda fila */}
+                    <div className="mx-auto mb-12 grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-2">
+                        {/* Gas */}
+                        <div className="group rounded-3xl border border-slate-200 bg-white p-8 transition-all duration-300 hover:border-[#A7E23C] hover:shadow-xl">
+                            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#A7E23C]/20 transition-colors group-hover:bg-[#A7E23C]">
+                                <Flame className="h-8 w-8 text-[#0D4638]" />
                             </div>
-                            <div>
-                                <h3
-                                    className="text-lg font-bold mb-1"
-                                >
-                                    Gas
-                                </h3>
-                                <p className="text-sm text-slate-500">Pérdidas de gas, calefones, cocinas y estufas.</p>
-                            </div>
+                            <h3 className="mb-3 text-2xl font-bold text-[#0D4638]">Gas</h3>
+                            <p className="mb-6 text-slate-600">Pérdidas de gas, calefones, cocinas y estufas.</p>
                         </div>
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:border-[#A7E23C] flex items-start gap-4 transition-colors cursor-default">
-                            <div className="bg-cyan-50 text-cyan-500 p-4 rounded-xl shrink-0">
-                                <Wind size={28} />
+
+                        {/* Aires */}
+                        <div className="group rounded-3xl border border-slate-200 bg-white p-8 transition-all duration-300 hover:border-[#A7E23C] hover:shadow-xl">
+                            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#C6F6DB] transition-colors group-hover:bg-[#A7E23C]">
+                                <Wind className="h-8 w-8 text-[#0D4638]" />
                             </div>
-                            <div>
-                                <h3
-                                    className="text-lg font-bold mb-1"
-                                >
-                                    Aires acondicionados
-                                </h3>
-                                <p className="text-sm text-slate-500">Instalación, reparación y limpieza de filtros.</p>
-                            </div>
+                            <h3 className="mb-3 text-2xl font-bold text-[#0D4638]">Aires acondicionados</h3>
+                            <p className="mb-6 text-slate-600">Instalación, reparación y limpieza de filtros.</p>
                         </div>
                     </div>
+
+                    {/* Pintura y Arregla Todo */}
+                    <div className="mx-auto mb-16 grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-2">
+                        <div className="group rounded-3xl border border-slate-200 bg-white p-8 transition-all duration-300 hover:border-[#A7E23C] hover:shadow-xl">
+                            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#A7E23C]/20 transition-colors group-hover:bg-[#A7E23C]">
+                                <Paintbrush className="h-8 w-8 text-[#0D4638]" />
+                            </div>
+                            <h3 className="mb-3 text-2xl font-bold text-[#0D4638]">Pintura</h3>
+                            <p className="mb-6 text-slate-600">Interiores, exteriores, humedad y terminaciones finas.</p>
+                        </div>
+                        <div className="group rounded-3xl border border-slate-200 bg-white p-8 transition-all duration-300 hover:border-[#A7E23C] hover:shadow-xl">
+                            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#C6F6DB] transition-colors group-hover:bg-[#A7E23C]">
+                                <Hammer className="h-8 w-8 text-[#0D4638]" />
+                            </div>
+                            <h3 className="mb-3 text-2xl font-bold text-[#0D4638]">Arregla Todo</h3>
+                            <p className="mb-6 text-slate-600">Pequeñas reparaciones del hogar y trabajos varios con un solo mensaje.</p>
+                        </div>
+                    </div>
+
+                    {/* CTA Central */}
+                    <div className="text-center">
+                        <a
+                            href={WA_LINK}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block rounded-full bg-[#0D4638] px-8 py-4 font-bold text-white shadow-xl transition-all duration-300 hover:-translate-y-1 hover:bg-[#0B3A31]"
+                        >
+                            Solicitar servicio ahora
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            {/* Más servicios */}
+            <section id="mas-servicios" className="w-full bg-slate-50 px-6 py-16 md:px-12">
+                <div className="mx-auto max-w-6xl text-center">
+                    <h2 className="mb-4 text-2xl font-bold text-[#0D4638] md:text-3xl">Más servicios</h2>
+                    <p className="mx-auto max-w-2xl text-slate-600">
+                        Sumamos rubros de a poco. Si necesitás algo que no figura arriba, escribinos por WhatsApp y vemos cómo ayudarte.
+                    </p>
                 </div>
             </section>
 
