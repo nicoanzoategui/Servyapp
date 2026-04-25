@@ -10,6 +10,7 @@ import { GeminiService } from './gemini.service';
 import { mediationDirectionRedisKey, normalizeTwilioWhatsAppFrom, userRelayPauseRedisKey } from '../utils/twilio-phone';
 import { env } from '../utils/env';
 import { createProfessionalFromWhatsAppWizard } from './professional-registration.internal';
+import { getServiceType, DIAGNOSTIC_CATEGORIES, DIAGNOSTIC_VISIT_PRICE } from '../constants/pricing';
 
 const SESSION_TTL = 60 * 60 * 24;
 const REDIS_OP_TIMEOUT_MS = 500;
@@ -370,6 +371,7 @@ export class ConversationService {
                     );
                     return;
                 }
+
                 const classification = await GeminiService.classifyProblem(content);
                 if (!classification.understood || !classification.category) {
                     await WhatsAppService.sendTextMessage(
@@ -378,17 +380,32 @@ export class ConversationService {
                     );
                     return;
                 }
+
+                const serviceType = getServiceType(classification.category);
+
                 session.data.description = content;
                 session.data.category = classification.category;
                 session.data.urgency = classification.urgency;
-                await this.saveSession(phone, 'AWAITING_PHOTOS', session.data);
+                session.data.serviceType = serviceType;
+
                 const empathy = randomEmpathy(String(classification.urgency));
                 const emoji = CATEGORY_EMOJIS[classification.category] || '🔧';
+
                 await WhatsAppService.sendTextMessage(phone, empathy);
-                await WhatsAppService.sendTextMessage(
-                    phone,
-                    `${emoji} *${classification.category}*\n\n¿Tenés una foto del problema? Le ayuda al técnico a cotizar mejor.\n\n1. Sí, mando una foto\n2. No, continuamos`
-                );
+
+                if (serviceType === 'diagnostic') {
+                    await this.saveSession(phone, 'AWAITING_PHOTOS', session.data);
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        `${emoji} *${classification.category}*\n\n¿Tenés una foto del problema? Le ayuda al técnico a entender mejor.\n\n1. Sí, mando una foto\n2. No, continuamos`
+                    );
+                } else {
+                    await this.saveSession(phone, 'AWAITING_PHOTOS', session.data);
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        `${emoji} *${classification.category}*\n\n¿Tenés una foto? Es opcional pero ayuda.\n\n1. Sí, mando una foto\n2. No, continuamos`
+                    );
+                }
                 break;
             }
 
@@ -415,16 +432,12 @@ export class ConversationService {
                     const yesPhotos = ['btn_yes_photos', 'si', 'sí', '1', 'si adjuntar', 'sí adjuntar'].includes(normalized);
 
                     if (normalized === 'listo' || noPhotos) {
-                        if (user.address) {
-                            session.data.address = user.address;
-                            await this.createRequestAndMatch(phone, session.data, user);
-                        } else {
-                            await this.saveSession(phone, 'AWAITING_ADDRESS_FOR_SERVICE', session.data);
-                            await WhatsAppService.sendTextMessage(
-                                phone,
-                                '¿Cuál es la dirección para el servicio? (calle, número y ciudad)'
-                            );
-                        }
+                        // NUEVO: Primero pedir fecha/hora, después dirección
+                        await this.saveSession(phone, 'AWAITING_SERVICE_DATE', session.data);
+                        await WhatsAppService.sendTextMessage(
+                            phone,
+                            '¿Cuándo necesitás el servicio?\n\n1. Hoy (urgente - precio premium)\n2. Mañana\n3. Pasado mañana\n4. Elegir fecha (formato: DD/MM)'
+                        );
                     } else if (yesPhotos) {
                         await WhatsAppService.sendTextMessage(
                             phone,
@@ -438,8 +451,187 @@ export class ConversationService {
 
             case 'AWAITING_ADDRESS_FOR_SERVICE':
                 session.data.serviceAddress = content;
-                await this.createRequestAndMatch(phone, session.data, user);
+                if (String(session.data.serviceType) === 'diagnostic') {
+                    await this.createDiagnosticRequest(phone, session.data, user);
+                } else if (String(session.data.serviceType) === 'one_shot') {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        '✅ Perfecto! Te enviamos la cotización...'
+                    );
+                    // TODO: Implementar one-shot flow
+                    await this.clearSession(phone);
+                } else {
+                    await this.createRequestAndMatch(phone, session.data, user);
+                }
                 break;
+
+            case 'AWAITING_SERVICE_DATE': {
+                const dateOption = content.trim();
+
+                let scheduledDate: Date;
+                const now = new Date();
+
+                switch (dateOption) {
+                    case '1': // Hoy
+                        scheduledDate = now;
+                        session.data.isUrgent = true;
+                        break;
+                    case '2': // Mañana
+                        scheduledDate = new Date(now);
+                        scheduledDate.setDate(scheduledDate.getDate() + 1);
+                        break;
+                    case '3': // Pasado mañana
+                        scheduledDate = new Date(now);
+                        scheduledDate.setDate(scheduledDate.getDate() + 2);
+                        break;
+                    case '4': // Fecha custom
+                        await this.saveSession(phone, 'AWAITING_CUSTOM_DATE', session.data);
+                        await WhatsAppService.sendTextMessage(
+                            phone,
+                            'Escribí la fecha en formato DD/MM\n\nEjemplo: 28/04'
+                        );
+                        return;
+                    default:
+                        await WhatsAppService.sendTextMessage(
+                            phone,
+                            'Por favor elegí una opción válida (1, 2, 3 o 4)'
+                        );
+                        return;
+                }
+
+                session.data.scheduledDate = scheduledDate.toISOString();
+                await this.saveSession(phone, 'AWAITING_SERVICE_TIME', session.data);
+
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    `¿A qué hora? (formato 24hs)\n\nEjemplo: 14:00\n\nO elegí una franja:\n1. Mañana (9-12hs)\n2. Mediodía (12-15hs)\n3. Tarde (15-18hs)\n4. Noche (18-21hs)`
+                );
+                break;
+            }
+
+            case 'AWAITING_CUSTOM_DATE': {
+                const dateMatch = content.trim().match(/^(\d{1,2})\/(\d{1,2})$/);
+                if (!dateMatch) {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'Formato inválido. Escribí la fecha como DD/MM\n\nEjemplo: 28/04'
+                    );
+                    return;
+                }
+
+                const day = parseInt(dateMatch[1]!, 10);
+                const month = parseInt(dateMatch[2]!, 10);
+                const nowCustom = new Date();
+                const year = nowCustom.getFullYear();
+
+                const scheduledDateCustom = new Date(year, month - 1, day);
+
+                // Validar que no sea una fecha pasada
+                if (scheduledDateCustom < nowCustom) {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'Esa fecha ya pasó. Por favor elegí una fecha futura.'
+                    );
+                    return;
+                }
+
+                session.data.scheduledDate = scheduledDateCustom.toISOString();
+                await this.saveSession(phone, 'AWAITING_SERVICE_TIME', session.data);
+
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    `¿A qué hora? (formato 24hs)\n\nEjemplo: 14:00\n\nO elegí una franja:\n1. Mañana (9-12hs)\n2. Mediodía (12-15hs)\n3. Tarde (15-18hs)\n4. Noche (18-21hs)`
+                );
+                break;
+            }
+
+            case 'AWAITING_SERVICE_TIME': {
+                const timeInput = content.trim();
+                let scheduledTime: string;
+                let isFlexible = false;
+
+                // Si escribió hora exacta (14:00)
+                if (/^\d{1,2}:\d{2}$/.test(timeInput)) {
+                    scheduledTime = timeInput;
+                }
+                // Si eligió franja
+                else if (['1', '2', '3', '4'].includes(timeInput)) {
+                    const slots: Record<string, string> = {
+                        '1': 'Mañana (9-12hs)',
+                        '2': 'Mediodía (12-15hs)',
+                        '3': 'Tarde (15-18hs)',
+                        '4': 'Noche (18-21hs)',
+                    };
+                    scheduledTime = slots[timeInput]!;
+                    isFlexible = true;
+                } else {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'Por favor escribí una hora válida (ej: 14:00) o elegí una franja (1-4)'
+                    );
+                    return;
+                }
+
+                session.data.scheduledTime = scheduledTime;
+                session.data.isFlexible = isFlexible;
+
+                // Formatear fecha para mostrar
+                const scheduledDateForMsg = new Date(String(session.data.scheduledDate));
+                const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                const dayName = dayNames[scheduledDateForMsg.getDay()];
+                const day = scheduledDateForMsg.getDate().toString().padStart(2, '0');
+                const month = (scheduledDateForMsg.getMonth() + 1).toString().padStart(2, '0');
+                const dateStr = `${dayName} ${day}/${month}`;
+
+                await this.saveSession(phone, 'AWAITING_DATE_CONFIRMATION', session.data);
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    `📅 Servicio agendado para:\n• Día: ${dateStr}\n• Horario: ${scheduledTime}\n\n¿Confirmás?\n1. Sí, perfecto\n2. Cambiar fecha/hora`
+                );
+                break;
+            }
+
+            case 'AWAITING_DATE_CONFIRMATION': {
+                if (content.trim() === '1') {
+                    // Confirmar fecha/hora
+                    if (user.address) {
+                        // Ya tiene dirección guardada → crear request directamente
+                        session.data.address = user.address;
+
+                        if (String(session.data.serviceType) === 'diagnostic') {
+                            await this.createDiagnosticRequest(phone, session.data, user);
+                        } else {
+                            // One-shot (Fase 2)
+                            await WhatsAppService.sendTextMessage(
+                                phone,
+                                '✅ Perfecto! Te enviamos la cotización...'
+                            );
+                            // TODO: Implementar one-shot flow
+                            await this.clearSession(phone);
+                        }
+                    } else {
+                        // No tiene dirección → pedirla
+                        await this.saveSession(phone, 'AWAITING_ADDRESS_FOR_SERVICE', session.data);
+                        await WhatsAppService.sendTextMessage(
+                            phone,
+                            '¿Cuál es la dirección para el servicio? (calle, número y ciudad)'
+                        );
+                    }
+                } else if (content.trim() === '2') {
+                    // Volver a pedir fecha
+                    await this.saveSession(phone, 'AWAITING_SERVICE_DATE', session.data);
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        '¿Cuándo necesitás el servicio?\n\n1. Hoy (urgente - precio premium)\n2. Mañana\n3. Pasado mañana\n4. Elegir fecha (formato: DD/MM)'
+                    );
+                } else {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'Por favor elegí 1 para confirmar o 2 para cambiar la fecha'
+                    );
+                }
+                break;
+            }
 
             case 'AWAITING_PROFESSIONAL_SELECTION': {
                 const requestId = session.data.requestId as string;
@@ -1350,6 +1542,48 @@ export class ConversationService {
         }
     }
 
+    /** Crea un pedido tipo diagnóstico con visita agendada, precio de visita y matching de técnicos. */
+    private static async createDiagnosticRequest(phone: string, sessionData: Record<string, unknown>, user: User) {
+        const address =
+            (sessionData.serviceAddress as string | undefined) ||
+            (sessionData.address as string | undefined) ||
+            user.address ||
+            '';
+
+        const serviceRequest = await prisma.serviceRequest.create({
+            data: {
+                user_phone: phone,
+                category: String(sessionData.category ?? ''),
+                description: String(sessionData.description ?? ''),
+                service_type: 'diagnostic',
+                phase: 'visit_pending',
+                visit_price: DIAGNOSTIC_VISIT_PRICE,
+                visit_status: 'pending',
+                scheduled_date: new Date(String(sessionData.scheduledDate)),
+                scheduled_time: String(sessionData.scheduledTime ?? ''),
+                is_flexible: Boolean(sessionData.isFlexible),
+                photos: (sessionData.photos as string[]) || [],
+                address,
+                status: 'pending',
+            },
+        });
+
+        await this.clearSession(phone);
+
+        const dateFormatted = new Date(String(sessionData.scheduledDate)).toLocaleDateString('es-AR', {
+            weekday: 'long',
+            day: '2-digit',
+            month: '2-digit',
+        });
+
+        await WhatsAppService.sendTextMessage(
+            phone,
+            `✅ Solicitud creada\n\n🔍 Visita de diagnóstico: $${DIAGNOSTIC_VISIT_PRICE.toLocaleString('es-AR')}\n📅 ${dateFormatted} · ${sessionData.scheduledTime}\n\nEstamos buscando técnicos disponibles...\n\n⏳ Esto toma unos segundos`
+        );
+
+        await ConversationService.continueAfterServiceRequestCreate(phone, sessionData, serviceRequest.id);
+    }
+
     private static async createRequestAndMatch(phone: string, sessionData: Record<string, unknown>, user: { name: string | null; address: string | null }) {
         const address = (sessionData.serviceAddress as string) || user.address || '';
 
@@ -1363,7 +1597,16 @@ export class ConversationService {
             },
         });
 
-        const matchRes = await ProfessionalMatchingService.findProfessionalsAndCreateOffers(request.id);
+        await ConversationService.continueAfterServiceRequestCreate(phone, sessionData, request.id);
+    }
+
+    private static async continueAfterServiceRequestCreate(
+        phone: string,
+        sessionData: Record<string, unknown>,
+        requestId: string
+    ) {
+
+        const matchRes = await ProfessionalMatchingService.findProfessionalsAndCreateOffers(requestId);
 
         if (!matchRes.urgent && !matchRes.scheduled) {
             await WhatsAppService.sendTextMessage(phone, 'No encontramos profesionales disponibles en tu zona en este momento. Lo sentimos.');
@@ -1386,7 +1629,7 @@ export class ConversationService {
         const fmtRating = (r: number): string => (Number.isInteger(r) ? String(r) : r.toFixed(1));
 
         await this.saveSession(phone, 'AWAITING_PROFESSIONAL_SELECTION', {
-            requestId: request.id,
+            requestId,
             hasUrgent,
             hasScheduled,
             ...sessionData,

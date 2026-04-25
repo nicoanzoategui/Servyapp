@@ -8,17 +8,18 @@ datasource db {
 }
 
 model User {
-  id                   String           @id @default(cuid())
-  phone                String           @unique
+  id                   String   @id @default(cuid())
+  phone                String   @unique
   name                 String?
   last_name            String?
   address              String?
   postal_code          String?
-  onboarding_completed Boolean          @default(false)
-  created_at           DateTime         @default(now())
-  last_active_at       DateTime         @default(now())
-  
-  service_requests     ServiceRequest[]
+  onboarding_completed Boolean  @default(false)
+  created_at           DateTime @default(now())
+  last_active_at       DateTime @default(now())
+
+  service_requests ServiceRequest[]
+  subscriptions    Subscription[]
 
   @@map("users")
 }
@@ -36,58 +37,59 @@ enum ProfessionalDocumentKind {
 }
 
 model Professional {
-  id                   String             @id @default(cuid())
-  name                 String
-  last_name            String
-  phone                String             @unique
-  email                String             @unique
-  password_hash        String
-  dni                  String?
-  categories           String[]
-  zones                String[]
-  schedule_json        Json?
-  is_urgent            Boolean            @default(false)
-  is_scheduled         Boolean            @default(true)
-  cbu_alias            String?
-  mp_alias             String?
+  id                             String             @id @default(cuid())
+  name                           String
+  last_name                      String
+  phone                          String             @unique
+  email                          String             @unique
+  password_hash                  String
+  dni                            String?
+  categories                     String[]
+  zones                          String[]
+  schedule_json                  Json?
+  is_urgent                      Boolean            @default(false)
+  is_scheduled                   Boolean            @default(true)
+  cbu_alias                      String?
+  mp_alias                       String?
   /// Domicilio / referencia de contacto (no reemplaza zonas de trabajo).
-  address              String?
-  postal_code          String?
-  bio                  String?
-  skills               String[]           @default([])
-  after_hours_available Boolean           @default(false)
+  address                        String?
+  postal_code                    String?
+  bio                            String?
+  skills                         String[]           @default([])
+  after_hours_available          Boolean            @default(false)
   /// Banco o billetera virtual asociada al cobro.
-  payout_institution   String?
+  payout_institution             String?
   /// cbu | cvu | alias | mercadopago | wallet_other
-  payout_account_type  String?
+  payout_account_type            String?
   /// CUIT/CUIL u otro identificador fiscal (opcional).
-  tax_id               String?
-  rating               Float              @default(0)
-  status               ProfessionalStatus @default(pending)
-  onboarding_completed Boolean            @default(false)
-  onboarding_step      Int                @default(1)
+  tax_id                         String?
+  rating                         Float              @default(0)
+  status                         ProfessionalStatus @default(pending)
+  onboarding_completed           Boolean            @default(false)
+  onboarding_step                Int                @default(1)
   /// Perfil listo para recibir ofertas (zonas, facturación, docs, etc.).
-  profile_operational_complete Boolean   @default(false)
+  profile_operational_complete   Boolean            @default(false)
   profile_ready_whatsapp_sent_at DateTime?
-  created_at           DateTime           @default(now())
+  created_at                     DateTime           @default(now())
 
-  job_offers           JobOffer[]
-  earnings             Earning[]
-  documents            ProfessionalDocument[]
-  schedules            ProviderSchedule[]
+  job_offers    JobOffer[]
+  earnings      Earning[]
+  documents     ProfessionalDocument[]
+  schedules     ProviderSchedule[]
+  subscriptions Subscription[]
 
   @@map("professionals")
 }
 
 model ProfessionalDocument {
-  id                String                   @id @default(cuid())
+  id              String                   @id @default(cuid())
   professional_id String
-  kind              ProfessionalDocumentKind
-  storage_key       String                   @unique
-  filename          String?
-  content_type      String
-  size_bytes        Int?
-  created_at        DateTime                 @default(now())
+  kind            ProfessionalDocumentKind
+  storage_key     String                   @unique
+  filename        String?
+  content_type    String
+  size_bytes      Int?
+  created_at      DateTime                 @default(now())
 
   professional Professional @relation(fields: [professional_id], references: [id], onDelete: Cascade)
 
@@ -97,21 +99,38 @@ model ProfessionalDocument {
 }
 
 model ServiceRequest {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   user_phone  String
   category    String?
   description String?
-  photos      String[]
-  address     String?
-  latitude    Float?
-  longitude   Float?
-  status      String   @default("pending")
-  created_at  DateTime @default(now())
-  scheduled_slot   String?
-  scheduled_date   DateTime?
 
-  user        User       @relation(fields: [user_phone], references: [phone])
-  job_offers  JobOffer[]
+  // NUEVO: Tipo de servicio
+  service_type String @default("diagnostic") // "diagnostic" | "one_shot"
+  phase        String @default("visit_pending") // "visit_pending" | "visit_completed" | "repair_pending" | "repair_completed" | "visit_only"
+
+  // NUEVO: Precios separados
+  visit_price  Decimal? @db.Decimal(10, 2)
+  repair_price Decimal? @db.Decimal(10, 2)
+
+  // NUEVO: Trazabilidad financiera
+  visit_payment_id  String? @unique
+  repair_payment_id String? @unique
+  visit_status      String  @default("pending") // "pending" | "paid" | "released" | "refunded"
+  repair_status     String? // "pending" | "paid" | "released" | "refunded"
+
+  photos         String[]
+  address        String?
+  latitude       Float?
+  longitude      Float?
+  status         String    @default("pending")
+  created_at     DateTime  @default(now())
+  scheduled_slot String?
+  scheduled_date DateTime?
+  scheduled_time String?
+  is_flexible    Boolean   @default(false)
+
+  user       User       @relation(fields: [user_phone], references: [phone])
+  job_offers JobOffer[]
 
   @@map("service_requests")
 }
@@ -135,16 +154,16 @@ model JobOffer {
 model Quotation {
   id                 String   @id @default(cuid())
   job_offer_id       String   @unique
-  items_json         Json     // [{description, price}]
+  items_json         Json // [{description, price}]
   total_price        Float
   description        String?
   estimated_duration String?
   status             String   @default("pending") // pending, accepted, rejected
   created_at         DateTime @default(now())
 
-  job_offer          JobOffer  @relation(fields: [job_offer_id], references: [id])
-  payment            Payment?
-  job                Job?
+  job_offer JobOffer @relation(fields: [job_offer_id], references: [id])
+  payment   Payment?
+  job       Job?
 
   @@map("quotations")
 }
@@ -158,23 +177,30 @@ model Payment {
   status           String    @default("pending")
   paid_at          DateTime?
 
-  quotation        Quotation @relation(fields: [quotation_id], references: [id])
+  quotation Quotation @relation(fields: [quotation_id], references: [id])
 
   @@map("payments")
 }
 
 model Job {
-  id                   String    @id @default(cuid())
-  quotation_id         String    @unique
-  scheduled_at         DateTime?
-  completed_at         DateTime?
-  status               String    @default("confirmed") // confirmed, in_progress, completed, cancelled
-  rating               Int?
-  review               String?
-  reminder_sent        Boolean   @default(false)
-  updated_at           DateTime  @updatedAt
+  id                  String    @id @default(cuid())
+  quotation_id        String    @unique
+  scheduled_at        DateTime?
+  completed_at        DateTime?
+  status              String    @default("confirmed") // confirmed, in_progress, completed, cancelled
+  rating              Int?
+  review              String?
+  reminder_sent       Boolean   @default(false)
+  updated_at          DateTime  @updatedAt
   /// Cuando el cliente liberó el pago vía QR / link público.
-  payment_released_at  DateTime?
+  payment_released_at DateTime?
+
+  // NUEVO: Fase del trabajo
+  phase String @default("visit_pending") // "visit_only" | "repair_completed"
+
+  // NUEVO: Token QR único
+  qr_token      String    @unique @default(cuid())
+  qr_scanned_at DateTime?
 
   quotation Quotation @relation(fields: [quotation_id], references: [id])
   earnings  Earning[]
@@ -191,8 +217,8 @@ model Earning {
   net_amount      Float
   transferred_at  DateTime?
 
-  professional    Professional @relation(fields: [professional_id], references: [id])
-  job             Job          @relation(fields: [job_id], references: [id])
+  professional Professional @relation(fields: [professional_id], references: [id])
+  job          Job          @relation(fields: [job_id], references: [id])
 
   @@map("earnings")
 }
@@ -226,13 +252,13 @@ model ProfessionalSession {
 }
 
 model ProfessionalLead {
-  id          String   @id @default(cuid())
-  name        String
-  email       String
-  phone       String
-  categories  String[] @default([])
-  zone        String?
-  created_at  DateTime @default(now())
+  id         String   @id @default(cuid())
+  name       String
+  email      String
+  phone      String
+  categories String[] @default([])
+  zone       String?
+  created_at DateTime @default(now())
 
   @@map("professional_leads")
 }
@@ -252,30 +278,30 @@ model PasswordToken {
 // --- Finanzas (ver apps/api/src/db/migrations/20260407000000_finance_agent.sql) ---
 
 model DemandForecast {
-  id                   String    @id @default(uuid()) @db.Uuid
-  createdAt            DateTime  @default(now()) @map("created_at")
-  forecastForWeek      DateTime  @map("forecast_for_week") @db.Date
-  category             String
-  zone                 String
-  predictedRequests    Int?      @map("predicted_requests")
-  confidence           Decimal?  @db.Decimal(12, 6)
-  availableProviders   Int?      @map("available_providers")
-  coverageGap          Int?      @map("coverage_gap")
-  recommendation       String?
-  geminiReasoning      String?   @map("gemini_reasoning")
+  id                 String   @id @default(uuid()) @db.Uuid
+  createdAt          DateTime @default(now()) @map("created_at")
+  forecastForWeek    DateTime @map("forecast_for_week") @db.Date
+  category           String
+  zone               String
+  predictedRequests  Int?     @map("predicted_requests")
+  confidence         Decimal? @db.Decimal(12, 6)
+  availableProviders Int?     @map("available_providers")
+  coverageGap        Int?     @map("coverage_gap")
+  recommendation     String?
+  geminiReasoning    String?  @map("gemini_reasoning")
 
   @@map("demand_forecasts")
 }
 
 model ExpansionOpportunity {
-  id                     String    @id @default(uuid()) @db.Uuid
-  detectedAt             DateTime  @default(now()) @map("detected_at")
-  zone                   String
-  category               String
-  uncoveredRequests30d   Int?      @map("uncovered_requests_30d")
-  estimatedRevenueArs    Decimal?  @map("estimated_revenue_ars") @db.Decimal(20, 4)
-  priority               String?
-  status                 String?   @default("detected")
+  id                   String   @id @default(uuid()) @db.Uuid
+  detectedAt           DateTime @default(now()) @map("detected_at")
+  zone                 String
+  category             String
+  uncoveredRequests30d Int?     @map("uncovered_requests_30d")
+  estimatedRevenueArs  Decimal? @map("estimated_revenue_ars") @db.Decimal(20, 4)
+  priority             String?
+  status               String?  @default("detected")
 
   @@map("expansion_opportunities")
 }
@@ -297,82 +323,109 @@ model FinanceAlert {
 }
 
 model FinanceProjection {
-  id                    String    @id @default(uuid()) @db.Uuid
-  createdAt             DateTime  @default(now()) @map("created_at")
-  projectionForMonth    String    @map("projection_for_month")
-  scenarioBaseArs       Decimal?  @map("scenario_base_ars") @db.Decimal(20, 4)
-  scenarioOptimistArs   Decimal?  @map("scenario_optimist_ars") @db.Decimal(20, 4)
-  scenarioPessimistArs  Decimal?  @map("scenario_pessimist_ars") @db.Decimal(20, 4)
-  assumedJobGrowthRate  Decimal?  @map("assumed_job_growth_rate") @db.Decimal(12, 6)
-  assumedAvgTicketArs   Decimal?  @map("assumed_avg_ticket_ars") @db.Decimal(20, 4)
-  assumedCommissionRate Decimal?  @map("assumed_commission_rate") @db.Decimal(12, 6)
-  assumedMpFeeRate      Decimal?  @default(0.0299) @map("assumed_mp_fee_rate") @db.Decimal(12, 6)
-  geminiAnalysis        String?   @map("gemini_analysis")
-  confidence            Decimal?  @db.Decimal(12, 6)
-  keyRisks              Json      @default("[]") @map("key_risks")
-  keyOpportunities      Json      @default("[]") @map("key_opportunities")
+  id                    String   @id @default(uuid()) @db.Uuid
+  createdAt             DateTime @default(now()) @map("created_at")
+  projectionForMonth    String   @map("projection_for_month")
+  scenarioBaseArs       Decimal? @map("scenario_base_ars") @db.Decimal(20, 4)
+  scenarioOptimistArs   Decimal? @map("scenario_optimist_ars") @db.Decimal(20, 4)
+  scenarioPessimistArs  Decimal? @map("scenario_pessimist_ars") @db.Decimal(20, 4)
+  assumedJobGrowthRate  Decimal? @map("assumed_job_growth_rate") @db.Decimal(12, 6)
+  assumedAvgTicketArs   Decimal? @map("assumed_avg_ticket_ars") @db.Decimal(20, 4)
+  assumedCommissionRate Decimal? @map("assumed_commission_rate") @db.Decimal(12, 6)
+  assumedMpFeeRate      Decimal? @default(0.0299) @map("assumed_mp_fee_rate") @db.Decimal(12, 6)
+  geminiAnalysis        String?  @map("gemini_analysis")
+  confidence            Decimal? @db.Decimal(12, 6)
+  keyRisks              Json     @default("[]") @map("key_risks")
+  keyOpportunities      Json     @default("[]") @map("key_opportunities")
 
   @@map("finance_projections")
 }
 
 model FinanceSnapshot {
-  id                           String   @id @default(uuid()) @db.Uuid
-  createdAt                    DateTime @default(now()) @map("created_at")
-  periodType                   String   @map("period_type")
-  periodKey                    String   @map("period_key")
-  grossRevenueArs              Decimal  @default(0) @map("gross_revenue_ars") @db.Decimal(20, 4)
-  servyRevenueArs              Decimal  @default(0) @map("servy_revenue_ars") @db.Decimal(20, 4)
-  mpFeesArs                    Decimal  @default(0) @map("mp_fees_ars") @db.Decimal(20, 4)
-  netRevenueArs                Decimal  @default(0) @map("net_revenue_ars") @db.Decimal(20, 4)
-  totalJobs                    Int      @default(0) @map("total_jobs")
-  completedJobs                Int      @default(0) @map("completed_jobs")
-  cancelledJobs                Int      @default(0) @map("cancelled_jobs")
-  avgTicketArs                 Decimal? @map("avg_ticket_ars") @db.Decimal(20, 4)
-  avgCommissionRate            Decimal? @map("avg_commission_rate") @db.Decimal(12, 6)
-  revenuePerJobArs             Decimal? @map("revenue_per_job_ars") @db.Decimal(20, 4)
-  byCategory                   Json     @default("{}") @map("by_category")
-  byZone                       Json     @default("{}") @map("by_zone")
-  activeProviders              Int      @default(0) @map("active_providers")
-  revenuePerActiveProviderArs  Decimal? @map("revenue_per_active_provider_ars") @db.Decimal(20, 4)
-  simulated                    Boolean  @default(true)
+  id                          String   @id @default(uuid()) @db.Uuid
+  createdAt                   DateTime @default(now()) @map("created_at")
+  periodType                  String   @map("period_type")
+  periodKey                   String   @map("period_key")
+  grossRevenueArs             Decimal  @default(0) @map("gross_revenue_ars") @db.Decimal(20, 4)
+  servyRevenueArs             Decimal  @default(0) @map("servy_revenue_ars") @db.Decimal(20, 4)
+  mpFeesArs                   Decimal  @default(0) @map("mp_fees_ars") @db.Decimal(20, 4)
+  netRevenueArs               Decimal  @default(0) @map("net_revenue_ars") @db.Decimal(20, 4)
+  totalJobs                   Int      @default(0) @map("total_jobs")
+  completedJobs               Int      @default(0) @map("completed_jobs")
+  cancelledJobs               Int      @default(0) @map("cancelled_jobs")
+  avgTicketArs                Decimal? @map("avg_ticket_ars") @db.Decimal(20, 4)
+  avgCommissionRate           Decimal? @map("avg_commission_rate") @db.Decimal(12, 6)
+  revenuePerJobArs            Decimal? @map("revenue_per_job_ars") @db.Decimal(20, 4)
+  byCategory                  Json     @default("{}") @map("by_category")
+  byZone                      Json     @default("{}") @map("by_zone")
+  activeProviders             Int      @default(0) @map("active_providers")
+  revenuePerActiveProviderArs Decimal? @map("revenue_per_active_provider_ars") @db.Decimal(20, 4)
+  simulated                   Boolean  @default(true)
 
   @@unique([periodType, periodKey], name: "periodType_periodKey")
   @@map("finance_snapshots")
 }
 
 model MpReconciliation {
-  id                       String    @id @default(uuid()) @db.Uuid
-  createdAt                DateTime  @default(now()) @map("created_at")
-  periodDate               DateTime  @map("period_date") @db.Date
-  mpReportedAmountArs      Decimal?  @map("mp_reported_amount_ars") @db.Decimal(20, 4)
-  internalExpectedArs      Decimal?  @map("internal_expected_ars") @db.Decimal(20, 4)
-  differenceArs            Decimal?  @map("difference_ars") @db.Decimal(20, 4)
-  differencePct            Decimal?  @map("difference_pct") @db.Decimal(12, 6)
-  mpTransactionCount       Int?      @map("mp_transaction_count")
-  internalTransactionCount Int?      @map("internal_transaction_count")
-  status                   String?   @default("pending")
+  id                       String   @id @default(uuid()) @db.Uuid
+  createdAt                DateTime @default(now()) @map("created_at")
+  periodDate               DateTime @map("period_date") @db.Date
+  mpReportedAmountArs      Decimal? @map("mp_reported_amount_ars") @db.Decimal(20, 4)
+  internalExpectedArs      Decimal? @map("internal_expected_ars") @db.Decimal(20, 4)
+  differenceArs            Decimal? @map("difference_ars") @db.Decimal(20, 4)
+  differencePct            Decimal? @map("difference_pct") @db.Decimal(12, 6)
+  mpTransactionCount       Int?     @map("mp_transaction_count")
+  internalTransactionCount Int?     @map("internal_transaction_count")
+  status                   String?  @default("pending")
   notes                    String?
-  simulated                Boolean   @default(true)
+  simulated                Boolean  @default(true)
 
   @@map("mp_reconciliation")
 }
 
 model ProviderSchedule {
-  id            String   @id @default(uuid())
-  provider_id   String
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
-  work_days     String[] // ["monday", "tuesday", ...]
-  shift_start   String?  // "09:00"
-  shift_end     String?  // "18:00"
-  shift2_start  String?  // Para doble turno
-  shift2_end    String?
-  timezone      String   @default("America/Argentina/Buenos_Aires")
-  is_active     Boolean  @default(true)
+  id           String   @id @default(uuid())
+  provider_id  String
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  work_days    String[] // ["monday", "tuesday", ...]
+  shift_start  String? // "09:00"
+  shift_end    String? // "18:00"
+  shift2_start String? // Para doble turno
+  shift2_end   String?
+  timezone     String   @default("America/Argentina/Buenos_Aires")
+  is_active    Boolean  @default(true)
 
   professional Professional @relation(fields: [provider_id], references: [id])
 
-  @@map("provider_schedules")
   @@index([provider_id])
+  @@map("provider_schedules")
 }
 
+model Subscription {
+  id              String  @id @default(cuid())
+  user_id         String
+  professional_id String?
+
+  service_category String // "Lavado de Autos" | "Limpieza de Piscinas" | "Jardinería"
+  frequency        String // "weekly" | "biweekly"
+  price            Decimal @db.Decimal(10, 2)
+
+  next_service_date DateTime
+  last_payment_date DateTime?
+
+  status      String @default("active") // "active" | "paused" | "cancelled"
+  retry_count Int    @default(0)
+
+  payment_method_id String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user         User          @relation(fields: [user_id], references: [id])
+  professional Professional? @relation(fields: [professional_id], references: [id])
+
+  @@index([user_id])
+  @@index([status])
+  @@index([next_service_date])
+}
