@@ -2,6 +2,7 @@ import { prisma, type JobOffer, type Professional, type ServiceRequest, type Use
 import { redis } from '../utils/redis';
 import { WhatsAppService } from './whatsapp.service';
 import { ConversationService } from './conversation.service';
+import { PaymentRetryService } from './payment-retry.service';
 import { DIAGNOSTIC_VISIT_PRICE, getServiceType } from '../constants/pricing';
 
 const SESSION_TTL = 60 * 60 * 24;
@@ -423,6 +424,11 @@ export class ProfessionalConversationService {
                 );
 
                 return;
+            }
+
+            case 'AWAITING_PAYMENT_RETRY_DECISION': {
+                await PaymentRetryService.processRetryDecision(phone, content, session.data);
+                break;
             }
 
             default:

@@ -4,6 +4,7 @@ import { env } from '../utils/env';
 import { prisma } from '@servy/db';
 import { ConversationService } from '../services/conversation.service';
 import { ProfessionalConversationService } from '../services/professional.conversation.service';
+import { PaymentRetryService } from '../services/payment-retry.service';
 import { getServiceType } from '../constants/pricing';
 import { WhatsAppService } from '../services/whatsapp.service';
 import { MercadoPagoService } from '../services/mercadopago.service';
@@ -220,13 +221,63 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
                     }
                 );
             }
-        } else if (status === 'rejected' || status === 'cancelled') {
+        } else if (status === 'rejected' || status === 'cancelled' || status === 'failure') {
+            console.log('[WEBHOOK] Pago rechazado/cancelado:', String(data.id));
+
             await prisma.payment.updateMany({
                 where: { quotation_id: quotationId },
                 data: { status, mp_payment_id: String(data.id) },
             });
 
-            if (metadata.user_phone) {
+            const paymentRow = await prisma.payment.findFirst({
+                where: { quotation_id: quotationId },
+                include: {
+                    quotation: {
+                        include: {
+                            job_offer: {
+                                include: {
+                                    service_request: true,
+                                    professional: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+
+            const sr = paymentRow?.quotation?.job_offer?.service_request;
+            const pro = paymentRow?.quotation?.job_offer?.professional;
+            const qTotal = paymentRow?.quotation?.total_price;
+            const isRepairFailure =
+                sr &&
+                sr.repair_price != null &&
+                qTotal != null &&
+                Number(sr.repair_price) === Number(qTotal) &&
+                sr.repair_status === 'pending';
+
+            if (isRepairFailure && pro?.phone) {
+                const job = await prisma.job.findFirst({
+                    where: {
+                        quotation: {
+                            job_offer: { request_id: sr.id },
+                        },
+                    },
+                    orderBy: { id: 'desc' },
+                });
+                if (job) {
+                    await PaymentRetryService.handleRepairPaymentFailure(
+                        job.id,
+                        sr.user_phone,
+                        pro.phone,
+                        Number(sr.repair_price)
+                    );
+                } else if (metadata.user_phone) {
+                    await WhatsAppService.sendTextMessage(
+                        String(metadata.user_phone),
+                        '⚠️ El pago no se pudo procesar.\n\n¿Querés intentar de nuevo? Escribí _ayuda_ si necesitás asistencia.'
+                    );
+                }
+            } else if (metadata.user_phone) {
                 await WhatsAppService.sendTextMessage(
                     String(metadata.user_phone),
                     '⚠️ El pago no se pudo procesar.\n\n¿Querés intentar de nuevo? Escribí _ayuda_ si necesitás asistencia.'
