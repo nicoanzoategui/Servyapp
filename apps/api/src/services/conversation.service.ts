@@ -10,7 +10,13 @@ import { GeminiService } from './gemini.service';
 import { mediationDirectionRedisKey, normalizeTwilioWhatsAppFrom, userRelayPauseRedisKey } from '../utils/twilio-phone';
 import { env } from '../utils/env';
 import { createProfessionalFromWhatsAppWizard } from './professional-registration.internal';
-import { getServiceType, DIAGNOSTIC_CATEGORIES, DIAGNOSTIC_VISIT_PRICE, ONE_SHOT_PRICING } from '../constants/pricing';
+import {
+    getServiceType,
+    DIAGNOSTIC_CATEGORIES,
+    DIAGNOSTIC_VISIT_PRICE,
+    ONE_SHOT_PRICING,
+    SUBSCRIPTION_PRICING,
+} from '../constants/pricing';
 
 const SESSION_TTL = 60 * 60 * 24;
 const REDIS_OP_TIMEOUT_MS = 500;
@@ -242,7 +248,18 @@ export class ConversationService {
     static async beginReviewPrompt(userPhone: string, jobId: string) {
         const job = await prisma.job.findUnique({
             where: { id: jobId },
-            include: { quotation: { include: { job_offer: { include: { professional: true } } } } },
+            include: {
+                quotation: {
+                    include: {
+                        job_offer: {
+                            include: {
+                                professional: true,
+                                service_request: true,
+                            },
+                        },
+                    },
+                },
+            },
         });
         if (!job?.quotation?.job_offer?.professional) {
             return;
@@ -252,7 +269,17 @@ export class ConversationService {
             userPhone,
             `🎉 *¡Trabajo completado!*\n\n¿Cómo te fue con *${proName}*?\n\n⭐ 1 — Muy malo\n⭐⭐ 2 — Malo\n⭐⭐⭐ 3 — Regular\n⭐⭐⭐⭐ 4 — Bueno\n⭐⭐⭐⭐⭐ 5 — Excelente\n\n_Respondé con el número._`
         );
-        await this.saveSession(userPhone, 'AWAITING_REVIEW', { jobId });
+        const sr = job.quotation.job_offer.service_request;
+        const reviewPayload: Record<string, unknown> = { jobId };
+        if (
+            sr &&
+            sr.service_type === 'one_shot' &&
+            sr.category &&
+            SUBSCRIPTION_PRICING[sr.category as keyof typeof SUBSCRIPTION_PRICING]
+        ) {
+            reviewPayload.pendingSubscriptionCategory = sr.category;
+        }
+        await this.saveSession(userPhone, 'AWAITING_REVIEW', reviewPayload);
     }
 
     static async processMessage(phone: string, messageType: string, content: string) {
@@ -954,6 +981,122 @@ export class ConversationService {
                 }
                 break;
 
+            case 'AWAITING_SUBSCRIPTION_DECISION': {
+                const category = session.data.category;
+
+                if (!category) {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'Hubo un error. Por favor escribí cuando quieras agendar otro servicio.'
+                    );
+                    await this.clearSession(phone);
+                    return;
+                }
+
+                const normalized = content.trim();
+
+                if (normalized === '1' || normalized.toLowerCase().includes('seman')) {
+                    await this.createSubscription(phone, String(category), 'weekly');
+                } else if (normalized === '2' || normalized.toLowerCase().includes('quince')) {
+                    await this.createSubscription(phone, String(category), 'biweekly');
+                } else if (
+                    normalized === '3' ||
+                    normalized.toLowerCase() === 'no' ||
+                    normalized.toLowerCase().startsWith('no,')
+                ) {
+                    await this.clearSession(phone);
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        '👍 Perfecto. Cuando necesites otro servicio, escribime y te ayudo.'
+                    );
+                } else {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'Por favor elegí una opción: 1 (semanal), 2 (quincenal) o 3 (no gracias)'
+                    );
+                }
+                break;
+            }
+
+            case 'AWAITING_SUBSCRIPTION_PAUSE_SELECTION': {
+                const { subscriptions } = session.data;
+                const selection = parseInt(content.trim(), 10);
+
+                if (!subscriptions || !Array.isArray(subscriptions)) {
+                    await this.clearSession(phone);
+                    return;
+                }
+
+                if (Number.isNaN(selection) || selection < 1 || selection > subscriptions.length) {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        `Por favor elegí un número válido (1-${subscriptions.length})`
+                    );
+                    return;
+                }
+
+                const subscriptionId = subscriptions[selection - 1];
+                const subscription = await prisma.subscription.findUnique({
+                    where: { id: String(subscriptionId) },
+                });
+
+                if (subscription) {
+                    await prisma.subscription.update({
+                        where: { id: String(subscriptionId) },
+                        data: { status: 'paused' },
+                    });
+
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        `⏸️ *Suscripción pausada*\n\n🔄 ${subscription.service_category}\n\nPara reactivar: escribí "reactivar suscripción"`
+                    );
+                }
+
+                await this.clearSession(phone);
+                break;
+            }
+
+            case 'AWAITING_SUBSCRIPTION_REACTIVATE_SELECTION': {
+                const { subscriptions } = session.data;
+                const selection = parseInt(content.trim(), 10);
+
+                if (!subscriptions || !Array.isArray(subscriptions)) {
+                    await this.clearSession(phone);
+                    return;
+                }
+
+                if (Number.isNaN(selection) || selection < 1 || selection > subscriptions.length) {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        `Por favor elegí un número válido (1-${subscriptions.length})`
+                    );
+                    return;
+                }
+
+                const subscriptionId = subscriptions[selection - 1];
+                const subscription = await prisma.subscription.findUnique({
+                    where: { id: String(subscriptionId) },
+                });
+
+                if (subscription) {
+                    await prisma.subscription.update({
+                        where: { id: String(subscriptionId) },
+                        data: {
+                            status: 'active',
+                            retry_count: 0,
+                        },
+                    });
+
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        `✅ *Suscripción reactivada*\n\n🔄 ${subscription.service_category}\n\nEl próximo servicio será: ${subscription.next_service_date.toLocaleDateString('es-AR')}`
+                    );
+                }
+
+                await this.clearSession(phone);
+                break;
+            }
+
             default:
                 await this.saveSession(phone, 'IDLE', {});
                 await WhatsAppService.sendTextMessage(
@@ -963,7 +1106,11 @@ export class ConversationService {
         }
     }
 
-    private static async handleGlobalIntents(phone: string, text: string, user: { name: string | null }): Promise<boolean> {
+    private static async handleGlobalIntents(
+        phone: string,
+        text: string,
+        user: { id: string; name: string | null }
+    ): Promise<boolean> {
         const t = text.toLowerCase();
         if (t === 'ayuda' || t === '?') {
             await WhatsAppService.sendTextMessage(
@@ -988,6 +1135,145 @@ export class ConversationService {
             );
             return true;
         }
+
+        // Comandos de suscripciones
+        if (t.includes('pausar suscri') || t.includes('cancelar suscri')) {
+            const subscriptions = await prisma.subscription.findMany({
+                where: {
+                    user_id: user.id,
+                    status: 'active',
+                },
+            });
+
+            if (subscriptions.length === 0) {
+                await WhatsAppService.sendTextMessage(phone, 'No tenés suscripciones activas para pausar.');
+                return true;
+            }
+
+            if (subscriptions.length === 1) {
+                await prisma.subscription.update({
+                    where: { id: subscriptions[0]!.id },
+                    data: { status: 'paused' },
+                });
+
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    `⏸️ *Suscripción pausada*\n\n🔄 ${subscriptions[0]!.service_category}\n\nPara reactivar: escribí "reactivar suscripción"`
+                );
+            } else {
+                const list = subscriptions
+                    .map((s, i) => `${i + 1}. ${s.service_category} (${s.frequency === 'weekly' ? 'semanal' : 'quincenal'})`)
+                    .join('\n');
+
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    `Tenés ${subscriptions.length} suscripciones activas:\n\n${list}\n\n¿Cuál querés pausar? Respondé con el número.`
+                );
+
+                await this.saveSession(phone, 'AWAITING_SUBSCRIPTION_PAUSE_SELECTION', {
+                    subscriptions: subscriptions.map((s) => s.id),
+                });
+            }
+            return true;
+        }
+
+        if (t.includes('reactivar suscri') || t.includes('activar suscri')) {
+            const subscriptions = await prisma.subscription.findMany({
+                where: {
+                    user_id: user.id,
+                    status: 'paused',
+                },
+            });
+
+            if (subscriptions.length === 0) {
+                await WhatsAppService.sendTextMessage(phone, 'No tenés suscripciones pausadas para reactivar.');
+                return true;
+            }
+
+            if (subscriptions.length === 1) {
+                await prisma.subscription.update({
+                    where: { id: subscriptions[0]!.id },
+                    data: {
+                        status: 'active',
+                        retry_count: 0,
+                    },
+                });
+
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    `✅ *Suscripción reactivada*\n\n🔄 ${subscriptions[0]!.service_category}\n\nEl próximo servicio será: ${subscriptions[0]!.next_service_date.toLocaleDateString('es-AR')}`
+                );
+            } else {
+                const list = subscriptions
+                    .map((s, i) => `${i + 1}. ${s.service_category} (${s.frequency === 'weekly' ? 'semanal' : 'quincenal'})`)
+                    .join('\n');
+
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    `Tenés ${subscriptions.length} suscripciones pausadas:\n\n${list}\n\n¿Cuál querés reactivar? Respondé con el número.`
+                );
+
+                await this.saveSession(phone, 'AWAITING_SUBSCRIPTION_REACTIVATE_SELECTION', {
+                    subscriptions: subscriptions.map((s) => s.id),
+                });
+            }
+            return true;
+        }
+
+        if (t.includes('mis suscri') || t.includes('ver suscri')) {
+            const subscriptions = await prisma.subscription.findMany({
+                where: { user_id: user.id },
+                orderBy: { created_at: 'desc' },
+            });
+
+            if (subscriptions.length === 0) {
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    'No tenés suscripciones activas.\n\nPodés crear una después de completar un servicio.'
+                );
+                return true;
+            }
+
+            const activeList = subscriptions
+                .filter((s) => s.status === 'active')
+                .map((s) => {
+                    const freqText = s.frequency === 'weekly' ? 'Semanal' : 'Quincenal';
+                    const nextDate = s.next_service_date.toLocaleDateString('es-AR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                    });
+                    return `✅ ${s.service_category} (${freqText})\n   💵 $${Number(s.price).toLocaleString('es-AR')}\n   📅 Próximo: ${nextDate}`;
+                })
+                .join('\n\n');
+
+            const pausedList = subscriptions
+                .filter((s) => s.status === 'paused')
+                .map((s) => {
+                    const freqText = s.frequency === 'weekly' ? 'Semanal' : 'Quincenal';
+                    return `⏸️ ${s.service_category} (${freqText})`;
+                })
+                .join('\n');
+
+            let message = '📋 *Tus Suscripciones*\n\n';
+
+            if (activeList) {
+                message += `*ACTIVAS:*\n${activeList}`;
+            }
+
+            if (pausedList) {
+                message += `\n\n*PAUSADAS:*\n${pausedList}`;
+            }
+
+            if (!activeList && !pausedList) {
+                message += '_No tenés suscripciones activas ni pausadas en este momento._';
+            }
+
+            message += '\n\n_Para pausar: "pausar suscripción"_\n_Para reactivar: "reactivar suscripción"_';
+
+            await WhatsAppService.sendTextMessage(phone, message);
+            return true;
+        }
+
         return false;
     }
 
@@ -1091,11 +1377,32 @@ export class ConversationService {
         await prisma.professional.update({ where: { id: proId }, data: { rating: Math.round(avg * 10) / 10 } });
 
         if (rating >= 4) {
-            await this.clearSession(phone);
-            await WhatsAppService.sendTextMessage(
-                phone,
-                '*¡Gracias por calificarlo!* 🙌\n\nNos alegra que haya salido bien. Cuando necesités otro servicio, ya sabés dónde encontrarnos.'
-            );
+            const pendingCat = data.pendingSubscriptionCategory as string | undefined;
+            const pricing =
+                pendingCat && SUBSCRIPTION_PRICING[pendingCat as keyof typeof SUBSCRIPTION_PRICING]
+                    ? SUBSCRIPTION_PRICING[pendingCat as keyof typeof SUBSCRIPTION_PRICING]
+                    : undefined;
+
+            if (pendingCat && pricing) {
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    '*¡Gracias por calificarlo!* 🙌\n\nNos alegra que haya salido bien. Cuando necesités otro servicio, ya sabés dónde encontrarnos.'
+                );
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    `\n━━━━━━━━━━━━━━━\n💡 *¿Te gustó el servicio?*\n━━━━━━━━━━━━━━━\n\n¿Querés que ${pendingCat} venga regularmente?\n\n1. Todas las semanas ($${pricing.weekly.toLocaleString('es-AR')})\n2. Cada 15 días ($${pricing.biweekly.toLocaleString('es-AR')})\n3. No, gracias\n\n_Ahorrás ~20% con suscripción._`
+                );
+                await this.saveSession(phone, 'AWAITING_SUBSCRIPTION_DECISION', {
+                    category: pendingCat,
+                    jobId: data.jobId as string,
+                });
+            } else {
+                await this.clearSession(phone);
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    '*¡Gracias por calificarlo!* 🙌\n\nNos alegra que haya salido bien. Cuando necesités otro servicio, ya sabés dónde encontrarnos.'
+                );
+            }
         } else {
             await this.saveSession(phone, 'REVIEW_COMMENT', data);
             await WhatsAppService.sendTextMessage(
@@ -1714,6 +2021,61 @@ export class ConversationService {
         );
 
         await ConversationService.continueAfterServiceRequestCreate(phone, sessionData, serviceRequest.id);
+    }
+
+    private static async createSubscription(phone: string, category: string, frequency: 'weekly' | 'biweekly') {
+        const user = await prisma.user.findUnique({
+            where: { phone },
+        });
+
+        if (!user) {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'Hubo un error al crear tu suscripción. Por favor contactá soporte.'
+            );
+            await this.clearSession(phone);
+            return;
+        }
+
+        const tier = SUBSCRIPTION_PRICING[category as keyof typeof SUBSCRIPTION_PRICING];
+        const price = tier?.[frequency];
+
+        if (price == null) {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'No tenemos suscripciones disponibles para este servicio todavía.'
+            );
+            await this.clearSession(phone);
+            return;
+        }
+
+        const nextServiceDate = new Date();
+        nextServiceDate.setDate(nextServiceDate.getDate() + (frequency === 'weekly' ? 7 : 15));
+
+        await prisma.subscription.create({
+            data: {
+                user_id: user.id,
+                service_category: category,
+                frequency,
+                price,
+                next_service_date: nextServiceDate,
+                status: 'active',
+            },
+        });
+
+        await this.clearSession(phone);
+
+        const freqText = frequency === 'weekly' ? 'todas las semanas' : 'cada 15 días';
+        const nextDateStr = nextServiceDate.toLocaleDateString('es-AR', {
+            weekday: 'long',
+            day: '2-digit',
+            month: '2-digit',
+        });
+
+        await WhatsAppService.sendTextMessage(
+            phone,
+            `✅ *¡Suscripción activada!*\n\n🔄 ${category} ${freqText}\n💵 $${price.toLocaleString('es-AR')} por servicio\n📅 Próximo servicio: ${nextDateStr}\n\n_Te cobramos automáticamente y agendamos el técnico. Podés pausar o cancelar cuando quieras escribiendo "pausar suscripción"._`
+        );
     }
 
     private static async createRequestAndMatch(phone: string, sessionData: Record<string, unknown>, user: { name: string | null; address: string | null }) {

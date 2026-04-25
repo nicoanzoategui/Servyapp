@@ -16,6 +16,7 @@ import { env } from './utils/env';
 import { errorHandler } from './middlewares/errorHandler';
 import { startCronJobs } from './workers/cron';
 import { startCrons } from './crons';
+import { startSubscriptionsCron } from './cron/subscriptions.cron';
 
 const app = express();
 
@@ -127,4 +128,5 @@ startCrons();
 
 app.listen(env.PORT, () => {
     console.log(`Server is running on port ${env.PORT}`);
+    startSubscriptionsCron();
 });
