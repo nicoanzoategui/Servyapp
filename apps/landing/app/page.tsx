@@ -62,14 +62,14 @@ export default function Home() {
                 <div className="relative z-[1] mx-auto flex max-w-5xl flex-col items-center gap-10 md:flex-row md:items-start md:justify-center md:gap-8 lg:gap-10">
                     {/* Texto */}
                     <div className="flex w-full max-w-md shrink-0 flex-col items-start text-left md:max-w-[28rem]">
-                        <h1 className="max-w-xl text-5xl font-bold leading-[1.28] tracking-tight text-[#0D4638] md:text-6xl md:leading-[1.15]">
+                        <h1 className="order-1 max-w-xl text-5xl font-bold leading-[1.28] tracking-tight text-[#0D4638] md:text-6xl md:leading-[1.15]">
                             Arreglá tu hogar sin dar vueltas ni sorpresas. <span className="text-[#A7E23C]">Por WhatsApp.</span>
                         </h1>
-                        <p className="mt-6 text-lg text-slate-600 max-w-lg md:text-xl">
+                        <p className="order-2 mt-6 text-lg text-slate-600 max-w-lg md:mt-5 md:text-xl">
                             Plomeros, electricistas y técnicos verificados en tu zona. Pedí un especialista de urgencia o agendalo para mañana. Pagás en cuotas y tu plata está protegida hasta que el trabajo esté terminado.
                         </p>
-                        {/* Ícono destacado — justo arriba del CTA principal */}
-                        <div className="mt-8 flex w-full max-w-lg items-start gap-4 rounded-2xl border border-[#C6F6DB]/40 bg-white/70 p-4 shadow-sm backdrop-blur-sm">
+                        {/* Ícono destacado — en desktop va después del CTA (order) */}
+                        <div className="order-3 mt-8 flex w-full max-w-lg items-start gap-4 rounded-2xl border border-[#C6F6DB]/40 bg-white/70 p-4 shadow-sm backdrop-blur-sm md:order-4 md:mt-6">
                             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#A7E23C]">
                                 <ShieldCheck className="h-6 w-6 text-white" />
                             </div>
@@ -78,7 +78,7 @@ export default function Home() {
                                 <p className="mt-1 text-sm text-slate-600">El técnico cobra solo cuando escaneás el QR. Sin efectivo, sin riesgos.</p>
                             </div>
                         </div>
-                        <div className="mt-8 animate-slide-up delay-300">
+                        <div className="order-4 mt-8 animate-slide-up delay-300 md:order-3 md:mt-6">
                             <a
                                 href={WA_LINK}
                                 target="_blank"
@@ -90,7 +90,7 @@ export default function Home() {
                             </a>
                         </div>
                         {/* Badges debajo del CTA */}
-                        <div className="mt-6 flex flex-wrap items-center gap-4 text-sm text-[#0B3A31] sm:gap-6">
+                        <div className="order-5 mt-6 flex flex-wrap items-center gap-4 text-sm text-[#0B3A31] sm:gap-6 md:mt-5">
                             <div className="flex items-center gap-2">
                                 <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                     <path
@@ -161,7 +161,7 @@ export default function Home() {
                                     </div>
 
                                     {/* Chat body */}
-                                    <div className="bg-[#ECE5DD] px-3 py-3 flex flex-col gap-3 min-h-[360px]">
+                                    <div className="bg-[#ECE5DD] px-3 py-3 flex flex-col gap-3 min-h-[360px] md:min-h-[260px]">
                                         {/* Mensaje usuario */}
                                         <div className="self-end bg-[#DCF8C6] rounded-2xl rounded-tr-sm px-3 py-2 max-w-[85%] shadow-sm">
                                             <p className="text-slate-800 text-[13px] m-0">Se me rompió la canilla del baño y pierde agua.</p>
