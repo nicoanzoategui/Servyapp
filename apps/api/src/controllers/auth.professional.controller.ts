@@ -1,8 +1,10 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import { prisma } from '@servy/db';
 import { EmailService } from '../services/email.service';
 import bcrypt from 'bcrypt';
+import { env } from '../utils/env';
 import {
     MIN_PROFESSIONAL_PASSWORD_LEN,
     registerProfessionalViaHttp,
@@ -141,6 +143,95 @@ export const setPassword = async (req: Request, res: Response) => {
         res.status(500).json({
             success: false,
             error: { message: 'Error al activar la cuenta' },
+        });
+    }
+};
+
+/**
+ * Login passwordless: valida token de activación y devuelve JWT (mismo formato que POST /auth/professional/login).
+ * GET /auth/professional/magic-verify?token=XXXXX
+ */
+export const magicVerify = async (req: Request, res: Response) => {
+    try {
+        const { token } = req.query;
+
+        if (!token || typeof token !== 'string') {
+            return res.status(400).json({
+                success: false,
+                error: { message: 'Token requerido' },
+            });
+        }
+
+        const record = await prisma.passwordToken.findUnique({
+            where: { token },
+        });
+
+        if (!record) {
+            return res.status(400).json({
+                success: false,
+                error: { message: 'Link inválido o expirado' },
+            });
+        }
+
+        if (record.used) {
+            return res.status(400).json({
+                success: false,
+                error: { message: 'Este link ya fue utilizado' },
+            });
+        }
+
+        if (record.expires_at < new Date()) {
+            return res.status(400).json({
+                success: false,
+                error: { message: 'Link expirado. Solicitá uno nuevo.' },
+            });
+        }
+
+        if (record.type !== 'set') {
+            return res.status(400).json({
+                success: false,
+                error: { message: 'Token inválido' },
+            });
+        }
+
+        const emailNorm = record.email.trim().toLowerCase();
+        const professional = await prisma.professional.findUnique({
+            where: { email: emailNorm },
+        });
+
+        if (!professional) {
+            return res.status(404).json({
+                success: false,
+                error: { message: 'Profesional no encontrado' },
+            });
+        }
+
+        const accessToken = jwt.sign(
+            { userId: professional.id, role: 'professional' as const },
+            env.JWT_SECRET,
+            { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
+        );
+
+        const refreshToken = jwt.sign(
+            { userId: professional.id, role: 'professional' as const },
+            env.JWT_REFRESH_SECRET,
+            { expiresIn: '30d' }
+        );
+
+        await prisma.passwordToken.update({
+            where: { token },
+            data: { used: true },
+        });
+
+        return res.json({
+            success: true,
+            data: { accessToken, refreshToken },
+        });
+    } catch (error) {
+        console.error('[magicVerify] Error:', error);
+        return res.status(500).json({
+            success: false,
+            error: { message: 'Error al verificar el link' },
         });
     }
 };

@@ -42,12 +42,12 @@ export const createProfessionalLead = async (req: Request, res: Response) => {
     }
 
     const base = env.FRONTEND_PRO_URL.replace(/\/$/, '');
-    const link = `${base}/set-password?token=${encodeURIComponent(result.token)}`;
+    const link = `${base}/auth/verify?token=${encodeURIComponent(result.token)}`;
 
     try {
         await WhatsAppService.sendTextMessage(
             result.phone,
-            `✅ *¡Hola ${result.firstName}!* Gracias por sumarte a Servy.\n\nPara activar tu cuenta y completar tu perfil entrá acá:\n👉 ${link}\n\n_El link es válido por 24 horas._\n\nCuando actives tu cuenta vas a poder recibir trabajos en tu zona. 💪`
+            `✅ *¡Hola ${result.firstName}!* Gracias por sumarte a Servy.\n\nPara entrar al portal (iniciás sesión automática) y completar tu perfil, abrí este link:\n👉 ${link}\n\n_El link es válido por 24 horas._\n\nDespués podés definir tu contraseña desde el portal si querés. Cuando completes el perfil vas a poder recibir trabajos en tu zona. 💪`
         );
     } catch (error) {
         console.error('[leads] Error enviando WhatsApp:', error);

@@ -133,21 +133,21 @@ Ejemplo:
     if (resendKey && frontendPro) {
         try {
             const resend = new Resend(resendKey);
-            const link = `${frontendPro.replace(/\/$/, '')}/set-password?token=${encodeURIComponent(token)}`;
+            const link = `${frontendPro.replace(/\/$/, '')}/auth/verify?token=${encodeURIComponent(token)}`;
             await resend.emails.send({
                 from: fromEmail,
                 to: pro.email,
-                subject: 'Bienvenido a Servy — Creá tu contraseña',
+                subject: 'Bienvenido a Servy — Entrá al portal',
                 html: `
         <h2>Hola ${pro.name}!</h2>
-        <p>Tu cuenta en Servy fue creada. Hacé clic para crear tu contraseña.</p>
+        <p>Tu cuenta en Servy fue creada. Hacé clic para entrar al portal (iniciás sesión automática). Después podés definir tu contraseña desde tu cuenta si querés.</p>
         <a href="${link}" style="background:#7c3aed;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;margin:16px 0;">
-            Crear mi contraseña
+            Entrar al portal
         </a>
         <p style="color:#888;font-size:13px;">Este link expira en 48 horas.</p>
     `,
             });
-            console.log(`Email enviado a ${pro.email} con link para setear contraseña.`);
+            console.log(`Email enviado a ${pro.email} con link de acceso al portal.`);
         } catch (e) {
             console.error('No se pudo enviar el email (Resend):', e);
         }

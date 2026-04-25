@@ -108,7 +108,7 @@ app.use(paymentReleaseRoutes);
 
 app.use(express.json({ limit: '15mb' }));
 
-/** Rutas públicas del portal (register / forgot / set password) antes del router /auth genérico. */
+/** Rutas públicas del portal (register / forgot / set password / magic-verify) antes del router /auth genérico. */
 app.use('/auth/professional', authProfessionalRoutes);
 app.use('/auth', authRoutes);
 

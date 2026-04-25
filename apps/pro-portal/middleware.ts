@@ -13,7 +13,11 @@ export function middleware(request: NextRequest) {
     }
 
     /** Links con token en query: deben abrirse aunque haya sesión previa. */
-    if (pathname === '/reset-password' || pathname === '/set-password') {
+    if (
+        pathname === '/reset-password' ||
+        pathname === '/set-password' ||
+        pathname.startsWith('/auth/verify')
+    ) {
         return NextResponse.next();
     }
 
@@ -41,6 +45,7 @@ export const config = {
         '/forgot-password',
         '/reset-password',
         '/set-password',
+        '/auth/verify',
         '/onboarding',
         '/dashboard/:path*',
         '/jobs/:path*',

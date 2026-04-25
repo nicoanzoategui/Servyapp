@@ -14,16 +14,17 @@ function escapeHtml(s: string): string {
 export class EmailService {
     static async sendSetPasswordEmail(to: string, name: string, token: string) {
         const safe = escapeHtml(name);
-        const link = `${env.FRONTEND_PRO_URL}/set-password?token=${encodeURIComponent(token)}`;
+        const base = env.FRONTEND_PRO_URL.replace(/\/$/, '');
+        const link = `${base}/auth/verify?token=${encodeURIComponent(token)}`;
         await resend.emails.send({
             from: env.RESEND_FROM_EMAIL,
             to,
-            subject: 'Bienvenido a Servy — Creá tu contraseña',
+            subject: 'Bienvenido a Servy — Entrá al portal',
             html: `
                 <h2>Hola ${safe}!</h2>
-                <p>Tu cuenta en Servy fue creada. Hacé clic en el botón para crear tu contraseña y empezar a recibir trabajos.</p>
+                <p>Tu cuenta en Servy fue creada. Hacé clic en el botón para entrar al portal (iniciás sesión automática). Después podés definir tu contraseña desde tu cuenta si querés.</p>
                 <a href="${link}" style="background:#7c3aed;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;margin:16px 0;">
-                    Crear mi contraseña
+                    Entrar al portal
                 </a>
                 <p style="color:#888;font-size:13px;">Este link expira en 48 horas.</p>
             `,

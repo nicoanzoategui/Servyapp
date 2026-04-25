@@ -80,7 +80,7 @@ export async function registerProfessionalViaHttp(body: {
     return { ok: true, id: professional.id };
 }
 
-/** Crea profesional con contraseña aleatoria + token `set` (24h) para `/set-password`. No loguea DNI. */
+/** Crea profesional con contraseña aleatoria + token `set` (24h) para `/auth/verify` (login mágico). No loguea DNI. */
 export async function createProfessionalFromWhatsAppWizard(input: {
     name: string;
     last_name: string;

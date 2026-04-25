@@ -77,6 +77,7 @@ model Professional {
   documents     ProfessionalDocument[]
   schedules     ProviderSchedule[]
   subscriptions Subscription[]
+  password_tokens PasswordToken[]
 
   @@map("professionals")
 }
@@ -271,6 +272,8 @@ model PasswordToken {
   expires_at DateTime
   used       Boolean  @default(false)
   created_at DateTime @default(now())
+
+  professional Professional @relation(fields: [email], references: [email])
 
   @@map("password_tokens")
 }

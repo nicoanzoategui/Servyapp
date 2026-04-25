@@ -43,8 +43,8 @@ const envSchema = z.object({
         .transform((v) => v === 'true'),
     RESEND_API_KEY: z.string().min(1),
     RESEND_FROM_EMAIL: z.string().min(1),
-    /** URL del portal profesional (links en emails set/reset password). */
-    FRONTEND_PRO_URL: z.string().url(),
+    /** URL del portal profesional (links mágicos, set/reset password). */
+    FRONTEND_PRO_URL: z.string().url().default('https://pro.servy.lat'),
     GEMINI_API_KEY: z.string().min(1),
     /** Alias opcional del spec; si viene, sobreescribe GEMINI_API_KEY para Gemini. */
     GOOGLE_AI_API_KEY: z.string().optional().default(''),

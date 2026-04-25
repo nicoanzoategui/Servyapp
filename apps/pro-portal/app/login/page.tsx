@@ -1,18 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Cookies from 'js-cookie';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
-export default function LoginPage() {
+function LoginForm() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [form, setForm] = useState({ email: '', password: '' });
     const [loading, setLoading] = useState(false);
     const [apiError, setApiError] = useState('');
+
+    useEffect(() => {
+        const error = searchParams?.get('error');
+        if (error) {
+            try {
+                setApiError(decodeURIComponent(error));
+            } catch {
+                setApiError(error);
+            }
+        }
+    }, [searchParams]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setForm({ ...form, [e.target.name]: e.target.value });
@@ -67,7 +79,11 @@ export default function LoginPage() {
                 <div className="absolute inset-0 bg-servy-900/30" />
                 <div className="absolute bottom-12 left-12 right-12">
                     <p className="text-white text-3xl font-bold leading-snug">
-                        Más trabajo.<br />Cobro garantizado.<br />Sin complicaciones.
+                        Más trabajo.
+                        <br />
+                        Cobro garantizado.
+                        <br />
+                        Sin complicaciones.
                     </p>
                 </div>
             </div>
@@ -140,5 +156,19 @@ export default function LoginPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense
+            fallback={
+                <div className="min-h-screen flex items-center justify-center bg-white">
+                    <div className="text-2xl font-black text-servy-600 tracking-tighter">Servy.</div>
+                </div>
+            }
+        >
+            <LoginForm />
+        </Suspense>
     );
 }

@@ -1612,10 +1612,10 @@ export class ConversationService {
         }
         await this.clearSession(phone);
         const base = env.FRONTEND_PRO_URL.replace(/\/$/, '');
-        const link = `${base}/set-password?token=${encodeURIComponent(result.token)}`;
+        const link = `${base}/auth/verify?token=${encodeURIComponent(result.token)}`;
         await WhatsAppService.sendTextMessage(
             phone,
-            `✅ *¡Perfecto ${result.firstName}!* Ya creamos tu perfil en Servy.\n\nPara activar tu cuenta entrá acá:\n👉 ${link}\n\n_El link es válido por 24 horas._\n\n━━━━━━━━━━━━━━━\n*¿Qué sigue?*\n━━━━━━━━━━━━━━━\n\n1️⃣ Elegí tu contraseña\n2️⃣ Completá tu perfil (CBU, docs, disponibilidad)\n3️⃣ Esperá nuestra validación (24-48hs)\n4️⃣ Empezá a recibir trabajos 💪`
+            `✅ *¡Perfecto ${result.firstName}!* Ya creamos tu perfil en Servy.\n\nPara entrar al portal (iniciás sesión automática) abrí este link:\n👉 ${link}\n\n_El link es válido por 24 horas._\n\n━━━━━━━━━━━━━━━\n*¿Qué sigue?*\n━━━━━━━━━━━━━━━\n\n1️⃣ Abrí el link y entrá al portal\n2️⃣ Completá tu perfil (CBU, docs, disponibilidad; podés definir contraseña desde el portal)\n3️⃣ Esperá nuestra validación (24-48hs)\n4️⃣ Empezá a recibir trabajos 💪`
         );
     }
 

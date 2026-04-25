@@ -4,6 +4,7 @@ import {
     forgotPassword,
     resetPassword,
     setPassword,
+    magicVerify,
 } from '../controllers/auth.professional.controller';
 import { rateLimit } from '../middlewares/rateLimit.middleware';
 
@@ -14,5 +15,6 @@ router.post('/register', authProfLimit, registerProfessional);
 router.post('/forgot-password', authProfLimit, forgotPassword);
 router.post('/reset-password', authProfLimit, resetPassword);
 router.post('/set-password', authProfLimit, setPassword);
+router.get('/magic-verify', authProfLimit, magicVerify);
 
 export default router;
