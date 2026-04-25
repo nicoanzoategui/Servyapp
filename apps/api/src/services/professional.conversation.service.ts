@@ -1,6 +1,8 @@
 import { prisma, type JobOffer, type Professional, type ServiceRequest, type User } from '@servy/db';
 import { redis } from '../utils/redis';
 import { WhatsAppService } from './whatsapp.service';
+import { ConversationService } from './conversation.service';
+import { DIAGNOSTIC_VISIT_PRICE, getServiceType } from '../constants/pricing';
 
 const SESSION_TTL = 60 * 60 * 24;
 
@@ -55,6 +57,14 @@ export class ProfessionalConversationService {
         await prisma.professionalSession.delete({ where: { phone } }).catch(() => {});
     }
 
+    /** Tras pago de visita (diagnóstico): el técnico envía precio de arreglo o *SOLO VISITA*. */
+    static async setRepairQuoteAwaitingSession(
+        professionalPhone: string,
+        data: { jobId: string; userPhone: string; requestId: string }
+    ) {
+        await this.saveSession(professionalPhone, 'AWAITING_REPAIR_QUOTE', data);
+    }
+
     static async notifyNewJob(
         professional: Professional,
         jobOffer: JobOffer,
@@ -106,20 +116,87 @@ export class ProfessionalConversationService {
 
         const session = await this.getSession(phone);
 
-        if (session.state === 'AWAITING_JOB_RESPONSE') {
+        switch (session.state) {
+            case 'AWAITING_JOB_RESPONSE': {
             const jobOfferId = session.data.jobOfferId as string;
             const userPhone = session.data.userPhone as string;
             const requestId = session.data.requestId as string;
 
-            if (content === `job_accept_${jobOfferId}` || content.toLowerCase().includes('acepto') || content === '1') {
-                await prisma.jobOffer.update({ where: { id: jobOfferId }, data: { status: 'accepted' } });
+            const normalized = content.trim().toLowerCase();
+            const acceptOptions = ['1', `job_accept_${jobOfferId}`.toLowerCase()];
+            if (acceptOptions.includes(normalized) || normalized.includes('acepto')) {
+                const existing = await prisma.jobOffer.findUnique({ where: { id: jobOfferId } });
+                if (!existing) {
+                    await WhatsAppService.sendTextMessage(phone, 'No encontré esa oferta.');
+                    return;
+                }
+
+                const offer = await prisma.jobOffer.update({
+                    where: { id: jobOfferId },
+                    data: { status: 'accepted' },
+                    include: {
+                        service_request: true,
+                        professional: true,
+                    },
+                });
+
                 const { markProfessionalBusy } = await import('../agents/availability-agent');
                 await markProfessionalBusy(professional.id).catch(() => {});
-                await this.saveSession(phone, 'AWAITING_QUOTATION', session.data);
-                await WhatsAppService.sendTextMessage(
-                    phone,
-                    '*Perfecto.* Trabajo aceptado ✅\n\nMandanos la cotización con este formato:\n\nTrabajo: [descripción del trabajo]\nTiempo: [tiempo estimado]\nPrecio: [monto en pesos]\n\n_El precio NO incluye materiales._'
-                );
+
+                const categoryLabel = offer.service_request.category ?? '';
+                const serviceType = getServiceType(String(categoryLabel));
+
+                if (serviceType === 'diagnostic') {
+                    const quotation = await prisma.quotation.create({
+                        data: {
+                            job_offer_id: jobOfferId,
+                            items_json: [
+                                {
+                                    description: `Visita de diagnóstico - ${categoryLabel || 'servicio'}`,
+                                    price: DIAGNOSTIC_VISIT_PRICE,
+                                },
+                            ],
+                            total_price: DIAGNOSTIC_VISIT_PRICE,
+                            description: `Visita de diagnóstico - ${categoryLabel || 'servicio'}`,
+                            estimated_duration: '1 hora',
+                            status: 'pending',
+                        },
+                    });
+
+                    await prisma.jobOffer.update({ where: { id: jobOfferId }, data: { status: 'quoted' } });
+
+                    const clientPhone = offer.service_request.user_phone;
+                    await ConversationService.afterQuotationSent(clientPhone, {
+                        quotationId: quotation.id,
+                        jobOfferId,
+                        requestId: offer.service_request.id,
+                        totalPrice: DIAGNOSTIC_VISIT_PRICE,
+                    });
+
+                    await this.clearSession(phone);
+
+                    const dateStr = offer.service_request.scheduled_date
+                        ? new Date(offer.service_request.scheduled_date).toLocaleDateString('es-AR', {
+                              weekday: 'long',
+                              day: '2-digit',
+                              month: '2-digit',
+                          })
+                        : 'fecha a confirmar';
+
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        `✅ Visita aceptada\n\n━━━━━━━━━━━━━━━\n📅 ${dateStr}\n⏰ ${offer.service_request.scheduled_time || 'Horario a confirmar'}\n💵 $${DIAGNOSTIC_VISIT_PRICE.toLocaleString('es-AR')}\n━━━━━━━━━━━━━━━\n\nTe avisamos cuando el cliente confirme el pago.`
+                    );
+                } else {
+                    await this.saveSession(phone, 'AWAITING_QUOTATION', {
+                        ...session.data,
+                        jobOfferId,
+                    });
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        '✅ Trabajo aceptado\n\nEnviá tu cotización con este formato:\n\nTrabajo: [descripción]\nTiempo: [tiempo estimado]\nPrecio: [monto]'
+                    );
+                }
             } else if (content === `job_reject_${jobOfferId}` || content.toLowerCase().includes('paso') || content === '2') {
                 await prisma.jobOffer.update({ where: { id: jobOfferId }, data: { status: 'rejected' } });
                 const { clearProfessionalBusyIfNeeded } = await import('../agents/availability-agent');
@@ -140,9 +217,9 @@ export class ProfessionalConversationService {
                 await WhatsAppService.sendTextMessage(phone, 'Respondé *1* para aceptar o *2* para pasar.');
             }
             return;
-        }
+            }
 
-        if (session.state === 'AWAITING_QUOTATION') {
+            case 'AWAITING_QUOTATION': {
             const jobOfferId = session.data.jobOfferId as string;
             const userPhone = session.data.userPhone as string;
 
@@ -197,13 +274,117 @@ export class ProfessionalConversationService {
             await this.clearSession(phone);
             await WhatsAppService.sendTextMessage(phone, '✅ *Cotización enviada.*\n\nTe avisamos cuando el cliente la acepte.');
 
-            const { ConversationService } = await import('./conversation.service');
             await ConversationService.afterQuotationSent(userPhone, {
                 quotationId: quotation.id,
                 jobOfferId,
                 requestId: jobOffer.request_id,
                 totalPrice: precioNum,
             });
+            return;
+            }
+
+            case 'AWAITING_REPAIR_QUOTE': {
+                const jobId = session.data.jobId as string | undefined;
+                const repairUserPhone = session.data.userPhone as string | undefined;
+                const requestIdRepair = session.data.requestId as string | undefined;
+
+                if (!jobId || !repairUserPhone || !requestIdRepair) {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'Hubo un error con la información del trabajo. Por favor contactá soporte.'
+                    );
+                    await this.clearSession(phone);
+                    return;
+                }
+
+                const contentUpper = content.toUpperCase().trim();
+
+                if (contentUpper === 'SOLO VISITA' || contentUpper === 'SOLOVISITA') {
+                    await prisma.job.update({
+                        where: { id: jobId },
+                        data: { phase: 'visit_only' },
+                    });
+
+                    await prisma.serviceRequest.update({
+                        where: { id: requestIdRepair },
+                        data: { phase: 'visit_only' },
+                    });
+
+                    await WhatsAppService.sendTextMessage(
+                        repairUserPhone,
+                        `El técnico terminó la evaluación.\n\nPodés mostrarle el QR para liberar el pago de la visita ($${DIAGNOSTIC_VISIT_PRICE.toLocaleString('es-AR')}).`
+                    );
+
+                    await this.clearSession(phone);
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        '✅ Registrado como "solo visita".\n\nCuando el cliente te muestre el QR, escanealo para recibir el pago.'
+                    );
+                    return;
+                }
+
+                const priceMatch = content.match(/(?:precio:?\s*)?(\d+)/i);
+
+                if (!priceMatch?.[1]) {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'No entendí el precio. Por favor respondé:\n\n*Precio: [monto]*\n\nEjemplo: Precio: 100000\n\nO escribí *SOLO VISITA* si el cliente no quiere hacer el arreglo.'
+                    );
+                    return;
+                }
+
+                const repairPrice = parseInt(priceMatch[1], 10);
+
+                if (repairPrice < 1000 || repairPrice > 10000000) {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'El precio parece incorrecto. Por favor verificá el monto y volvé a enviarlo.'
+                    );
+                    return;
+                }
+
+                await prisma.serviceRequest.update({
+                    where: { id: requestIdRepair },
+                    data: {
+                        repair_price: repairPrice,
+                        phase: 'repair_pending',
+                        repair_status: 'pending',
+                    },
+                });
+
+                const job = await prisma.job.findUnique({
+                    where: { id: jobId },
+                    include: {
+                        quotation: {
+                            include: {
+                                job_offer: {
+                                    include: {
+                                        professional: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                });
+
+                const techName = job?.quotation?.job_offer?.professional?.name || 'El técnico';
+
+                await WhatsAppService.sendTextMessage(
+                    repairUserPhone,
+                    `💰 Presupuesto de reparación\n\n━━━━━━━━━━━━━━━\n👤 ${techName}\n💵 $${repairPrice.toLocaleString('es-AR')}\n✅ Incluye materiales\n━━━━━━━━━━━━━━━\n\n🔒 Pago protegido hasta que el trabajo esté completo.\n\n¿Aceptás?\n1. Sí, arreglá ahora\n2. No, solo la visita`
+                );
+
+                await this.clearSession(phone);
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    `✅ Presupuesto enviado al cliente.\n\n💵 $${repairPrice.toLocaleString('es-AR')}\n\nTe avisamos cuando acepte.`
+                );
+
+                return;
+            }
+
+            default:
+                break;
         }
     }
 

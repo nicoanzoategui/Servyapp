@@ -3,6 +3,8 @@ import crypto from 'crypto';
 import { env } from '../utils/env';
 import { prisma } from '@servy/db';
 import { ConversationService } from '../services/conversation.service';
+import { ProfessionalConversationService } from '../services/professional.conversation.service';
+import { getServiceType } from '../constants/pricing';
 import { WhatsAppService } from '../services/whatsapp.service';
 import { MercadoPagoService } from '../services/mercadopago.service';
 import { QRService } from '../services/qr.service';
@@ -204,6 +206,25 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
                 job.quotation.job_offer.professional.phone,
                 `💼 *Nuevo trabajo confirmado*\n\n━━━━━━━━━━━━━━━\n📍 ${serviceRequest?.address ?? 'Ver portal'}\n🔧 ${serviceRequest?.description?.slice(0, 80) ?? 'Ver portal'}\n📅 ${fecha} · turno ${franja}\n💰 *$${totalStr}*\n━━━━━━━━━━━━━━━\n\nEl pago se libera cuando el cliente te muestre el QR al terminar.\n\n🔗 _portal.servy.lat/jobs/${job.id}_\n\n━━━━━━━━━━━━━━━\n*Comandos disponibles*\n━━━━━━━━━━━━━━━\n_estoy yendo_ → avisamos al cliente\n_llego en X minutos_ → se lo reenviamos\n_no encuentro la dirección_ → le pedimos referencias\n_tuve un imprevisto_ → notificamos al cliente`
             );
+
+            // Si es diagnóstico, preparar sesión para pedir presupuesto del arreglo
+            const serviceType = getServiceType(serviceRequest?.category || '');
+
+            if (serviceType === 'diagnostic' && serviceRequest) {
+                await ProfessionalConversationService.setRepairQuoteAwaitingSession(
+                    job.quotation.job_offer.professional.phone,
+                    {
+                        jobId: job.id,
+                        userPhone,
+                        requestId: serviceRequest.id,
+                    }
+                );
+
+                await WhatsAppService.sendTextMessage(
+                    job.quotation.job_offer.professional.phone,
+                    `\n📋 *Después de la visita*\n\nCuando termines de evaluar el problema, enviame el presupuesto del arreglo:\n\n*Precio: [monto]*\n\nEjemplo: Precio: 100000\n\nSi el cliente no quiere hacer el arreglo, escribí: *SOLO VISITA*`
+                );
+            }
         } else if (status === 'rejected' || status === 'cancelled') {
             await prisma.payment.updateMany({
                 where: { quotation_id: quotationId },
