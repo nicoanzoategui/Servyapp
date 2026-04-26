@@ -318,6 +318,39 @@ export class ConversationService {
             return;
         }
 
+        // Ruteo inteligente: detectar mensajes específicos de las landings
+        if (session.state === 'UNKNOWN' && messageType === 'text') {
+            const normalized = content.toLowerCase().trim();
+
+            // Atajo directo a onboarding profesional
+            if (normalized.includes('sumarme') && normalized.includes('profesional')) {
+                await this.saveSession(phone, 'PRO_ONBOARDING_ZONES', {});
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    `¡Qué grande! Bienvenido a la red de Servy 🛠️\n\nAcá no pasás presupuestos gratis:\n\n✅ Te pagamos $35.000 garantizados por cada diagnóstico\n✅ Si hay arreglo, el 95% es tuyo (solo 5% de comisión)\n✅ El cliente paga en cuotas, vos cobrás al toque\n\n¿En qué zona trabajás principalmente?\n\nEjemplo: Pilar, Olivos, Tigre`
+                );
+                return;
+            }
+
+            // Atajo directo a onboarding cliente
+            if (normalized.includes('técnico') && normalized.includes('domicilio')) {
+                await this.clearSession(phone);
+                // Crear usuario solo si no existe
+                let existingUser = await prisma.user.findUnique({ where: { phone } });
+                if (!existingUser) {
+                    await prisma.user.create({ data: { phone } });
+                }
+                await this.saveSession(phone, 'ONBOARDING_NAME', {});
+                await WhatsAppService.sendTextMessage(phone, CLIENT_ONBOARDING_NAME_PROMPT);
+                return;
+            }
+
+            // Si no matchea ningún atajo, mostrar menú normal
+            await this.saveSession(phone, 'ROLE_SELECTION', {});
+            await WhatsAppService.sendTextMessage(phone, ROLE_SELECTION_PROMPT);
+            return;
+        }
+
         if (messageType === 'text' && content.toLowerCase().includes('cambiar dirección')) {
             await this.saveSession(phone, 'ONBOARDING_ADDRESS', { isChange: true });
             await WhatsAppService.sendTextMessage(phone, '¿Cuál es tu nueva dirección? (calle, número y ciudad)');

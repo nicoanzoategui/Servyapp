@@ -15,7 +15,7 @@ import {
 const NEXT_PUBLIC_WA_NUMBER = (
     process.env.NEXT_PUBLIC_WA_NUMBER || '16206474920'
 ).replace(/\D/g, '');
-const WA_LINK = `https://wa.me/${NEXT_PUBLIC_WA_NUMBER}?text=Hola,%20necesito%20ayuda`;
+const WA_LINK = `https://wa.me/${NEXT_PUBLIC_WA_NUMBER}?text=Hola%2C%20necesito%20un%20t%C3%A9cnico%20en%20mi%20domicilio.`;
 
 function WhatsAppIcon({ className }: { className?: string }) {
     return (
