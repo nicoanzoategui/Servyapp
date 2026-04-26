@@ -30,9 +30,6 @@ export default function TecnicosPage() {
                     Servy.
                 </Link>
                 <nav className="gap-6 hidden md:flex font-medium text-slate-600 text-sm items-center">
-                    <a href="#como-funciona" className="hover:text-blue-500 transition">
-                        Cómo funciona
-                    </a>
                     <a href="#beneficios" className="hover:text-blue-500 transition">
                         Beneficios
                     </a>
@@ -113,44 +110,6 @@ export default function TecnicosPage() {
                         </div>
                     </div>
                     <p className="text-center text-xl font-semibold text-blue-600 mt-12">Con Servy, eso se terminó.</p>
-                </div>
-            </section>
-
-            <section id="como-funciona" className="w-full py-24 px-6 md:px-12 bg-white flex flex-col items-center">
-                <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-4">
-                    ⚙️ CÓMO ES TRABAJAR CON SERVY (El Nuevo Flujo)
-                </h2>
-                <p className="text-slate-600 text-center max-w-2xl mb-16">
-                    Pensado para que te enfoques en tu oficio, no en perseguir pagos.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full">
-                    <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-blue-100 text-blue-600 flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
-                            <MessageCircle size={28} />
-                        </div>
-                        <h3 className="text-xl font-bold mb-3">1. Te llega la alerta al celular</h3>
-                        <p className="text-slate-600">
-                            Recibís pedidos por WhatsApp en tu zona. Podés recibir trabajos Programados (Visita de $35.000) o Urgencias (Visita exprés de $50.000). Si estás disponible, tocás aceptar y es tuyo.
-                        </p>
-                    </div>
-                    <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-blue-100 text-blue-600 flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
-                            <Smartphone size={28} />
-                        </div>
-                        <h3 className="text-xl font-bold mb-3">2. Presupuestás in situ (con la visita ya cobrada)</h3>
-                        <p className="text-slate-600">
-                            Llegás a la casa del cliente sabiendo que tu tiempo ya está pago. Evaluás el problema y le pasás el precio del arreglo ahí mismo. ¿El arreglo es caro? No importa, nosotros le damos hasta 3 cuotas al cliente.
-                        </p>
-                    </div>
-                    <div className="relative p-8 rounded-3xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-blue-100 text-blue-600 flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
-                            <Wallet size={28} />
-                        </div>
-                        <h3 className="text-xl font-bold mb-3">3. Cobrás seguro con Código QR</h3>
-                        <p className="text-slate-600">
-                            El cliente aprueba el arreglo y Servy retiene el dinero para tu tranquilidad. Cuando terminás, el cliente escanea tu Código QR y la plata se libera automáticamente a tu billetera virtual. Nada de &quot;te pago después&quot;.
-                        </p>
-                    </div>
                 </div>
             </section>
 
