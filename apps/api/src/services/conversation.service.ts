@@ -2141,8 +2141,13 @@ export class ConversationService {
         sessionData: Record<string, unknown>,
         requestId: string
     ) {
+        // Determinar prioridad según lo que eligió el cliente
+        const priority = sessionData.isUrgent === true ? 'urgent' : 'scheduled';
 
-        const matchRes = await ProfessionalMatchingService.findProfessionalsAndCreateOffers(requestId);
+        const matchRes = await ProfessionalMatchingService.findProfessionalsAndCreateOffers(
+            requestId,
+            priority
+        );
 
         if (!matchRes.urgent && !matchRes.scheduled) {
             await WhatsAppService.sendTextMessage(phone, 'No encontramos profesionales disponibles en tu zona en este momento. Lo sentimos.');

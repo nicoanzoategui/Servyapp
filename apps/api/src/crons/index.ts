@@ -13,6 +13,7 @@ import { runExperimentsDaily, runExperimentsMonthly } from './experiments-cron';
 import { processAgentTasks } from '../lib/agent-task-consumer';
 import { runPaymentReminder } from './payment-reminder';
 import { runJobTimeout } from './job-timeout';
+import { processCascadeTimeouts } from './cascade-timeout';
 
 /**
  * Crons de los agentes operativos (Servy).
@@ -38,6 +39,11 @@ export function startCrons(): void {
 
     cron.schedule('* * * * *', () => {
         void runCheckinScheduler().catch((err) => console.error('[cron runCheckinScheduler]', err));
+    });
+
+    cron.schedule('* * * * *', () => {
+        console.log('[Cron] Running cascade timeout processor');
+        void processCascadeTimeouts().catch((err) => console.error('[cron processCascadeTimeouts]', err));
     });
 
     // Cron cada 15 minutos para check-in matutino

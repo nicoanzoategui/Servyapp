@@ -29,8 +29,97 @@ function isWorkDayFromScheduleJson(scheduleJson: unknown, weekdayLong: string): 
  * filas corruptas (p. ej. bind incorrecto en raw). El día laborable se toma
  * de `professional.schedule_json`, alineado con el portal.
  */
+
+/**
+ * Enviar recordatorios 90 minutos antes de visitas programadas
+ */
+async function sendPreVisitReminders() {
+    try {
+        const now = new Date();
+        const in90Min = new Date(now.getTime() + 90 * 60 * 1000);
+        const in75Min = new Date(now.getTime() + 75 * 60 * 1000);
+
+        // Buscar jobs programados entre 75-90 minutos
+        const upcomingJobs = await prisma.job.findMany({
+            where: {
+                status: 'confirmed',
+                scheduled_at: {
+                    gte: in75Min,
+                    lte: in90Min,
+                },
+                reminder_sent: false,
+            },
+            include: {
+                quotation: {
+                    include: {
+                        job_offer: {
+                            include: {
+                                professional: true,
+                                service_request: {
+                                    include: { user: true },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        if (upcomingJobs.length === 0) {
+            return;
+        }
+
+        console.log(`[PreVisitReminder] Found ${upcomingJobs.length} jobs to remind`);
+
+        for (const job of upcomingJobs) {
+            const professional = job.quotation.job_offer.professional;
+            const serviceRequest = job.quotation.job_offer.service_request;
+            const user = serviceRequest.user;
+
+            if (!professional?.phone || !job.scheduled_at) {
+                continue;
+            }
+
+            const scheduledTime = job.scheduled_at.toLocaleTimeString('es-AR', {
+                hour: '2-digit',
+                minute: '2-digit',
+            });
+
+            const message =
+                `🔔 *Recordatorio de visita*\n\n` +
+                `En 1 hora y media (a las ${scheduledTime}) tenés la visita con:\n\n` +
+                `👤 ${user?.name || 'Cliente'}\n` +
+                `📍 ${serviceRequest.address || 'Ver portal'}\n` +
+                `🔧 ${serviceRequest.category || 'Servicio'}\n\n` +
+                `¿Confirmás que vas a llegar en tiempo y forma?\n\n` +
+                `Respondé:\n` +
+                `✅ *SI* - Confirmo\n` +
+                `⏳ *DEMORA* - Voy a llegar tarde`;
+
+            await WhatsAppService.sendTextMessage(professional.phone, message);
+
+            // Marcar como enviado
+            await prisma.job.update({
+                where: { id: job.id },
+                data: { reminder_sent: true },
+            });
+
+            console.log(
+                `[PreVisitReminder] Sent reminder for job ${job.id} to ${professional.name ?? 'pro'}`
+            );
+        }
+
+        console.log(`[PreVisitReminder] Sent ${upcomingJobs.length} reminders`);
+    } catch (error) {
+        console.error('[PreVisitReminder] Error:', error);
+    }
+}
+
 export async function runMorningCheckin(): Promise<void> {
     try {
+        // Primero enviar recordatorios pre-visita
+        await sendPreVisitReminders();
+
         // Obtener día actual en Buenos Aires
         const now = new Date();
         const formatter = new Intl.DateTimeFormat('en-US', {

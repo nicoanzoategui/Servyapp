@@ -418,7 +418,9 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
             }
 
             const { ProfessionalConversationService } = await import('../services/professional.conversation.service');
-            await ProfessionalConversationService.processMessage(phone, content).catch(console.error);
+            await ProfessionalConversationService.processMessage(phone, content, messageType).catch(
+                console.error
+            );
             console.log('[twilio] ProfessionalConversationService.processMessage fin');
             return;
         }

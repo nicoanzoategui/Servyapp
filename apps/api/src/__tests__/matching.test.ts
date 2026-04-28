@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ProfessionalMatchingService } from '../services/matching.service';
+import { CascadeQueueService } from '../services/cascade-queue.service';
 import { prisma } from '@servy/db';
+
+vi.mock('../services/cascade-queue.service', () => ({
+    CascadeQueueService: {
+        startCascade: vi.fn().mockResolvedValue(undefined),
+    },
+}));
 
 vi.mock('@servy/db', () => ({
     prisma: {
@@ -10,18 +17,17 @@ vi.mock('@servy/db', () => ({
         professional: {
             findMany: vi.fn(),
         },
-        jobOffer: {
-            create: vi.fn(),
-        },
     },
 }));
 
 const completePro = (overrides: Record<string, unknown>) => ({
     id: 'pro1',
+    phone: '111',
     categories: ['Plomería'],
     zones: ['1414'],
     is_urgent: true,
     is_scheduled: false,
+    total_jobs_accepted: 0,
     rating: 5,
     name: 'Ana',
     last_name: 'García',
@@ -66,7 +72,7 @@ describe('ProfessionalMatchingService', () => {
         expect(result.scheduled).toBeNull();
     });
 
-    it('matches by postal code and creates offers for distinct urgent vs scheduled pros', async () => {
+    it('orders scheduled candidates by score and starts cascade', async () => {
         (prisma.serviceRequest.findUnique as any).mockResolvedValue({
             id: 'req1',
             category: 'Plomería',
@@ -75,22 +81,34 @@ describe('ProfessionalMatchingService', () => {
         });
 
         (prisma.professional.findMany as any).mockResolvedValue([
-            completePro({ id: 'pro1', is_urgent: true, is_scheduled: false, rating: 5 }),
+            completePro({
+                id: 'pro1',
+                is_urgent: true,
+                is_scheduled: true,
+                rating: 5,
+                total_jobs_accepted: 0,
+            }),
             completePro({
                 id: 'pro2',
                 is_urgent: false,
                 is_scheduled: true,
                 rating: 4,
                 phone: '222',
+                total_jobs_accepted: 10,
             }),
         ]);
 
-        (prisma.jobOffer.create as any).mockResolvedValue({ id: 'offer1' });
+        const result = await ProfessionalMatchingService.findProfessionalsAndCreateOffers('req1', 'scheduled');
 
-        const result = await ProfessionalMatchingService.findProfessionalsAndCreateOffers('req1');
-
-        expect(result.urgent?.id).toBe('pro1');
-        expect(result.scheduled?.id).toBe('pro2');
-        expect(prisma.jobOffer.create).toHaveBeenCalledTimes(2);
+        expect(result.urgent).toBeNull();
+        expect(result.scheduled?.id).toBe('pro1');
+        expect(CascadeQueueService.startCascade).toHaveBeenCalledWith(
+            'req1',
+            ['pro1', 'pro2'],
+            'scheduled',
+            'Plomería',
+            'Calle Falsa 123, CABA (1414)',
+            35000
+        );
     });
 });

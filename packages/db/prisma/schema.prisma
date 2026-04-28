@@ -72,6 +72,17 @@ model Professional {
   profile_ready_whatsapp_sent_at DateTime?
   created_at                     DateTime           @default(now())
 
+  // Estados para sistema de cascada
+  availability_status    String   @default("IDLE") // IDLE, EVALUATING, ON_JOB, OFFLINE
+  current_job_offer_id   String?
+  last_status_change     DateTime @default(now())
+
+  // Métricas para scoring de cascada
+  total_jobs_offered     Int      @default(0)
+  total_jobs_accepted    Int      @default(0)
+  total_jobs_rejected    Int      @default(0)
+  avg_response_seconds   Int?
+
   job_offers    JobOffer[]
   earnings      Earning[]
   documents     ProfessionalDocument[]
@@ -144,6 +155,13 @@ model JobOffer {
   status          String   @default("pending") // pending, accepted, rejected, quoted
   schedule        String?
   created_at      DateTime @default(now())
+
+  // Cascada tracking
+  offered_at         DateTime  @default(now())
+  responded_at       DateTime?
+  timeout_at         DateTime?
+  cascade_position   Int? // 1, 2, 3... orden en la cascada
+  response_time_sec  Int?
 
   service_request ServiceRequest @relation(fields: [request_id], references: [id])
   professional    Professional   @relation(fields: [professional_id], references: [id])

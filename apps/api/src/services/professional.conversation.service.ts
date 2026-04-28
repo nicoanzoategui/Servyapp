@@ -1,6 +1,7 @@
 import { prisma, type JobOffer, type Professional, type ServiceRequest, type User } from '@servy/db';
 import { redis } from '../utils/redis';
 import { WhatsAppService } from './whatsapp.service';
+import { CascadeQueueService } from './cascade-queue.service';
 import { ConversationService } from './conversation.service';
 import { PaymentRetryService } from './payment-retry.service';
 import { DIAGNOSTIC_VISIT_PRICE, getServiceType } from '../constants/pricing';
@@ -106,7 +107,7 @@ export class ProfessionalConversationService {
         });
     }
 
-    static async processMessage(phone: string, content: string) {
+    static async processMessage(phone: string, content: string, messageType: string = 'text') {
         if (content.toLowerCase() === 'cancelar') {
             await this.clearSession(phone);
             await WhatsAppService.sendTextMessage(
@@ -120,6 +121,284 @@ export class ProfessionalConversationService {
         if (!professional) return;
 
         const session = await this.getSession(phone);
+
+        // Detectar respuestas a ofertas de trabajo (cascada)
+        if (messageType === 'text') {
+            const normalized = content.toLowerCase().trim();
+            const isAccept =
+                normalized === 'si' ||
+                normalized === 'sí' ||
+                normalized === 'acepto' ||
+                normalized === '1' ||
+                normalized === 'dale' ||
+                normalized === 'ok';
+
+            const isReject =
+                normalized === 'no' ||
+                normalized === 'rechazo' ||
+                normalized === 'rechazar' ||
+                normalized === '2' ||
+                normalized === 'cancelar';
+
+            if (isAccept || isReject) {
+                if (professional.availability_status === 'EVALUATING') {
+                    // Buscar la oferta pendiente más reciente
+                    const pendingOffer = await prisma.jobOffer.findFirst({
+                        where: {
+                            professional_id: professional.id,
+                            status: 'pending',
+                        },
+                        orderBy: { offered_at: 'desc' },
+                        include: { service_request: { include: { user: true } } },
+                    });
+
+                    if (pendingOffer) {
+                        if (isAccept) {
+                            const success = await CascadeQueueService.acceptJob(
+                                pendingOffer.id,
+                                professional.id
+                            );
+
+                            if (success) {
+                                await WhatsAppService.sendTextMessage(
+                                    phone,
+                                    `✅ *¡El trabajo es tuyo!*\n\n` +
+                                        `📍 ${pendingOffer.service_request.address || 'Ver detalles'}\n` +
+                                        `👤 Cliente: ${pendingOffer.service_request.user?.name || 'Usuario'}\n\n` +
+                                        `Ahora podés cotizar el trabajo. El cliente ya fue notificado.\n\n` +
+                                        `_Ingresá a tu portal para ver todos los detalles._`
+                                );
+
+                                // Notificar al cliente
+                                if (pendingOffer.service_request.user?.phone) {
+                                    await WhatsAppService.sendTextMessage(
+                                        pendingOffer.service_request.user.phone,
+                                        `✅ *¡Tenemos técnico!*\n\n` +
+                                            `${professional.name} aceptó tu solicitud.\n\n` +
+                                            `⏳ En breve te llega su cotización — normalmente en menos de 30 minutos.\n\n` +
+                                            `_Si no recibís nada en una hora, escribí *ayuda*._`
+                                    );
+                                }
+
+                                return; // Terminar procesamiento
+                            } else {
+                                await WhatsAppService.sendTextMessage(
+                                    phone,
+                                    `⏱️ *Este trabajo ya fue tomado por otro profesional.*\n\n` +
+                                        `¡Atento a la próxima oportunidad!`
+                                );
+                                return;
+                            }
+                        } else if (isReject) {
+                            await CascadeQueueService.rejectOrTimeout(
+                                pendingOffer.id,
+                                professional.id,
+                                'rejected'
+                            );
+
+                            await WhatsAppService.sendTextMessage(
+                                phone,
+                                `👍 *Entendido.* Este trabajo pasará a otro profesional.\n\n` +
+                                    `Quedate atento para la próxima oportunidad.`
+                            );
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Detectar confirmación de visita / "Estoy en camino"
+        if (messageType === 'text') {
+            const normalized = content.toLowerCase().trim();
+            const isConfirm =
+                normalized === 'si' ||
+                normalized === 'sí' ||
+                normalized === 'confirmo' ||
+                normalized === '1';
+
+            const isDemora =
+                normalized.includes('demora') ||
+                normalized.includes('tarde') ||
+                normalized === '2';
+
+            const skipVisitPromptFlow =
+                session.state === 'AWAITING_JOB_RESPONSE' ||
+                session.state === 'AWAITING_QUOTATION' ||
+                session.state === 'AWAITING_REPAIR_QUOTE';
+
+            if (!skipVisitPromptFlow && (isConfirm || isDemora)) {
+                const upcomingJob = await prisma.job.findFirst({
+                        where: {
+                            quotation: {
+                                job_offer: {
+                                    professional_id: professional.id,
+                                },
+                            },
+                            status: 'confirmed',
+                            scheduled_at: {
+                                gte: new Date(),
+                                lte: new Date(Date.now() + 2 * 60 * 60 * 1000), // Próximas 2 horas
+                            },
+                        },
+                        include: {
+                            quotation: {
+                                include: {
+                                    job_offer: {
+                                        include: {
+                                            service_request: {
+                                                include: { user: true },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        orderBy: { scheduled_at: 'asc' },
+                    });
+
+                    if (upcomingJob) {
+                        if (isConfirm) {
+                            await WhatsAppService.sendTextMessage(
+                                phone,
+                                `✅ *Perfecto.* El turno está confirmado.\n\n` +
+                                    `Cuando estés saliendo para el domicilio, avisanos escribiendo:\n` +
+                                    `🚗 *VOY EN CAMINO*`
+                            );
+
+                            // Guardar en sesión para detectar "voy en camino" después
+                            await redis.setex(
+                                `pending_departure:${phone}`,
+                                7200, // 2 horas
+                                upcomingJob.id
+                            );
+
+                            return;
+                        } else if (isDemora) {
+                            // Notificar al cliente
+                            const u = upcomingJob.quotation.job_offer.service_request.user;
+                            if (u?.phone) {
+                                await WhatsAppService.sendTextMessage(
+                                    u.phone,
+                                    `⏰ *Aviso:* Tu técnico ${professional.name ?? 'Tu técnico'} va a llegar con un pequeño retraso.\n\n` +
+                                        `Te avisaremos cuando esté en camino.`
+                                );
+                            }
+
+                            await WhatsAppService.sendTextMessage(
+                                phone,
+                                `👍 *Entendido.* Le avisamos al cliente que vas a llegar con demora.\n\n` +
+                                    `Avisanos cuando salgas escribiendo: *VOY EN CAMINO*`
+                            );
+
+                            await redis.setex(`pending_departure:${phone}`, 7200, upcomingJob.id);
+
+                            return;
+                        }
+                    }
+            }
+
+            // Detectar "voy en camino"
+            if (normalized.includes('voy') || normalized.includes('camino') || normalized.includes('salgo')) {
+                const jobId = await redis.get(`pending_departure:${phone}`);
+
+                if (jobId) {
+                    const job = await prisma.job.findUnique({
+                        where: { id: jobId },
+                        include: {
+                            quotation: {
+                                include: {
+                                    job_offer: {
+                                        include: {
+                                            professional: true,
+                                            service_request: {
+                                                include: { user: true },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    });
+
+                    if (job) {
+                        const pro = job.quotation.job_offer.professional;
+                        const user = job.quotation.job_offer.service_request.user;
+
+                        // Notificar al cliente
+                        if (user?.phone) {
+                            await WhatsAppService.sendTextMessage(
+                                user.phone,
+                                `🚗 *¡Buenas noticias!*\n\n` +
+                                    `Tu especialista ${pro.name ?? 'Tu especialista'} ya está en camino hacia tu domicilio.\n\n` +
+                                    `Te avisará por este mismo chat cuando esté llegando.`
+                            );
+                        }
+
+                        await WhatsAppService.sendTextMessage(
+                            phone,
+                            `✅ *¡Excelente!* Le avisamos al cliente que estás en camino.\n\n` +
+                                `Cuando llegues al domicilio, avisanos escribiendo:\n` +
+                                `🏠 *YA LLEGUÉ*`
+                        );
+
+                        // Cambiar key de Redis
+                        await redis.del(`pending_departure:${phone}`);
+                        await redis.setex(`pending_arrival:${phone}`, 3600, jobId);
+
+                        return;
+                    }
+                }
+            }
+
+            // Detectar "ya llegué"
+            if (normalized.includes('llegué') || normalized.includes('llegue') || normalized.includes('puerta') || normalized.includes('afuera')) {
+                const jobId = await redis.get(`pending_arrival:${phone}`);
+
+                if (jobId) {
+                    const job = await prisma.job.findUnique({
+                        where: { id: jobId },
+                        include: {
+                            quotation: {
+                                include: {
+                                    job_offer: {
+                                        include: {
+                                            professional: true,
+                                            service_request: {
+                                                include: { user: true },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    });
+
+                    if (job) {
+                        const pro = job.quotation.job_offer.professional;
+                        const user = job.quotation.job_offer.service_request.user;
+
+                        // Notificar al cliente
+                        if (user?.phone) {
+                            await WhatsAppService.sendTextMessage(
+                                user.phone,
+                                `🏠 *${pro.name ?? 'Tu especialista'} ya está en tu puerta.*\n\n` + `¡Que tengas un excelente servicio!`
+                            );
+                        }
+
+                        await WhatsAppService.sendTextMessage(
+                            phone,
+                            `✅ *Perfecto.* Le avisamos al cliente que ya estás en la puerta.\n\n` + `¡Éxitos con el servicio!`
+                        );
+
+                        // Limpiar Redis
+                        await redis.del(`pending_arrival:${phone}`);
+
+                        return;
+                    }
+                }
+            }
+        }
 
         switch (session.state) {
             case 'AWAITING_JOB_RESPONSE': {
