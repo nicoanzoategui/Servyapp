@@ -110,12 +110,61 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
 
         const paymentData = await MercadoPagoService.getPayment(String(data.id));
         const status = paymentData.status;
-        const metadata = paymentData.metadata as { quotation_id?: string; user_phone?: string };
+        const metadata = paymentData.metadata as {
+            quotation_id?: string;
+            user_phone?: string;
+            payment_type?: 'visit' | 'repair';
+        };
 
         const quotationId = metadata.quotation_id;
         if (!quotationId) return;
 
+        const quotation = await prisma.quotation.findUnique({
+            where: { id: quotationId },
+            include: { job_offer: true },
+        });
+        const paymentType = metadata.payment_type || quotation?.quotation_type || 'visit';
+
         if (status === 'approved') {
+            if (paymentType === 'repair') {
+                const payUp = await prisma.payment.updateMany({
+                    where: { quotation_id: quotationId },
+                    data: { status: 'approved', mp_payment_id: String(data.id), paid_at: new Date() },
+                });
+                if (payUp.count === 0) return;
+
+                const visitQuotation = await prisma.quotation.findFirst({
+                    where: { job_offer_id: quotation!.job_offer_id, quotation_type: 'visit' },
+                });
+                const job = visitQuotation
+                    ? await prisma.job.findUnique({ where: { quotation_id: visitQuotation.id } })
+                    : null;
+                if (!job) return;
+
+                await prisma.job.update({ where: { id: job.id }, data: { status: 'in_progress' } });
+
+                const userPhone = String(metadata.user_phone);
+                let qrUrl: string | null = null;
+                try {
+                    qrUrl = await QRService.generateAndUpload(job.id);
+                } catch (e) {
+                    console.error('[MP webhook] QR generation failed:', e);
+                }
+
+                const qrCopy = qrUrl
+                    ? '🔒 *QR de liberación*\nGuardá la imagen. El técnico la escanea al terminar el arreglo — ahí se libera el pago del trabajo.'
+                    : '🔒 *QR de liberación*\nEn breve te enviamos el código para liberar el pago al finalizar.';
+
+                await WhatsAppService.sendTextMessage(
+                    userPhone,
+                    `✅ *Pago del arreglo confirmado*\n\n${qrCopy}`
+                );
+                if (qrUrl) {
+                    await WhatsAppService.sendImageMessage(userPhone, qrUrl);
+                }
+                return;
+            }
+
             const existing = await prisma.job.findUnique({ where: { quotation_id: quotationId } });
             if (existing) return;
 
@@ -154,28 +203,27 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
                 },
             });
 
+            await prisma.jobOffer.update({
+                where: { id: job.quotation.job_offer_id },
+                data: { status: 'accepted' },
+            });
+            await prisma.serviceRequest.update({
+                where: { id: job.quotation.job_offer.request_id },
+                data: { status: 'visit_paid' },
+            });
+
             const userPhone = String(metadata.user_phone);
-            let qrUrl: string | null = null;
-            try {
-                qrUrl = await QRService.generateAndUpload(job.id);
-            } catch (e) {
-                console.error('[MP webhook] QR generation failed:', e);
-            }
 
             const proJob = job.quotation.job_offer;
             const serviceRequest = await prisma.serviceRequest.findUnique({
                 where: { id: proJob.request_id },
                 include: { user: true },
             });
-            const franja = serviceRequest?.scheduled_slot ?? 'a confirmar';
+            const franja = serviceRequest?.scheduled_slot ?? proJob.schedule ?? 'a confirmar';
             const fecha = serviceRequest?.scheduled_date
                 ? new Date(serviceRequest.scheduled_date).toLocaleDateString('es-AR')
                 : 'a confirmar';
             const addr = serviceRequest?.address ?? 'Ver portal';
-
-            const qrCopy = qrUrl
-                ? '🔒 *QR de liberación de pago*\nGuardá la imagen que te mandamos ahora. El técnico la escanea al terminar — ahí se libera el pago. Si algo no quedó bien, no lo muestres antes.'
-                : '🔒 *QR de liberación de pago*\nEn breve te enviamos el código. El técnico lo escanea al terminar para liberar el pago.';
 
             const pro = job.quotation.job_offer.professional;
             const proFullName = `${pro.name}${pro.last_name ? ' ' + pro.last_name : ''}`;
@@ -193,17 +241,39 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
 
             await WhatsAppService.sendTextMessage(
                 userPhone,
-                `✅ *¡Pago confirmado!*\n\nTu técnico está reservado 🎉\n\n━━━━━━━━━━━━━━━\n*DATOS DEL TÉCNICO*\n━━━━━━━━━━━━━━━\n👤 ${proFullName}\n📞 ${proPhoneFormatted}${pro.dni ? `\n🆔 DNI: ${pro.dni}` : ''}${proBio}${proSkills}${proCategories}\n━━━━━━━━━━━━━━━\n📅 ${fecha} · ${franja}\n📍 ${addr}\n━━━━━━━━━━━━━━━\n\n${qrCopy}\n\n_En breve te enviamos la documentación del técnico._`
+                `✅ *¡Visita pagada!*\n\nTu técnico está confirmado 🎉\n\n━━━━━━━━━━━━━━━\n*DATOS DEL TÉCNICO*\n━━━━━━━━━━━━━━━\n👤 ${proFullName}\n📞 ${proPhoneFormatted}${pro.dni ? `\n🆔 DNI: ${pro.dni}` : ''}${proBio}${proSkills}${proCategories}\n━━━━━━━━━━━━━━━\n📅 ${fecha} · ${franja}\n📍 ${addr}\n━━━━━━━━━━━━━━━\n\n_El arreglo se cotiza in situ. Cualquier consulta escribí acá._`
             );
-            if (qrUrl) {
-                await WhatsAppService.sendImageMessage(userPhone, qrUrl);
-            }
 
             const totalStr = job.quotation.total_price.toLocaleString('es-AR');
             await WhatsAppService.sendTextMessage(
                 job.quotation.job_offer.professional.phone,
-                `💼 *Nuevo trabajo confirmado*\n\n━━━━━━━━━━━━━━━\n📍 ${serviceRequest?.address ?? 'Ver portal'}\n🔧 ${serviceRequest?.description?.slice(0, 80) ?? 'Ver portal'}\n📅 ${fecha} · turno ${franja}\n💰 *$${totalStr}*\n━━━━━━━━━━━━━━━\n\nEl pago se libera cuando el cliente te muestre el QR al terminar.\n\n🔗 _portal.servy.lat/jobs/${job.id}_\n\n━━━━━━━━━━━━━━━\n*Comandos disponibles*\n━━━━━━━━━━━━━━━\n_estoy yendo_ → avisamos al cliente\n_llego en X minutos_ → se lo reenviamos\n_no encuentro la dirección_ → le pedimos referencias\n_tuve un imprevisto_ → notificamos al cliente`
+                `💼 *Visita confirmada y pagada*\n\n━━━━━━━━━━━━━━━\n📍 ${serviceRequest?.address ?? 'Ver portal'}\n🔧 ${serviceRequest?.description?.slice(0, 80) ?? 'Ver portal'}\n📅 ${fecha} · turno ${franja}\n💰 Visita: *$${totalStr}*\n━━━━━━━━━━━━━━━\n\n🔗 _portal.servy.lat/jobs/${job.id}_\n\n*Comandos:* _estoy yendo_ · _llego en X minutos_ · _no encuentro la dirección_`
             );
+
+            try {
+                await prisma.whatsappSession.upsert({
+                    where: { phone: userPhone },
+                    update: {
+                        step: 'COMPLETED',
+                        data_json: { jobId: job.id },
+                        expires_at: new Date(Date.now() + 86400 * 1000),
+                    },
+                    create: {
+                        phone: userPhone,
+                        step: 'COMPLETED',
+                        data_json: { jobId: job.id },
+                        expires_at: new Date(Date.now() + 86400 * 1000),
+                    },
+                });
+                await redis.set(
+                    `session:${userPhone}`,
+                    JSON.stringify({ state: 'COMPLETED', data: { jobId: job.id } }),
+                    'EX',
+                    86400
+                );
+            } catch {
+                /* ignore */
+            }
         } else if (status === 'rejected' || status === 'cancelled') {
             await prisma.payment.updateMany({
                 where: { quotation_id: quotationId },

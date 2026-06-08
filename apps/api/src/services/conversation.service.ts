@@ -3,13 +3,13 @@ import { prisma } from '@servy/db';
 import type { Professional, User } from '@servy/db';
 import { insertAgentLog } from '../lib/agent-log';
 import { WhatsAppService } from './whatsapp.service';
-import { ProfessionalMatchingService } from './matching.service';
 import { StorageService } from './storage.service';
 import { MercadoPagoService } from './mercadopago.service';
 import { GeminiService } from './gemini.service';
 import { mediationDirectionRedisKey, normalizeTwilioWhatsAppFrom, userRelayPauseRedisKey } from '../utils/twilio-phone';
 import { env } from '../utils/env';
 import { createProfessionalFromWhatsAppWizard } from './professional-registration.internal';
+import { VisitFlowService } from './visit-flow.service';
 
 const SESSION_TTL = 60 * 60 * 24;
 const REDIS_OP_TIMEOUT_MS = 500;
@@ -128,12 +128,6 @@ function dniDigitsOnly(raw: string): string {
     return raw.replace(/\D/g, '');
 }
 
-async function countJobsForProfessional(professionalId: string): Promise<number> {
-    return prisma.job.count({
-        where: { quotation: { job_offer: { professional_id: professionalId } } },
-    });
-}
-
 const EMPATHY_MESSAGES: Record<string, string[]> = {
     alta: [
         'Entiendo, no te preocupes. Estas situaciones son estresantes pero las resolvemos rápido. 💪',
@@ -224,17 +218,7 @@ export class ConversationService {
         userPhone: string,
         payload: { quotationId: string; jobOfferId: string; requestId: string; totalPrice: number }
     ) {
-        const offer = await prisma.jobOffer.findUnique({
-            where: { id: payload.jobOfferId },
-            include: { professional: true },
-        });
-        const proName = offer?.professional?.name?.trim() || 'Tu técnico';
-        const priceStr = payload.totalPrice.toLocaleString('es-AR');
-        await WhatsAppService.sendTextMessage(
-            userPhone,
-            `💰 *Cotización recibida*\n\n━━━━━━━━━━━━━━━\n👤 *${proName}*\n💵 *$${priceStr}*\n⚠️ _Precio no incluye materiales_\n━━━━━━━━━━━━━━━\n\n🔒 _Tu dinero está protegido: el pago se retiene hasta que el trabajo esté terminado y vos lo confirmés._\n\n¿Aceptás?\n\n1. Sí, acepto\n2. No, prefiero otra opción`
-        );
-        await this.saveSession(userPhone, 'AWAITING_PAYMENT_DECISION', payload as unknown as Record<string, unknown>);
+        await VisitFlowService.afterRepairQuotationSent(userPhone, payload);
     }
 
     /** Tras marcar el trabajo completado (manual o por QR), el usuario puede responder con estrellas. */
@@ -417,7 +401,7 @@ export class ConversationService {
                     if (normalized === 'listo' || noPhotos) {
                         if (user.address) {
                             session.data.address = user.address;
-                            await this.createRequestAndMatch(phone, session.data, user);
+                            await VisitFlowService.beginServiceRequest(phone, session.data, user);
                         } else {
                             await this.saveSession(phone, 'AWAITING_ADDRESS_FOR_SERVICE', session.data);
                             await WhatsAppService.sendTextMessage(
@@ -438,94 +422,19 @@ export class ConversationService {
 
             case 'AWAITING_ADDRESS_FOR_SERVICE':
                 session.data.serviceAddress = content;
-                await this.createRequestAndMatch(phone, session.data, user);
+                await VisitFlowService.beginServiceRequest(phone, session.data, user);
                 break;
 
-            case 'AWAITING_PROFESSIONAL_SELECTION': {
-                const requestId = session.data.requestId as string;
-                const hasUrgent = Boolean(session.data.hasUrgent);
-                const hasScheduled = Boolean(session.data.hasScheduled);
-                const raw = content.trim();
-                const lc = raw.toLowerCase();
-
-                const pickUrgent =
-                    (hasUrgent && hasScheduled && (raw === 'btn_urgent' || raw === '1')) ||
-                    (hasUrgent && !hasScheduled && (raw === 'btn_urgent' || raw === '1' || lc === 'si' || lc === 'sí'));
-                const pickScheduled =
-                    (hasScheduled && hasUrgent && (raw === 'btn_sched' || raw === '2')) ||
-                    (hasScheduled && !hasUrgent && (raw === 'btn_sched' || raw === '1' || lc === 'si' || lc === 'sí'));
-
-                if (pickUrgent) {
-                    session.data.selection = 'urgent';
-                    await prisma.jobOffer.updateMany({
-                        where: { request_id: requestId, priority: 'scheduled' },
-                        data: { status: 'cancelled' },
-                    });
-
-                    await ConversationService.notifyProfessionalJobSelected(requestId, 'urgent');
-
-                    const now = new Date();
-                    const hour = parseInt(
-                        new Intl.DateTimeFormat('es-AR', {
-                            hour: 'numeric',
-                            hour12: false,
-                            timeZone: 'America/Argentina/Buenos_Aires',
-                        }).format(now),
-                        10
-                    );
-
-                    let scheduleOptionIds: string[] = [];
-                    let scheduleLabels: string[] = [];
-                    let scheduleMsg = '';
-
-                    if (hour < 18) {
-                        if (hour < 12) {
-                            scheduleOptionIds.push('sch_9_12');
-                            scheduleLabels.push('9 a 12hs');
-                        }
-                        if (hour < 15) {
-                            scheduleOptionIds.push('sch_12_15');
-                            scheduleLabels.push('12 a 15hs');
-                        }
-                        if (hour < 18) {
-                            scheduleOptionIds.push('sch_15_18');
-                            scheduleLabels.push('15 a 18hs');
-                        }
-                        scheduleOptionIds.push('sch_asap');
-                        scheduleLabels.push('Lo antes posible');
-                        const lines = scheduleOptionIds.map((_, i) => `${i + 1}. ${scheduleLabels[i]}`).join('\n');
-                        scheduleMsg = `¿En qué horario preferís que vaya hoy?\n\n${lines}`;
-                    } else {
-                        scheduleOptionIds = ['sch_tomorrow_morning', 'sch_tomorrow_mid', 'sch_tomorrow_afternoon'];
-                        scheduleMsg =
-                            'Ya es tarde para coordinar para hoy.\n\n¿A qué horario preferís mañana?\n\n1. Mañana temprano (8 a 10hs)\n2. Mañana a la mañana (10 a 12hs)\n3. Mañana a la tarde (14 a 18hs)';
-                    }
-
-                    session.data.scheduleOptionIds = scheduleOptionIds;
-                    await this.saveSession(phone, 'AWAITING_SCHEDULE', session.data);
-                    await WhatsAppService.sendTextMessage(phone, scheduleMsg);
-                } else if (pickScheduled) {
-                    session.data.selection = 'scheduled';
-                    await prisma.jobOffer.updateMany({ where: { request_id: requestId, priority: 'urgent' }, data: { status: 'cancelled' } });
-
-                    await ConversationService.notifyProfessionalJobSelected(requestId, 'scheduled');
-
-                    await this.saveSession(phone, 'AWAITING_SCHEDULE_DAY', session.data);
-                    await WhatsAppService.sendTextMessage(
-                        phone,
-                        '¿Qué día preferís?\n\n1. Mañana\n2. Pasado mañana\n3. En 3 días'
-                    );
-                } else {
-                    const hint =
-                        hasUrgent && hasScheduled
-                            ? 'Solo hay dos opciones: *1* (urgente) o *2* (programado).'
-                            : hasUrgent || hasScheduled
-                              ? 'Escribí *sí* o *1* para seguir con la opción que te mostramos.'
-                              : 'Por favor respondé *1* o *2* para elegir una opción.';
-                    await WhatsAppService.sendTextMessage(phone, hint);
-                }
+            case 'AWAITING_SPEED_SELECTION':
+                await VisitFlowService.handleSpeedSelection(phone, content, session);
                 break;
-            }
+
+            case 'AWAITING_TECH_CONFIRMATION':
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    '⏳ Todavía estamos confirmando con el técnico asignado.\n\nTe avisamos en cuanto confirme. _Normalmente tarda unos minutos._'
+                );
+                break;
 
             case 'AWAITING_SCHEDULE': {
                 const scheduleMap: Record<string, string> = {
@@ -551,15 +460,7 @@ export class ConversationService {
                     break;
                 }
                 session.data.schedule = scheduleMap[slotId] ?? trimmed;
-                await prisma.jobOffer.updateMany({
-                    where: { request_id: session.data.requestId as string },
-                    data: { schedule: session.data.schedule as string },
-                });
-                await this.saveSession(phone, 'AWAITING_QUOTATION', session.data);
-                await WhatsAppService.sendTextMessage(
-                    phone,
-                    '*Perfecto.* Le avisamos al técnico ahora mismo.\n\n⏳ En breve te llega su cotización — normalmente en menos de 30 minutos.\n\n_Si no recibís nada en una hora, escribí *ayuda*._'
-                );
+                await VisitFlowService.finalizeScheduleAndAssignTech(phone, session.data);
                 break;
             }
 
@@ -582,6 +483,7 @@ export class ConversationService {
                     break;
                 }
                 session.data.scheduleDay = dayMap[dayKey];
+                VisitFlowService.persistScheduleDay(session.data, dayKey);
                 await this.saveSession(phone, 'AWAITING_SCHEDULE_TIME', session.data);
                 await WhatsAppService.sendTextMessage(phone, '¿En qué horario?\n\n1. 9 a 12hs\n2. 12 a 15hs\n3. 15 a 18hs');
                 break;
@@ -604,25 +506,19 @@ export class ConversationService {
                     break;
                 }
                 session.data.schedule = `${session.data.scheduleDay} ${timeMap[tk]}`;
-                await prisma.jobOffer.updateMany({
-                    where: { request_id: session.data.requestId as string },
-                    data: { schedule: session.data.schedule as string },
-                });
-                await this.saveSession(phone, 'AWAITING_QUOTATION', session.data);
-                await WhatsAppService.sendTextMessage(
-                    phone,
-                    '*Perfecto.* Le avisamos al técnico ahora mismo.\n\n⏳ En breve te llega su cotización — normalmente en menos de 30 minutos.\n\n_Si no recibís nada en una hora, escribí *ayuda*._'
-                );
+                await VisitFlowService.finalizeScheduleAndAssignTech(phone, session.data);
                 break;
             }
 
-            case 'AWAITING_QUOTATION':
+            case 'VISIT_PAYMENT_PENDING':
+            case 'PAYMENT_PENDING':
                 await WhatsAppService.sendTextMessage(
                     phone,
-                    '⏳ Todavía estamos esperando la cotización del técnico.\n\nTe avisamos en cuanto la tengamos. _Normalmente llega en menos de 30 minutos._'
+                    '⏳ Tu pago está siendo procesado.\n\nSi ya completaste el pago, la confirmación llega en unos minutos. Si tuviste algún problema, escribí _ayuda_.'
                 );
                 break;
 
+            case 'AWAITING_REPAIR_PAYMENT_DECISION':
             case 'AWAITING_PAYMENT_DECISION': {
                 const acceptWords = ['btn_accept', 'aceptar', 'acepto', 'si', 'sí', '1', 'ok', 'dale'];
                 const rejectWords = ['btn_reject', 'rechazar', 'rechazo', 'no', '2', 'cancelar'];
@@ -634,17 +530,10 @@ export class ConversationService {
                 } else if (rejectWords.includes(lc)) {
                     await this.handleRejectQuotation(phone, session.data);
                 } else {
-                    await WhatsAppService.sendTextMessage(phone, 'Respondé *1* para aceptar o *2* para rechazar la cotización.');
+                    await WhatsAppService.sendTextMessage(phone, 'Respondé *1* para aceptar o *2* para rechazar el presupuesto.');
                 }
                 break;
             }
-
-            case 'PAYMENT_PENDING':
-                await WhatsAppService.sendTextMessage(
-                    phone,
-                    '⏳ Tu pago está siendo procesado.\n\nSi ya completaste el pago, la confirmación llega en unos minutos. Si tuviste algún problema, escribí _ayuda_.'
-                );
-                break;
 
             case 'AWAITING_REVIEW':
                 await this.handleReview(phone, content, session.data);
@@ -728,10 +617,17 @@ export class ConversationService {
         const priceStr = quotation.total_price.toLocaleString('es-AR');
 
         try {
-            const initPoint = await MercadoPagoService.createPreference(quotation, user);
+            const qRow = await prisma.quotation.findUnique({ where: { id: quotationId } });
+            const paymentType = qRow?.quotation_type === 'repair' ? 'repair' : 'visit';
+            const initPoint = await MercadoPagoService.createPreference(qRow!, { phone }, paymentType);
+            const label = paymentType === 'repair' ? 'arreglo' : 'visita';
+            const expireNote =
+                paymentType === 'repair'
+                    ? '_Tenés 48 horas para completar el pago._'
+                    : `_Tenés ${env.VISIT_PAYMENT_EXPIRE_MINUTES} minutos para completar el pago._`;
             await WhatsAppService.sendTextMessage(
                 phone,
-                `*¡Genial!* Confirmamos el servicio con *${proName}* 🙌\n\n━━━━━━━━━━━━━━━\n💳 *Total: $${priceStr}*\n━━━━━━━━━━━━━━━\n\n🔒 *Tu dinero está protegido*\nEl pago queda retenido hasta que el trabajo esté bien hecho. Si el técnico no aparece, te devolvemos todo.\n\n👉 ${initPoint}\n\n_Tenés 30 minutos para completar el pago antes de que se libere la reserva._`
+                `*¡Genial!* Confirmamos el ${label} con *${proName}* 🙌\n\n━━━━━━━━━━━━━━━\n💳 *Total: $${priceStr}*\n━━━━━━━━━━━━━━━\n\n🔒 *Tu dinero está protegido*\nEl pago queda retenido hasta que el trabajo esté bien hecho.\n\n👉 ${initPoint}\n\n${expireNote}`
             );
         } catch {
             await WhatsAppService.sendTextMessage(
@@ -744,7 +640,6 @@ export class ConversationService {
     private static async handleRejectQuotation(phone: string, data: Record<string, unknown>) {
         const quotationId = data.quotationId as string;
         const jobOfferId = data.jobOfferId as string;
-        const requestId = data.requestId as string;
 
         const rejectedOffer = await prisma.jobOffer.findUnique({
             where: { id: jobOfferId },
@@ -752,35 +647,19 @@ export class ConversationService {
         });
 
         await prisma.quotation.update({ where: { id: quotationId }, data: { status: 'rejected' } }).catch(() => {});
-        await prisma.jobOffer.update({ where: { id: jobOfferId }, data: { status: 'rejected' } }).catch(() => {});
 
         if (rejectedOffer?.professional?.phone) {
             await WhatsAppService.sendTextMessage(
                 rejectedOffer.professional.phone,
-                'El cliente eligió otra opción para este trabajo.\n\nNo te preocupes, seguís activo y te llegan nuevas solicitudes. 💪'
+                'El cliente rechazó el presupuesto del arreglo. Podés enviar uno nuevo desde el portal si acordaron otro monto.'
             );
         }
 
-        const sibling = await prisma.jobOffer.findFirst({
-            where: { request_id: requestId, id: { not: jobOfferId }, status: 'cancelled' },
-            include: { professional: true },
-        });
-
-        if (sibling) {
-            await prisma.jobOffer.update({ where: { id: sibling.id }, data: { status: 'pending' } });
-            await WhatsAppService.sendTextMessage(sibling.professional.phone, 'El cliente pidió otra opción. Entrá al portal y enviá tu cotización.');
-            await this.saveSession(phone, 'AWAITING_QUOTATION', { requestId });
-            await WhatsAppService.sendTextMessage(
-                phone,
-                'Entendido, buscamos otra opción.\n\n⏳ Le pedimos cotización al otro técnico disponible. Te avisamos cuando llegue.'
-            );
-        } else {
-            await this.clearSession(phone);
-            await WhatsAppService.sendTextMessage(
-                phone,
-                'No tenemos otra opción disponible para este pedido en este momento.\n\nEscribí cuando quieras hacer un nuevo pedido y buscamos de nuevo. 👍'
-            );
-        }
+        await this.clearSession(phone);
+        await WhatsAppService.sendTextMessage(
+            phone,
+            'Entendido, no avanzamos con ese presupuesto.\n\nSi acordás otro monto con el técnico, te avisamos. También podés escribir *ayuda* si necesitás algo.'
+        );
     }
 
     private static async handleReview(phone: string, content: string, data: Record<string, unknown>) {
@@ -1278,180 +1157,5 @@ export class ConversationService {
             details: { jobId: job.id, preview: trimmed.slice(0, 200), direction: 'pro_to_user' },
         });
         return true;
-    }
-
-    /** Tras elegir el cliente urgente vs programado: avisar al técnico (WhatsApp + sesión pro). */
-    private static async notifyProfessionalJobSelected(requestId: string, priority: 'urgent' | 'scheduled'): Promise<void> {
-        const selectedOffer = await prisma.jobOffer.findFirst({
-            where: {
-                request_id: requestId,
-                priority,
-                status: { not: 'cancelled' },
-            },
-            include: {
-                professional: true,
-                service_request: { include: { user: true } },
-            },
-        });
-        if (!selectedOffer?.professional || !selectedOffer.service_request) {
-            console.error('[notifyProfessionalJobSelected] sin oferta o relación', { requestId, priority });
-            return;
-        }
-
-        let userForNotify: User | null = selectedOffer.service_request.user;
-        if (!userForNotify) {
-            userForNotify = await prisma.user.findUnique({
-                where: { phone: selectedOffer.service_request.user_phone },
-            });
-        }
-        if (!userForNotify) {
-            userForNotify = {
-                phone: selectedOffer.service_request.user_phone,
-                name: null,
-                last_name: null,
-            } as User;
-            console.warn('[notifyProfessionalJobSelected] User no encontrado; aviso con datos mínimos', {
-                requestId,
-                phone: selectedOffer.service_request.user_phone,
-            });
-        }
-
-        const { ProfessionalConversationService } = await import('./professional.conversation.service');
-        await ProfessionalConversationService.notifyNewJob(
-            selectedOffer.professional,
-            selectedOffer,
-            { ...selectedOffer.service_request, user: userForNotify },
-            userForNotify
-        );
-    }
-
-    /** Aviso temprano: hay pedido y oferta en portal; el mensaje “aceptás” llega cuando el cliente elige modalidad. */
-    private static async pingProfessionalsNewRequest(
-        matchRes: { urgent: { id: string; phone: string } | null; scheduled: { id: string; phone: string } | null },
-        categoryLabel: string
-    ): Promise<void> {
-        const baseUrl = env.FRONTEND_PRO_URL.replace(/\/$/, '');
-        const list = [matchRes.urgent, matchRes.scheduled].filter(Boolean) as {
-            id: string;
-            phone: string;
-        }[];
-        const seen = new Set<string>();
-        for (const pro of list) {
-            if (seen.has(pro.id)) continue;
-            seen.add(pro.id);
-            try {
-                await WhatsAppService.sendTextMessage(
-                    pro.phone,
-                    `🔔 *Servy* — Hay un cliente con pedido de *${categoryLabel || 'servicio'}*. Está eligiendo la modalidad; en cuanto confirme te vamos a pedir por acá si aceptás el trabajo.\n\n📱 Podés ver el pedido en: ${baseUrl}/dashboard`
-                );
-            } catch (e) {
-                console.error('[pingProfessionalsNewRequest]', pro.id, e);
-            }
-        }
-    }
-
-    private static async createRequestAndMatch(phone: string, sessionData: Record<string, unknown>, user: { name: string | null; address: string | null }) {
-        const address = (sessionData.serviceAddress as string) || user.address || '';
-
-        const request = await prisma.serviceRequest.create({
-            data: {
-                user_phone: phone,
-                category: sessionData.category as string,
-                description: sessionData.description as string,
-                photos: (sessionData.photos as string[]) || [],
-                address,
-            },
-        });
-
-        const matchRes = await ProfessionalMatchingService.findProfessionalsAndCreateOffers(request.id);
-
-        if (!matchRes.urgent && !matchRes.scheduled) {
-            await WhatsAppService.sendTextMessage(phone, 'No encontramos profesionales disponibles en tu zona en este momento. Lo sentimos.');
-            await this.clearSession(phone);
-            return;
-        }
-
-        const hasUrgent = Boolean(matchRes.urgent);
-        const hasScheduled = Boolean(matchRes.scheduled);
-
-        let urgentJobs = 0;
-        let schedJobs = 0;
-        if (matchRes.urgent) {
-            urgentJobs = await countJobsForProfessional(matchRes.urgent.id);
-        }
-        if (matchRes.scheduled) {
-            schedJobs = await countJobsForProfessional(matchRes.scheduled.id);
-        }
-
-        const fmtRating = (r: number): string => (Number.isInteger(r) ? String(r) : r.toFixed(1));
-
-        await this.saveSession(phone, 'AWAITING_PROFESSIONAL_SELECTION', {
-            requestId: request.id,
-            hasUrgent,
-            hasScheduled,
-            ...sessionData,
-        });
-
-        await ConversationService.pingProfessionalsNewRequest(
-            matchRes,
-            String((sessionData.category as string) || 'servicio')
-        );
-
-        if (hasUrgent && hasScheduled) {
-            const u = matchRes.urgent!;
-            const s = matchRes.scheduled!;
-            const text =
-                'Encontré técnicos disponibles en tu zona 👇\n\n' +
-                '━━━━━━━━━━━━━━━\n' +
-                '⚡ *Urgente*\n' +
-                '━━━━━━━━━━━━━━━\n' +
-                `👤 *${u.name} ${u.last_name}*\n` +
-                `⭐ ${fmtRating(u.rating)} · ${urgentJobs} trabajos\n` +
-                '🕐 Hoy, en menos de 24hs\n' +
-                '💰 Tarifa urgente\n\n' +
-                '━━━━━━━━━━━━━━━\n' +
-                '📅 *Programado*\n' +
-                '━━━━━━━━━━━━━━━\n' +
-                `👤 *${s.name} ${s.last_name}*\n` +
-                `⭐ ${fmtRating(s.rating)} · ${schedJobs} trabajos\n` +
-                '🕐 Hasta 72hs\n' +
-                '💰 Tarifa estándar\n\n' +
-                '¿Con cuál continuamos?\n\n' +
-                '1. Urgente\n' +
-                '2. Programado';
-            await WhatsAppService.sendTextMessage(phone, text);
-            return;
-        }
-
-        if (hasUrgent) {
-            const u = matchRes.urgent!;
-            const text =
-                'Encontré técnicos disponibles en tu zona 👇\n\n' +
-                '━━━━━━━━━━━━━━━\n' +
-                '⚡ *Urgente*\n' +
-                '━━━━━━━━━━━━━━━\n' +
-                `👤 *${u.name} ${u.last_name}*\n` +
-                `⭐ ${fmtRating(u.rating)} · ${urgentJobs} trabajos\n` +
-                '🕐 Hoy, en menos de 24hs\n' +
-                '💰 Tarifa urgente\n\n' +
-                '¿Te sirve esta opción?\n\n' +
-                'Escribí *sí* o *1* para continuar.';
-            await WhatsAppService.sendTextMessage(phone, text);
-            return;
-        }
-
-        const s = matchRes.scheduled!;
-        const text =
-            'Encontré técnicos disponibles en tu zona 👇\n\n' +
-            '━━━━━━━━━━━━━━━\n' +
-            '📅 *Programado*\n' +
-            '━━━━━━━━━━━━━━━\n' +
-            `👤 *${s.name} ${s.last_name}*\n` +
-            `⭐ ${fmtRating(s.rating)} · ${schedJobs} trabajos\n` +
-            '🕐 Hasta 72hs\n' +
-            '💰 Tarifa estándar\n\n' +
-            '¿Te sirve esta opción?\n\n' +
-            'Escribí *sí* o *1* para continuar.';
-        await WhatsAppService.sendTextMessage(phone, text);
     }
 }

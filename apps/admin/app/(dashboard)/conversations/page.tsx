@@ -7,6 +7,24 @@ import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import { API_URL } from '@/lib/api';
 
+const SESSION_STATE_LABELS: Record<string, string> = {
+    IDLE: 'Inactivo',
+    AWAITING_SPEED_SELECTION: 'Eligiendo modalidad',
+    AWAITING_SCHEDULE: 'Eligiendo horario',
+    AWAITING_SCHEDULE_DAY: 'Eligiendo día',
+    AWAITING_SCHEDULE_TIME: 'Eligiendo franja',
+    AWAITING_TECH_CONFIRMATION: 'Esperando técnico',
+    VISIT_PAYMENT_PENDING: 'Pago visita pendiente',
+    AWAITING_REPAIR_PAYMENT_DECISION: 'Decidiendo arreglo',
+    PAYMENT_PENDING: 'Pago en proceso',
+    COMPLETED: 'Completado',
+    AWAITING_REVIEW: 'Calificando',
+};
+
+function sessionStateLabel(state: string): string {
+    return SESSION_STATE_LABELS[state] || state.replace(/_/g, ' ').toLowerCase();
+}
+
 const fetchConversations = async () => {
     const token = Cookies.get('token');
     const res = await fetch(`${API_URL}/admin/conversations`, {
@@ -46,8 +64,8 @@ export default function ConversationsPage() {
                             <tr key={session.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition">
                                 <td className="p-4 font-medium text-slate-900 tracking-tight">+{session.phone}</td>
                                 <td className="p-4">
-                                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
-                                        {session.state}
+                                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium" title={session.state}>
+                                        {sessionStateLabel(session.state)}
                                     </span>
                                 </td>
                                 <td className="p-4 text-slate-600">

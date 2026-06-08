@@ -1,6 +1,7 @@
 import { prisma, type JobOffer, type Professional, type ServiceRequest, type User } from '@servy/db';
 import { redis } from '../utils/redis';
 import { WhatsAppService } from './whatsapp.service';
+import { formatArs, visitFeeForPriority, type ServicePriority } from './visit-pricing';
 
 const SESSION_TTL = 60 * 60 * 24;
 
@@ -61,10 +62,12 @@ export class ProfessionalConversationService {
         request: ServiceRequest & { user: User },
         user: User
     ) {
+        const priority = (jobOffer.priority || 'scheduled') as ServicePriority;
+        const fee = request.visit_fee ?? visitFeeForPriority(priority);
         const urgencyText =
-            jobOffer.priority === 'urgent'
-                ? '⚡ *Urgente* — tarifa alta'
-                : '📅 *Programado* — tarifa estándar';
+            priority === 'urgent'
+                ? `⚡ *Urgente* — Visita $${formatArs(fee)}`
+                : `📅 *Programado* — Visita $${formatArs(fee)}`;
 
         const jobCount = await prisma.job.count({
             where: { quotation: { job_offer: { professional_id: professional.id } } },
@@ -79,8 +82,8 @@ export class ProfessionalConversationService {
         const proFirst = professional.name.trim() || 'vos';
         const body =
             jobCount === 0
-                ? `🎉 *¡Tu primer trabajo en Servy, ${proFirst}!*\n\n━━━━━━━━━━━━━━━\n👤 *${uname}*\n📍 ${addr}\n🔧 ${cat}\n📋 ${desc}\n🕐 ${sched}\n━━━━━━━━━━━━━━━\n\n${urgencyText}\n\n¿Aceptás el trabajo?\n\n1. Sí, acepto\n2. No, paso`
-                : `💼 *Nuevo trabajo disponible*\n\n━━━━━━━━━━━━━━━\n👤 *${uname}*\n📍 ${addr}\n🔧 ${cat}\n📋 ${desc}\n🕐 ${sched}\n━━━━━━━━━━━━━━━\n\n${urgencyText}\n\n¿Aceptás el trabajo?\n\n1. Sí, acepto\n2. No, paso`;
+                ? `🎉 *¡Tu primer trabajo en Servy, ${proFirst}!*\n\n━━━━━━━━━━━━━━━\n👤 *${uname}*\n📍 ${addr}\n🔧 ${cat}\n📋 ${desc}\n🕐 ${sched}\n━━━━━━━━━━━━━━━\n\n${urgencyText}\n\n¿Confirmás que podés ir en ese turno?\n\n1. Sí, confirmo\n2. No, paso`
+                : `💼 *Nueva visita disponible*\n\n━━━━━━━━━━━━━━━\n👤 *${uname}*\n📍 ${addr}\n🔧 ${cat}\n📋 ${desc}\n🕐 ${sched}\n━━━━━━━━━━━━━━━\n\n${urgencyText}\n\n¿Confirmás que podés ir en ese turno?\n\n1. Sí, confirmo\n2. No, paso`;
 
         await WhatsAppService.sendTextMessage(professional.phone, body);
 
@@ -115,11 +118,14 @@ export class ProfessionalConversationService {
                 await prisma.jobOffer.update({ where: { id: jobOfferId }, data: { status: 'accepted' } });
                 const { markProfessionalBusy } = await import('../agents/availability-agent');
                 await markProfessionalBusy(professional.id).catch(() => {});
-                await this.saveSession(phone, 'AWAITING_QUOTATION', session.data);
+                await this.clearSession(phone);
                 await WhatsAppService.sendTextMessage(
                     phone,
-                    '*Perfecto.* Trabajo aceptado ✅\n\nMandanos la cotización con este formato:\n\nTrabajo: [descripción del trabajo]\nTiempo: [tiempo estimado]\nPrecio: [monto en pesos]\n\n_El precio NO incluye materiales._'
+                    `*Perfecto.* Turno confirmado ✅\n\nLe enviamos al cliente el link de pago de la visita. Te avisamos cuando abone.\n\n_Comandos útiles cuando estés en camino: *estoy yendo*, *llego en X minutos*_`
                 );
+
+                const { VisitFlowService } = await import('./visit-flow.service');
+                await VisitFlowService.onTechConfirmedVisit(jobOfferId, userPhone);
             } else if (content === `job_reject_${jobOfferId}` || content.toLowerCase().includes('paso') || content === '2') {
                 await prisma.jobOffer.update({ where: { id: jobOfferId }, data: { status: 'rejected' } });
                 const { clearProfessionalBusyIfNeeded } = await import('../agents/availability-agent');
@@ -130,105 +136,12 @@ export class ProfessionalConversationService {
                     'Entendido. No te preocupes, te avisamos cuando haya otro trabajo disponible. 💪'
                 );
 
-                await WhatsAppService.sendTextMessage(
-                    userPhone,
-                    'El técnico que te recomendamos no está disponible en este momento.\n\nYa estamos buscando otra opción para vos. En breve te avisamos. 🔍'
-                );
-
-                await this.findNextProfessional(requestId, jobOfferId, userPhone);
+                const { VisitFlowService } = await import('./visit-flow.service');
+                await VisitFlowService.onTechRejectedVisit(jobOfferId, requestId, userPhone);
             } else {
-                await WhatsAppService.sendTextMessage(phone, 'Respondé *1* para aceptar o *2* para pasar.');
+                await WhatsAppService.sendTextMessage(phone, 'Respondé *1* para confirmar o *2* para pasar.');
             }
             return;
-        }
-
-        if (session.state === 'AWAITING_QUOTATION') {
-            const jobOfferId = session.data.jobOfferId as string;
-            const userPhone = session.data.userPhone as string;
-
-            const lines = content.split('\n');
-            let trabajo = '';
-            let tiempo = '';
-            let precio = '';
-
-            for (const line of lines) {
-                const lower = line.toLowerCase();
-                if (lower.startsWith('trabajo:')) trabajo = line.split(':').slice(1).join(':').trim();
-                if (lower.startsWith('tiempo:')) tiempo = line.split(':').slice(1).join(':').trim();
-                if (lower.startsWith('precio:')) precio = line.split(':').slice(1).join(':').trim();
-            }
-
-            if (!trabajo || !tiempo || !precio) {
-                await WhatsAppService.sendTextMessage(
-                    phone,
-                    'No pude leer bien la cotización. Usá este formato exacto:\n\nTrabajo: [descripción]\nTiempo: [tiempo estimado]\nPrecio: [monto en pesos]'
-                );
-                return;
-            }
-
-            const precioNum = parseFloat(precio.replace(/[^0-9.]/g, ''));
-            if (Number.isNaN(precioNum) || precioNum <= 0) {
-                await WhatsAppService.sendTextMessage(
-                    phone,
-                    'El precio no es válido. Enviá un monto en pesos en la línea _Precio:_\n\n_Ej: Precio: 45000_'
-                );
-                return;
-            }
-
-            const jobOffer = await prisma.jobOffer.findUnique({
-                where: { id: jobOfferId },
-                include: { service_request: true },
-            });
-            if (!jobOffer) return;
-
-            const quotation = await prisma.quotation.create({
-                data: {
-                    job_offer_id: jobOfferId,
-                    items_json: [{ description: trabajo, price: precioNum }],
-                    total_price: precioNum,
-                    description: trabajo,
-                    estimated_duration: tiempo,
-                    status: 'pending',
-                },
-            });
-
-            await prisma.jobOffer.update({ where: { id: jobOfferId }, data: { status: 'quoted' } });
-
-            await this.clearSession(phone);
-            await WhatsAppService.sendTextMessage(phone, '✅ *Cotización enviada.*\n\nTe avisamos cuando el cliente la acepte.');
-
-            const { ConversationService } = await import('./conversation.service');
-            await ConversationService.afterQuotationSent(userPhone, {
-                quotationId: quotation.id,
-                jobOfferId,
-                requestId: jobOffer.request_id,
-                totalPrice: precioNum,
-            });
-        }
-    }
-
-    private static async findNextProfessional(requestId: string, rejectedOfferId: string, userPhone: string) {
-        const nextOffer = await prisma.jobOffer.findFirst({
-            where: {
-                request_id: requestId,
-                id: { not: rejectedOfferId },
-                status: 'pending',
-            },
-            include: {
-                professional: true,
-                service_request: { include: { user: true } },
-            },
-        });
-
-        if (nextOffer) {
-            const req = nextOffer.service_request;
-            const u = req.user;
-            await ProfessionalConversationService.notifyNewJob(nextOffer.professional, nextOffer, { ...req, user: u }, u);
-        } else {
-            await WhatsAppService.sendTextMessage(
-                userPhone,
-                'Lo sentimos, no encontramos más técnicos disponibles en tu zona en este momento.\n\nEscribí cuando quieras intentarlo de nuevo. 🙏'
-            );
         }
     }
 }

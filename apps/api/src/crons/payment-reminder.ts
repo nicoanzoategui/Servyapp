@@ -46,6 +46,7 @@ export async function runPaymentReminder(): Promise<void> {
     const payments = await prisma.payment.findMany({
         where: {
             status: 'pending',
+            payment_type: 'repair',
             mp_preference_id: { not: null },
             quotation: {
                 created_at: { lte: minAge, gte: maxAge },

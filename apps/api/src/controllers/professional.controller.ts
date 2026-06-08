@@ -241,8 +241,13 @@ export const getJobDetail = async (req: Request, res: Response) => {
 
         // Hide details conditionally
         const isConfirmed = ['confirmed', 'in_progress', 'completed'].includes(job.status);
+        const repairQuotation = await prisma.quotation.findFirst({
+            where: { job_offer_id: job.quotation.job_offer_id, quotation_type: 'repair' },
+            select: { id: true, status: true, total_price: true },
+        });
         const detail = {
             ...job,
+            repairQuotation,
             quotation: {
                 ...job.quotation,
                 job_offer: {
@@ -380,21 +385,29 @@ export const createQuote = async (req: Request, res: Response) => {
         if (offer.status === 'cancelled' || offer.status === 'rejected') {
             return res.status(400).json({ success: false, error: { code: 'INVALID_STATE', message: 'Esta oferta ya no está activa' } });
         }
-        if (offer.status !== 'pending' && offer.status !== 'accepted') {
+
+        const visitJob = await prisma.quotation.findFirst({
+            where: { job_offer_id: jobOfferId, quotation_type: 'visit' },
+            include: { job: true },
+        });
+        if (!visitJob?.job || !['confirmed', 'in_progress'].includes(visitJob.job.status)) {
             return res.status(400).json({
                 success: false,
-                error: { code: 'INVALID_STATE', message: 'Solo se puede cotizar una oferta pendiente o ya aceptada por vos' },
+                error: { code: 'INVALID_STATE', message: 'Solo podés cotizar el arreglo después de la visita confirmada' },
             });
         }
 
-        const existing = await prisma.quotation.findUnique({ where: { job_offer_id: jobOfferId } });
+        const existing = await prisma.quotation.findFirst({
+            where: { job_offer_id: jobOfferId, quotation_type: 'repair' },
+        });
         if (existing) {
-            return res.status(400).json({ success: false, error: { code: 'ALREADY_QUOTED', message: 'Ya existe una cotización para esta oferta' } });
+            return res.status(400).json({ success: false, error: { code: 'ALREADY_QUOTED', message: 'Ya existe un presupuesto de arreglo para esta visita' } });
         }
 
         const quotation = await prisma.quotation.create({
             data: {
                 job_offer_id: jobOfferId,
+                quotation_type: 'repair',
                 items_json: items,
                 total_price,
                 description,
@@ -417,7 +430,7 @@ export const createQuote = async (req: Request, res: Response) => {
 
         await WhatsAppService.sendButtonMessage(
             offer.service_request.user_phone,
-            `¡Recibiste una cotización! Monto: $${total_price}. Detalle: ${description}.`,
+            `¡Presupuesto del arreglo! Monto: $${total_price}. Detalle: ${description}.`,
             [
                 { id: 'btn_accept', title: 'Aceptar' },
                 { id: 'btn_reject', title: 'Rechazar' },

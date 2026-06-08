@@ -9,6 +9,20 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { API_URL } from '@/lib/api';
 
+const SESSION_STATE_LABELS: Record<string, string> = {
+    IDLE: 'Inactivo',
+    AWAITING_SPEED_SELECTION: 'Eligiendo modalidad',
+    AWAITING_SCHEDULE: 'Eligiendo horario',
+    AWAITING_SCHEDULE_DAY: 'Eligiendo día',
+    AWAITING_SCHEDULE_TIME: 'Eligiendo franja',
+    AWAITING_TECH_CONFIRMATION: 'Esperando técnico',
+    VISIT_PAYMENT_PENDING: 'Pago visita pendiente',
+    AWAITING_REPAIR_PAYMENT_DECISION: 'Decidiendo arreglo',
+    PAYMENT_PENDING: 'Pago en proceso',
+    COMPLETED: 'Completado',
+    AWAITING_REVIEW: 'Calificando',
+};
+
 const fetchConversation = async (phone: string) => {
     const token = Cookies.get('token');
     const res = await fetch(`${API_URL}/admin/conversations/${phone}`, {
@@ -65,7 +79,7 @@ export default function ConversationDetailPage() {
                         {session && (
                             <div className="mt-3 flex items-center gap-3">
                                 <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
-                                    Estado: {session.state}
+                                    Estado: {SESSION_STATE_LABELS[session.state] || session.state}
                                 </span>
                                 <span className="text-sm text-slate-500">
                                     Expira: {format(new Date(session.expires_at), "dd MMM 'a las' HH:mm", { locale: es })}

@@ -32,10 +32,10 @@ export default function Home() {
                         <p className="mt-6 text-lg md:text-xl text-[#0D4638]/80 max-w-lg animate-fade-in delay-150">
                             Canilla que pierde, se fue la luz, te quedaste afuera?{' '}
                             <span className="font-semibold text-[#0D4638]">Mandá mensaje a Servy.</span>{' '}
-                            Recibí la cotización en minutos y tenés un técnico verificado camino a tu casa.
+                            Elegí urgente o programado, confirmamos tu técnico y pagás la visita protegida. Después cotizás el arreglo in situ.
                         </p>
                         <p className="mt-4 text-lg md:text-xl text-[#0D4638]/80 max-w-lg animate-fade-in delay-200">
-                            <span className="font-semibold text-[#0D4638]">Precio cerrado antes de que llegue.</span>{' '}
+                            <span className="font-semibold text-[#0D4638]">Visita $50.000 · Programado $35.000.</span>{' '}
                             Sin apps nuevas, sin llamadas, sin vueltas.
                         </p>
                         <div className="mt-10 animate-slide-up delay-300">
@@ -107,13 +107,9 @@ export default function Home() {
 
                                         {/* Respuesta Servy */}
                                         <div className="self-start bg-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
-                                            <p className="text-slate-800 text-[13px] m-0 mb-1">Encontré 2 plomeros disponibles</p>
-                                            <p className="text-slate-600 text-[12px] m-0">
-                                                1 <strong>Urgente</strong> — hoy en 2hs
-                                            </p>
-                                            <p className="text-slate-600 text-[12px] m-0">
-                                                2 <strong>Programado</strong> — mañana
-                                            </p>
+                                            <p className="text-slate-800 text-[13px] m-0 mb-1">¿Urgente $50.000 o Programado $35.000?</p>
+                                            <p className="text-slate-600 text-[12px] m-0">1 Urgente — hoy</p>
+                                            <p className="text-slate-600 text-[12px] m-0">2 Programado — hasta 72 hs</p>
                                             <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:24</p>
                                         </div>
 
@@ -126,7 +122,7 @@ export default function Home() {
                                         {/* Respuesta Servy */}
                                         <div className="self-start bg-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
                                             <p className="text-slate-800 text-[13px] m-0">
-                                                Genial! La cotización está en camino. Te avisamos enseguida
+                                                Listo. Confirmamos con tu técnico y te mandamos el link de pago de la visita.
                                             </p>
                                             <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:25</p>
                                         </div>
@@ -154,9 +150,9 @@ export default function Home() {
                         <div className="w-16 h-16 rounded-2xl bg-[#C6F6DB]/30 text-[#0D4638] flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
                             <span className="text-2xl font-black">1</span>
                         </div>
-                        <h3 className="text-xl font-bold mb-3 text-[#0B3A31]">Contale y elegí tu técnico</h3>
+                        <h3 className="text-xl font-bold mb-3 text-[#0B3A31]">Contanos el problema</h3>
                         <p className="text-[#0D4638]/80">
-                            Mandá mensaje con tu problema (texto o foto). Te mostramos 2 opciones: técnico URGENTE (llega hoy) o PROGRAMADO (más económico). Ambos con calificaciones reales.
+                            Mandá mensaje con tu problema (texto o foto). Elegí Urgente ($50.000, hoy) o Programado ($35.000, hasta 72 hs) y coordinamos el turno.
                         </p>
                     </div>
 
@@ -165,9 +161,9 @@ export default function Home() {
                         <div className="w-16 h-16 rounded-2xl bg-[#C6F6DB]/30 text-[#0D4638] flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
                             <span className="text-2xl font-black">2</span>
                         </div>
-                        <h3 className="text-xl font-bold mb-3 text-[#0B3A31]">Recibí la cotización y reservá</h3>
+                        <h3 className="text-xl font-bold mb-3 text-[#0B3A31]">Confirmamos y pagás la visita</h3>
                         <p className="text-[#0D4638]/80">
-                            El técnico que elegiste te manda el precio exacto. Si te cierra, reservás con pago protegido por Mercado Pago. El dinero queda congelado hasta que estés conforme.
+                            Asignamos un técnico verificado y te avisamos cuando confirma el turno. Pagás la visita con Mercado Pago — el dinero queda retenido hasta que confirmes el servicio.
                         </p>
                     </div>
 
@@ -176,9 +172,9 @@ export default function Home() {
                         <div className="w-16 h-16 rounded-2xl bg-[#C6F6DB]/30 text-[#0D4638] flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
                             <span className="text-2xl font-black">3</span>
                         </div>
-                        <h3 className="text-xl font-bold mb-3 text-[#0B3A31]">Recibí el arreglo y liberá el pago</h3>
+                        <h3 className="text-xl font-bold mb-3 text-[#0B3A31]">Arreglo in situ y QR</h3>
                         <p className="text-[#0D4638]/80">
-                            El técnico va, arregla y te muestra el resultado. Cuando estés conforme, escaneás el QR y ahí se libera el pago. Vos tenés el control.
+                            El técnico diagnostica en la visita y te manda el presupuesto del arreglo. Si aceptás y pagás, al terminar escaneás el QR y se libera el pago del trabajo.
                         </p>
                     </div>
                 </div>

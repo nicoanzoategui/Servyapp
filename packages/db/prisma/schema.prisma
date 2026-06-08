@@ -109,6 +109,10 @@ model ServiceRequest {
   created_at  DateTime @default(now())
   scheduled_slot   String?
   scheduled_date   DateTime?
+  /// urgent | scheduled
+  priority    String?
+  /// Fixed visit fee (50000 urgent / 35000 scheduled)
+  visit_fee   Float?
 
   user        User       @relation(fields: [user_phone], references: [phone])
   job_offers  JobOffer[]
@@ -121,7 +125,7 @@ model JobOffer {
   request_id      String
   professional_id String
   priority        String   @default("normal")
-  status          String   @default("pending") // pending, accepted, rejected, quoted
+  status          String   @default("pending") // pending, held, accepted, rejected, quoted, expired, cancelled
   schedule        String?
   created_at      DateTime @default(now())
 
@@ -134,11 +138,13 @@ model JobOffer {
 
 model Quotation {
   id                 String   @id @default(cuid())
-  job_offer_id       String   @unique
+  job_offer_id       String
   items_json         Json     // [{description, price}]
   total_price        Float
   description        String?
   estimated_duration String?
+  /// visit = tarifa de visita | repair = presupuesto in situ
+  quotation_type     String   @default("visit")
   status             String   @default("pending") // pending, accepted, rejected
   created_at         DateTime @default(now())
 
@@ -146,6 +152,7 @@ model Quotation {
   payment            Payment?
   job                Job?
 
+  @@unique([job_offer_id, quotation_type])
   @@map("quotations")
 }
 
@@ -155,6 +162,8 @@ model Payment {
   mp_payment_id    String?
   mp_preference_id String?
   amount           Float
+  /// visit | repair
+  payment_type     String    @default("visit")
   status           String    @default("pending")
   paid_at          DateTime?
 

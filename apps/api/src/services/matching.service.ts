@@ -1,6 +1,7 @@
 import { prisma } from '@servy/db';
 import { buildProfileCompletionFromDbRow } from './professional-profile-completion.service';
 import { normalizeTwilioWhatsAppFrom } from '../utils/twilio-phone';
+import type { ServicePriority } from './visit-pricing';
 
 /** Técnico de prueba: ignora perfil incompleto, zona/categoría y asegura al menos una oferta. */
 const MATCHING_BYPASS_PHONE_DIGITS = '5491154142169';
@@ -33,12 +34,22 @@ const professionalMatchSelect = {
 } as const;
 
 export class ProfessionalMatchingService {
+    /** @deprecated Use checkCapacity / assignProfessional for visit flow */
     static async findProfessionalsAndCreateOffers(requestId: string) {
+        const urgentOk = await this.checkCapacity(requestId, 'urgent');
+        const schedOk = await this.checkCapacity(requestId, 'scheduled');
+        return {
+            urgent: urgentOk ? (await this.listCandidates(requestId, 'urgent'))[0] ?? null : null,
+            scheduled: schedOk ? (await this.listCandidates(requestId, 'scheduled'))[0] ?? null : null,
+        };
+    }
+
+    static async listCandidates(requestId: string, priority: ServicePriority, excludeProfessionalIds: string[] = []) {
         const request = await prisma.serviceRequest.findUnique({
             where: { id: requestId },
             include: { user: true },
         });
-        if (!request) return { urgent: null, scheduled: null };
+        if (!request) return [];
 
         const userPostalCode = request.user?.postal_code || '';
         const userAddress = request.address || '';
@@ -46,12 +57,8 @@ export class ProfessionalMatchingService {
         const professionals = await prisma.professional.findMany({
             where: {
                 status: 'active',
-                OR: [
-                    // Filtro normal: debe tener la categoría
-                    { categories: { has: request.category || '' } },
-                    // Excepción: técnico de prueba (mismo formato que en DB)
-                    { phone: MATCHING_BYPASS_PHONE_DIGITS },
-                ],
+                id: excludeProfessionalIds.length ? { notIn: excludeProfessionalIds } : undefined,
+                OR: [{ categories: { has: request.category || '' } }, { phone: MATCHING_BYPASS_PHONE_DIGITS }],
             },
             select: professionalMatchSelect,
         });
@@ -64,8 +71,6 @@ export class ProfessionalMatchingService {
 
         const matched = profileComplete.filter((p) => {
             if (isMatchingBypassPhone(p.phone)) return true;
-
-            // Filtro normal por zona
             if (!p.zones || p.zones.length === 0) return true;
             return p.zones.some(
                 (zone) =>
@@ -75,38 +80,56 @@ export class ProfessionalMatchingService {
             );
         });
 
-        let urgent =
-            matched.filter((p) => p.is_urgent).sort((a, b) => (b.rating || 0) - (a.rating || 0))[0] || null;
-        let scheduled =
-            matched.filter((p) => p.is_scheduled).sort((a, b) => (b.rating || 0) - (a.rating || 0))[0] || null;
+        const filtered = matched.filter((p) => {
+            if (isMatchingBypassPhone(p.phone)) return true;
+            return priority === 'urgent' ? p.is_urgent : p.is_scheduled;
+        });
 
-        const bypassPro = matched.find((p) => isMatchingBypassPhone(p.phone));
-        if (bypassPro) {
-            const inUrgent = urgent?.id === bypassPro.id;
-            const inScheduled = scheduled?.id === bypassPro.id;
-            if (!inUrgent && !inScheduled) {
-                if (!urgent) urgent = bypassPro;
-                else if (!scheduled) scheduled = bypassPro;
-                else scheduled = bypassPro;
-            }
-        }
+        return filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    }
 
-        if (urgent) {
-            await prisma.jobOffer.create({
-                data: { request_id: requestId, professional_id: urgent.id, priority: 'urgent', status: 'pending' },
-            });
-        }
-        if (scheduled && scheduled.id !== urgent?.id) {
-            await prisma.jobOffer.create({
-                data: {
-                    request_id: requestId,
-                    professional_id: scheduled.id,
-                    priority: 'scheduled',
-                    status: 'pending',
-                },
-            });
-        }
+    static async checkCapacity(requestId: string, priority: ServicePriority): Promise<boolean> {
+        const list = await this.listCandidates(requestId, priority);
+        return list.length > 0;
+    }
 
-        return { urgent, scheduled };
+    /** Creates a single pending JobOffer for the best available professional. */
+    static async assignProfessional(
+        requestId: string,
+        priority: ServicePriority,
+        schedule: string | null,
+        excludeProfessionalIds: string[] = []
+    ) {
+        const candidates = await this.listCandidates(requestId, priority, excludeProfessionalIds);
+        const pro = candidates[0];
+        if (!pro) return null;
+
+        const offer = await prisma.jobOffer.create({
+            data: {
+                request_id: requestId,
+                professional_id: pro.id,
+                priority,
+                status: 'pending',
+                schedule,
+            },
+            include: { professional: true },
+        });
+
+        return offer;
+    }
+
+    static async cancelOffersForRequest(requestId: string, exceptOfferId?: string) {
+        await prisma.jobOffer.updateMany({
+            where: {
+                request_id: requestId,
+                ...(exceptOfferId ? { id: { not: exceptOfferId } } : {}),
+                status: { in: ['pending', 'held'] },
+            },
+            data: { status: 'cancelled' },
+        });
+    }
+
+    static formatProName(pro: { name: string; last_name: string }): string {
+        return `${pro.name} ${pro.last_name}`.trim() || 'Tu técnico';
     }
 }

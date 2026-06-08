@@ -4,18 +4,25 @@ import { prisma } from '@servy/db';
 
 const client = new MercadoPagoConfig({ accessToken: env.MP_ACCESS_TOKEN });
 
+export type PaymentType = 'visit' | 'repair';
+
 export class MercadoPagoService {
-    static async createPreference(quotation: any, user: any) {
+    static async createPreference(quotation: { id: string; job_offer_id: string; total_price: number; description?: string | null; quotation_type?: string }, user: { phone: string }, paymentType: PaymentType = 'visit') {
         const preferenceClient = new Preference(client);
 
-        const expiresAt = new Date();
-        expiresAt.setHours(expiresAt.getHours() + 48);
+        const expireMinutes = paymentType === 'visit' ? env.VISIT_PAYMENT_EXPIRE_MINUTES : 48 * 60;
+        const expiresAt = new Date(Date.now() + expireMinutes * 60 * 1000);
+
+        const title =
+            paymentType === 'visit'
+                ? quotation.description || 'Visita Servy'
+                : quotation.description || 'Arreglo Servy';
 
         const body = {
             items: [
                 {
                     id: quotation.id,
-                    title: quotation.description || 'Servicio Servy',
+                    title,
                     quantity: 1,
                     unit_price: quotation.total_price,
                 },
@@ -38,6 +45,7 @@ export class MercadoPagoService {
                 quotation_id: quotation.id,
                 job_offer_id: quotation.job_offer_id,
                 user_phone: user.phone,
+                payment_type: paymentType,
             },
             expires: true,
             expiration_date_to: expiresAt.toISOString(),
@@ -51,22 +59,10 @@ export class MercadoPagoService {
                     quotation_id: quotation.id,
                     mp_preference_id: preference.id,
                     amount: quotation.total_price,
+                    payment_type: paymentType,
                     status: 'pending',
                 },
             });
-
-            console.log(
-                '[MP Preference]',
-                JSON.stringify(
-                    {
-                        items: preference.items,
-                        payer: preference.payer,
-                        back_urls: preference.back_urls,
-                    },
-                    null,
-                    2
-                )
-            );
 
             return preference.init_point;
         } catch (error) {
@@ -80,7 +76,6 @@ export class MercadoPagoService {
         return payment.get({ id: paymentId });
     }
 
-    /** Reembolso total por id de pago en Mercado Pago (API). */
     static async refundByMpPaymentId(mpPaymentId: string, amount?: number): Promise<void> {
         const refund = new PaymentRefund(client);
         await refund.create({
@@ -92,7 +87,6 @@ export class MercadoPagoService {
     static async processRefund(paymentId: string, amount?: number) {
         const refund = new PaymentRefund(client);
 
-        // Convert payment DB ID to MP Payment ID if we store it
         const dbPayment = await prisma.payment.findUnique({
             where: { id: paymentId },
         });

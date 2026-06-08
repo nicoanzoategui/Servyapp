@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Cookies from 'js-cookie';
 import { useState } from 'react';
-import { ArrowLeft, Clock, MapPin, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, Image as ImageIcon, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { API_URL } from '@/lib/api';
 
@@ -11,6 +11,7 @@ type OfferDetail = {
     id: string;
     status: string;
     priority: string;
+    schedule: string | null;
     service_request: {
         description: string | null;
         photos: string[];
@@ -22,8 +23,10 @@ type OfferDetail = {
 type JobDetail = {
     id: string;
     status: string;
+    repairQuotation?: { id: string; status: string; total_price: number } | null;
     quotation: {
         job_offer: {
+            id: string;
             service_request: {
                 description: string | null;
                 photos: string[];
@@ -50,10 +53,19 @@ async function fetchDetail(id: string): Promise<{ kind: 'offer'; data: OfferDeta
     return { kind: 'job', data: json.data };
 }
 
+const OFFER_STATUS_LABELS: Record<string, string> = {
+    pending: 'Esperando tu confirmación',
+    held: 'Esperando pago del cliente',
+    accepted: 'Visita confirmada',
+    expired: 'Vencida',
+    rejected: 'Rechazada',
+    quoted: 'Presupuesto enviado',
+};
+
 export default function JobDetailPage({ params }: { params: { id: string } }) {
     const queryClient = useQueryClient();
     const [quotePrice, setQuotePrice] = useState('');
-    const [quoteDesc, setQuoteDesc] = useState('Cotización estándar');
+    const [quoteDesc, setQuoteDesc] = useState('Arreglo in situ');
     const [quoting, setQuoting] = useState(false);
 
     const { data, isLoading, error } = useQuery({
@@ -61,16 +73,18 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
         queryFn: () => fetchDetail(params.id),
     });
 
+    const jobOfferId = data?.kind === 'job' ? data.data.quotation.job_offer.id : params.id;
+
     const quoteMutation = useMutation({
         mutationFn: async () => {
             const token = Cookies.get('token');
             const total = Number(quotePrice);
             if (!total || Number.isNaN(total)) throw new Error('Precio inválido');
-            const res = await fetch(`${API_URL}/professional/offers/${params.id}/quote`, {
+            const res = await fetch(`${API_URL}/professional/offers/${jobOfferId}/quote`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                 body: JSON.stringify({
-                    items: [{ description: quoteDesc || 'Servicio', price: total }],
+                    items: [{ description: quoteDesc || 'Arreglo', price: total }],
                     total_price: total,
                     description: quoteDesc,
                     estimated_duration: 'A coordinar',
@@ -83,6 +97,7 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['proJobDetail', params.id] });
             queryClient.invalidateQueries({ queryKey: ['proOffers'] });
+            queryClient.invalidateQueries({ queryKey: ['proJobs'] });
             setQuoting(false);
         },
     });
@@ -109,8 +124,12 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
 
     const isOffer = data.kind === 'offer';
     const status = isOffer ? data.data.status : data.data.status;
+    const statusLabel = isOffer ? OFFER_STATUS_LABELS[status] || status : status;
     const sr = isOffer ? data.data.service_request : data.data.quotation.job_offer.service_request;
-    const title = isOffer ? 'Solicitud de servicio' : 'Trabajo confirmado';
+    const title = isOffer ? 'Turno asignado' : 'Visita confirmada';
+    const canQuoteRepair =
+        !isOffer && ['confirmed', 'in_progress'].includes(data.data.status) && !data.data.repairQuotation;
+    const repairSent = !isOffer && Boolean(data.data.repairQuotation);
 
     return (
         <div className="p-6 flex flex-col gap-6 w-full pb-24 md:pb-6 animate-fade-in max-w-3xl mx-auto">
@@ -124,16 +143,16 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
                     <span
                         className={`text-xs font-bold px-3 py-1 uppercase rounded-md tracking-wider
                   ${
-                      status === 'pending' || status === 'accepted'
+                      status === 'pending' || status === 'held'
                           ? 'bg-yellow-100 text-yellow-800'
                           : status === 'quoted'
                             ? 'bg-blue-100 text-blue-800'
-                            : status === 'confirmed' || status === 'in_progress'
+                            : status === 'confirmed' || status === 'in_progress' || status === 'accepted'
                               ? 'bg-green-100 text-green-800'
                               : 'bg-slate-100 text-slate-600'
                   }`}
                     >
-                        {status}
+                        {statusLabel}
                     </span>
                 </div>
 
@@ -150,7 +169,7 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
                                 <div className="text-xs text-slate-500 font-medium">Ubicación</div>
                                 <div className="text-sm font-bold text-slate-900">
                                     {isOffer
-                                ? sr?.address || 'Oculta hasta confirmar el servicio'
+                                        ? sr?.address || 'Oculta hasta confirmar la visita'
                                         : sr?.address || '—'}
                                 </div>
                             </div>
@@ -160,8 +179,15 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
                             <div>
                                 <div className="text-xs text-slate-500 font-medium">Modalidad</div>
                                 <div className="text-sm font-bold text-slate-900">
-                                    {isOffer && data.data.priority === 'urgent' ? 'Urgente' : isOffer ? 'Programado' : 'Confirmado'}
+                                    {isOffer && data.data.priority === 'urgent'
+                                        ? 'Urgente'
+                                        : isOffer
+                                          ? 'Programado'
+                                          : 'Visita pagada'}
                                 </div>
+                                {isOffer && data.data.schedule && (
+                                    <div className="text-xs text-slate-500 mt-1">{data.data.schedule}</div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -179,8 +205,25 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
                         </div>
                     )}
 
-                    {isOffer && (data.data.status === 'pending' || data.data.status === 'accepted') && (
+                    {isOffer && (status === 'pending' || status === 'held') && (
+                        <div className="mt-4 border-t border-slate-100 pt-6 bg-green-50 border border-green-100 rounded-xl p-5 flex gap-3">
+                            <MessageCircle className="text-green-700 shrink-0 mt-0.5" size={22} />
+                            <div>
+                                <p className="font-bold text-green-900 mb-1">
+                                    {status === 'pending' ? 'Confirmá el turno por WhatsApp' : 'Esperando pago del cliente'}
+                                </p>
+                                <p className="text-sm text-green-800 leading-relaxed">
+                                    {status === 'pending'
+                                        ? 'Respondé *1* para confirmar o *2* para rechazar en el mensaje de Servy. Cuando confirmes, le enviamos al cliente el link de pago de la visita.'
+                                        : 'El cliente tiene unos minutos para pagar la visita. Te avisamos cuando esté confirmada.'}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {canQuoteRepair && (
                         <div className="mt-4 border-t border-slate-100 pt-6">
+                            <h3 className="text-sm font-bold text-slate-700 mb-3">Presupuesto del arreglo (post-visita)</h3>
                             {quoting ? (
                                 <div className="flex flex-col gap-3">
                                     <label className="text-sm font-bold text-slate-700">Detalle (opcional)</label>
@@ -190,12 +233,12 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
                                         value={quoteDesc}
                                         onChange={(e) => setQuoteDesc(e.target.value)}
                                     />
-                                    <label className="text-sm font-bold text-slate-700">Total ($)</label>
+                                    <label className="text-sm font-bold text-slate-700">Mano de obra ($, sin materiales)</label>
                                     <div className="flex gap-3">
                                         <input
                                             type="number"
                                             className="flex-1 px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-servy-500"
-                                            placeholder="Ej: 25000"
+                                            placeholder="Ej: 45000"
                                             value={quotePrice}
                                             onChange={(e) => setQuotePrice(e.target.value)}
                                         />
@@ -205,7 +248,7 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
                                             disabled={!quotePrice || quoteMutation.isPending}
                                             className="bg-servy-600 hover:bg-servy-500 text-white font-bold px-6 py-3 rounded-xl disabled:opacity-50"
                                         >
-                                            {quoteMutation.isPending ? 'Enviando...' : 'Enviar cotización'}
+                                            {quoteMutation.isPending ? 'Enviando...' : 'Enviar presupuesto'}
                                         </button>
                                     </div>
                                     {quoteMutation.isError && (
@@ -221,15 +264,15 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
                                     onClick={() => setQuoting(true)}
                                     className="w-full bg-servy-600 hover:bg-servy-500 text-white font-bold py-4 rounded-xl text-lg shadow-lg transition-all"
                                 >
-                                    Presupuestar este trabajo
+                                    Cotizar arreglo in situ
                                 </button>
                             )}
                         </div>
                     )}
 
-                    {isOffer && data.data.status === 'quoted' && (
+                    {repairSent && (
                         <div className="mt-4 bg-blue-50 border border-blue-200 p-4 rounded-xl text-blue-800 text-center font-medium">
-                            Ya enviaste la cotización al cliente. Esperando respuesta por WhatsApp.
+                            Presupuesto de arreglo enviado (${data.data.repairQuotation?.total_price?.toLocaleString('es-AR')}). Esperando respuesta del cliente por WhatsApp.
                         </div>
                     )}
 

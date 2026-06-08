@@ -43,8 +43,8 @@ export default function ProJobsPage() {
     return (
         <div className="p-6 flex flex-col gap-8 w-full pb-20 md:pb-6 animate-fade-in">
             <section>
-                <h1 className="text-2xl font-bold text-slate-900 mb-2">Solicitudes para cotizar</h1>
-                <p className="text-slate-500 text-sm mb-4">Ofertas activas vinculadas a tu perfil</p>
+                <h1 className="text-2xl font-bold text-slate-900 mb-2">Turnos asignados</h1>
+                <p className="text-slate-500 text-sm mb-4">Confirmá por WhatsApp cuando te llegue la solicitud</p>
                 <div className="flex flex-col gap-4">
                     {(offers || []).map((offer: any) => (
                         <Link
@@ -74,7 +74,7 @@ export default function ProJobsPage() {
                                     {offer.service_request?.description || 'Solicitud de servicio'}
                                 </h3>
                                 <div className="flex items-center gap-1 text-slate-500 text-sm mt-1">
-                                    <MapPin size={14} /> Dirección oculta hasta confirmar pago
+                                    <MapPin size={14} /> {offer.status === 'held' ? 'Esperando pago del cliente' : 'Confirmá por WhatsApp'}
                                 </div>
                             </div>
                             <div className="flex justify-end items-center text-servy-600 font-medium shrink-0 group-hover:translate-x-1 transition-transform">
@@ -87,7 +87,8 @@ export default function ProJobsPage() {
             </section>
 
             <section>
-                <h2 className="text-xl font-bold text-slate-900 mb-2">Trabajos confirmados</h2>
+                <h2 className="text-xl font-bold text-slate-900 mb-2">Visitas confirmadas</h2>
+                <p className="text-slate-500 text-sm mb-4">Visitas pagadas — cotizá el arreglo desde el detalle</p>
                 <div className="flex flex-col gap-4">
                     {(jobs || []).map((job: any) => (
                         <Link

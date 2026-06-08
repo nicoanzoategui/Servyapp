@@ -73,6 +73,41 @@ const envSchema = z.object({
             const n = parseInt(String(v || ''), 10);
             return Number.isFinite(n) && n >= 15 ? n : 180;
         }),
+    VISIT_FEE_URGENT: z
+        .string()
+        .optional()
+        .transform((v) => {
+            const n = parseInt(String(v || '50000'), 10);
+            return Number.isFinite(n) && n > 0 ? n : 50000;
+        }),
+    VISIT_FEE_SCHEDULED: z
+        .string()
+        .optional()
+        .transform((v) => {
+            const n = parseInt(String(v || '35000'), 10);
+            return Number.isFinite(n) && n > 0 ? n : 35000;
+        }),
+    TECH_CONFIRM_TIMEOUT_MINUTES: z
+        .string()
+        .optional()
+        .transform((v) => {
+            const n = parseInt(String(v || '20'), 10);
+            return Number.isFinite(n) && n >= 5 ? n : 20;
+        }),
+    VISIT_PAYMENT_EXPIRE_MINUTES: z
+        .string()
+        .optional()
+        .transform((v) => {
+            const n = parseInt(String(v || '30'), 10);
+            return Number.isFinite(n) && n >= 10 ? n : 30;
+        }),
+    MAX_TECH_ASSIGNMENT_ATTEMPTS: z
+        .string()
+        .optional()
+        .transform((v) => {
+            const n = parseInt(String(v || '3'), 10);
+            return Number.isFinite(n) && n >= 1 ? n : 3;
+        }),
 });
 
 const _env = envSchema.safeParse(process.env);

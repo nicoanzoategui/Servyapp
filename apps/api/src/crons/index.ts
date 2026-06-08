@@ -13,6 +13,7 @@ import { runExperimentsDaily, runExperimentsMonthly } from './experiments-cron';
 import { processAgentTasks } from '../lib/agent-task-consumer';
 import { runPaymentReminder } from './payment-reminder';
 import { runJobTimeout } from './job-timeout';
+import { runVisitHoldExpiry } from './visit-hold-expiry';
 
 /**
  * Crons de los agentes operativos (Servy).
@@ -34,6 +35,7 @@ export function startCrons(): void {
 
     cron.schedule('*/10 * * * *', () => {
         void runPaymentReminder().catch((err) => console.error('[cron runPaymentReminder]', err));
+        void runVisitHoldExpiry().catch((err) => console.error('[cron runVisitHoldExpiry]', err));
     });
 
     cron.schedule('* * * * *', () => {
