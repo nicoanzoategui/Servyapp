@@ -85,12 +85,29 @@ describe('ProfessionalMatchingService', () => {
             }),
         ]);
 
-        (prisma.jobOffer.create as any).mockResolvedValue({ id: 'offer1' });
-
         const result = await ProfessionalMatchingService.findProfessionalsAndCreateOffers('req1');
 
         expect(result.urgent?.id).toBe('pro1');
         expect(result.scheduled?.id).toBe('pro2');
-        expect(prisma.jobOffer.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('assigns professional and creates job offer', async () => {
+        (prisma.serviceRequest.findUnique as any).mockResolvedValue({
+            id: 'req1',
+            category: 'Plomería',
+            address: 'Calle Falsa 123, CABA (1414)',
+            user: { postal_code: '1414' },
+        });
+
+        (prisma.professional.findMany as any).mockResolvedValue([
+            completePro({ id: 'pro1', is_urgent: true, is_scheduled: false, rating: 5 }),
+        ]);
+
+        (prisma.jobOffer.create as any).mockResolvedValue({ id: 'offer1' });
+
+        const result = await ProfessionalMatchingService.assignProfessional('req1', 'urgent', null);
+
+        expect(result).toEqual({ id: 'offer1' });
+        expect(prisma.jobOffer.create).toHaveBeenCalledTimes(1);
     });
 });

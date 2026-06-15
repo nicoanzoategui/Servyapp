@@ -122,9 +122,13 @@ app.use('/api/finance', financeRouter);
 // Apply global error handler middleware
 app.use(errorHandler);
 
-startCronJobs();
-startCrons();
+if (process.env.NODE_ENV !== 'test') {
+    startCronJobs();
+    startCrons();
 
-app.listen(env.PORT, () => {
-    console.log(`Server is running on port ${env.PORT}`);
-});
+    app.listen(env.PORT, () => {
+        console.log(`Server is running on port ${env.PORT}`);
+    });
+}
+
+export default app;

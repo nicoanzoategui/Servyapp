@@ -8,7 +8,9 @@
         "start": "node dist/index.js",
         "test": "vitest run",
         "test:watch": "vitest",
-        "test:coverage": "vitest run --coverage"
+        "test:coverage": "vitest run --coverage",
+        "test:integration": "vitest run src/__tests__/integration-real-db.test.ts src/__tests__/security-vulnerability.test.ts",
+        "stress:run": "ts-node scripts/stress-test.ts"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.1022.0",
@@ -42,6 +44,7 @@
         "@types/qrcode": "^1.5.6",
         "@types/supertest": "^7.2.0",
         "@vitest/coverage-v8": "^4.1.2",
+        "autocannon": "^8.0.0",
         "nodemon": "^3.1.0",
         "supertest": "^7.2.2",
         "ts-node": "^10.9.2",
