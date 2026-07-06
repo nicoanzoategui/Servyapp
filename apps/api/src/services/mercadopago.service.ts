@@ -7,11 +7,23 @@ const client = new MercadoPagoConfig({ accessToken: env.MP_ACCESS_TOKEN });
 export type PaymentType = 'visit' | 'repair';
 
 export class MercadoPagoService {
-    static async createPreference(quotation: { id: string; job_offer_id: string; total_price: number; description?: string | null; quotation_type?: string }, user: { phone: string }, paymentType: PaymentType = 'visit') {
+    static async createPreference(
+        quotation: {
+            id: string;
+            job_offer_id: string;
+            total_price: number;
+            description?: string | null;
+            quotation_type?: string;
+        },
+        user: { phone: string },
+        paymentType: PaymentType = 'visit',
+        chargeAmount?: number
+    ) {
         const preferenceClient = new Preference(client);
 
         const expireMinutes = paymentType === 'visit' ? env.VISIT_PAYMENT_EXPIRE_MINUTES : 48 * 60;
         const expiresAt = new Date(Date.now() + expireMinutes * 60 * 1000);
+        const unitPrice = chargeAmount ?? quotation.total_price;
 
         const title =
             paymentType === 'visit'
@@ -24,7 +36,7 @@ export class MercadoPagoService {
                     id: quotation.id,
                     title,
                     quantity: 1,
-                    unit_price: quotation.total_price,
+                    unit_price: unitPrice,
                 },
             ],
             payer: {
@@ -58,7 +70,7 @@ export class MercadoPagoService {
                 data: {
                     quotation_id: quotation.id,
                     mp_preference_id: preference.id,
-                    amount: quotation.total_price,
+                    amount: unitPrice,
                     payment_type: paymentType,
                     status: 'pending',
                 },

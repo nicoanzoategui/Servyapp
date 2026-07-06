@@ -43,19 +43,6 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-/** Temporal: listar modelos disponibles en la API de Gemini (quitar en producción). */
-app.get('/debug/gemini-models', async (_req, res) => {
-    try {
-        const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models?key=${env.GEMINI_API_KEY}`
-        );
-        const data = await response.json();
-        res.json(data);
-    } catch (err) {
-        res.json({ error: String(err) });
-    }
-});
-
 // Verificación rápida en navegador: Twilio solo usa POST; esto confirma URL/HTTPS/DNS correctos.
 app.get('/webhook/twilio', (_req, res) => {
     res.type('text/plain; charset=utf-8').send(

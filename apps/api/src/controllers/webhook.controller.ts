@@ -10,6 +10,8 @@ import { redis } from '../utils/redis';
 import { processAvailabilityMessage } from '../agents/availability-agent';
 import { processQualityUserReply } from '../agents/quality-agent';
 import { tryExperimentWaitlist } from '../agents/experiments-agent';
+import { verifyMercadoPagoWebhookSignature } from '../lib/mp-webhook-signature';
+import { verifyTwilioWebhookSignature } from '../lib/twilio-webhook-signature';
 import { twilioWebhookAls } from '../lib/twilio-request-context';
 import {
     maskPhoneDigitsTail,
@@ -100,15 +102,25 @@ export const handleWhatsAppMessage = async (req: Request, res: Response) => {
 };
 
 export const handleMPWebhook = async (req: Request, res: Response) => {
+    if (!verifyMercadoPagoWebhookSignature(req)) {
+        console.error('[MP webhook] Firma inválida o ausente');
+        res.sendStatus(401);
+        return;
+    }
+
     res.sendStatus(200);
 
     try {
-        void req.headers['x-signature'];
-
         const { type, data } = req.body || {};
         if (type !== 'payment' || !data?.id) return;
 
-        const paymentData = await MercadoPagoService.getPayment(String(data.id));
+        const mpPaymentId = String(data.id);
+        const alreadyProcessed = await prisma.payment.findFirst({
+            where: { mp_payment_id: mpPaymentId, status: 'approved' },
+        });
+        if (alreadyProcessed) return;
+
+        const paymentData = await MercadoPagoService.getPayment(mpPaymentId);
         const status = paymentData.status;
         const metadata = paymentData.metadata as {
             quotation_id?: string;
@@ -128,8 +140,8 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
         if (status === 'approved') {
             if (paymentType === 'repair') {
                 const payUp = await prisma.payment.updateMany({
-                    where: { quotation_id: quotationId },
-                    data: { status: 'approved', mp_payment_id: String(data.id), paid_at: new Date() },
+                    where: { quotation_id: quotationId, status: { not: 'approved' } },
+                    data: { status: 'approved', mp_payment_id: mpPaymentId, paid_at: new Date() },
                 });
                 if (payUp.count === 0) return;
 
@@ -139,7 +151,7 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
                 const job = visitQuotation
                     ? await prisma.job.findUnique({ where: { quotation_id: visitQuotation.id } })
                     : null;
-                if (!job) return;
+                if (!job || job.status === 'in_progress' || job.status === 'completed') return;
 
                 await prisma.job.update({ where: { id: job.id }, data: { status: 'in_progress' } });
 
@@ -152,8 +164,8 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
                 }
 
                 const qrCopy = qrUrl
-                    ? '🔒 *QR de liberación*\nGuardá la imagen. El técnico la escanea al terminar el arreglo — ahí se libera el pago del trabajo.'
-                    : '🔒 *QR de liberación*\nEn breve te enviamos el código para liberar el pago al finalizar.';
+                    ? '🔒 *QR de confirmación*\nGuardá la imagen. Al terminar el arreglo, el técnico la escanea desde el portal Servy para confirmar el trabajo.'
+                    : '🔒 *QR de confirmación*\nEn breve te enviamos el código para que el técnico confirme el trabajo al finalizar.';
 
                 await WhatsAppService.sendTextMessage(
                     userPhone,
@@ -169,8 +181,8 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
             if (existing) return;
 
             const payUp = await prisma.payment.updateMany({
-                where: { quotation_id: quotationId },
-                data: { status: 'approved', mp_payment_id: String(data.id), paid_at: new Date() },
+                where: { quotation_id: quotationId, status: { not: 'approved' } },
+                data: { status: 'approved', mp_payment_id: mpPaymentId, paid_at: new Date() },
             });
             if (payUp.count === 0) return;
 
@@ -277,7 +289,7 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
         } else if (status === 'rejected' || status === 'cancelled') {
             await prisma.payment.updateMany({
                 where: { quotation_id: quotationId },
-                data: { status, mp_payment_id: String(data.id) },
+                data: { status, mp_payment_id: mpPaymentId },
             });
 
             if (metadata.user_phone) {
@@ -293,6 +305,13 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
 };
 
 export const handleTwilioMessage = async (req: Request, res: Response) => {
+    const params = req.body as Record<string, string>;
+    if (!verifyTwilioWebhookSignature(req, params)) {
+        console.error('[twilio] Firma inválida o ausente');
+        res.sendStatus(403);
+        return;
+    }
+
     res.set('Content-Type', 'text/xml');
     res.send('<Response></Response>');
 

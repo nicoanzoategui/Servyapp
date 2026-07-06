@@ -32,11 +32,10 @@ export default function Home() {
                         <p className="mt-6 text-lg md:text-xl text-[#0D4638]/80 max-w-lg animate-fade-in delay-150">
                             Canilla que pierde, se fue la luz, te quedaste afuera?{' '}
                             <span className="font-semibold text-[#0D4638]">Mandá mensaje a Servy.</span>{' '}
-                            Elegí urgente o programado, confirmamos tu técnico y pagás la visita protegida. Después cotizás el arreglo in situ.
+                            Elegí urgente o programado, pagás la visita y si hacés el arreglo, se descuenta del total.
                         </p>
                         <p className="mt-4 text-lg md:text-xl text-[#0D4638]/80 max-w-lg animate-fade-in delay-200">
-                            <span className="font-semibold text-[#0D4638]">Visita $50.000 · Programado $35.000.</span>{' '}
-                            Sin apps nuevas, sin llamadas, sin vueltas.
+                            <span className="font-semibold text-[#0D4638]">Visita urgente $55.000 · Programada $39.000 · Se descuenta del arreglo.</span>
                         </p>
                         <div className="mt-10 animate-slide-up delay-300">
                             <a
@@ -107,7 +106,7 @@ export default function Home() {
 
                                         {/* Respuesta Servy */}
                                         <div className="self-start bg-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
-                                            <p className="text-slate-800 text-[13px] m-0 mb-1">¿Urgente $50.000 o Programado $35.000?</p>
+                                            <p className="text-slate-800 text-[13px] m-0 mb-1">¿Urgente $55.000 o Programado $39.000?</p>
                                             <p className="text-slate-600 text-[12px] m-0">1 Urgente — hoy</p>
                                             <p className="text-slate-600 text-[12px] m-0">2 Programado — hasta 72 hs</p>
                                             <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:24</p>
@@ -123,6 +122,14 @@ export default function Home() {
                                         <div className="self-start bg-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
                                             <p className="text-slate-800 text-[13px] m-0">
                                                 Listo. Confirmamos con tu técnico y te mandamos el link de pago de la visita.
+                                            </p>
+                                            <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:25</p>
+                                        </div>
+
+                                        {/* Respuesta Servy */}
+                                        <div className="self-start bg-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
+                                            <p className="text-slate-800 text-[13px] m-0">
+                                                Si hacés el arreglo, la visita se descuenta del total 👍
                                             </p>
                                             <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:25</p>
                                         </div>
@@ -152,7 +159,7 @@ export default function Home() {
                         </div>
                         <h3 className="text-xl font-bold mb-3 text-[#0B3A31]">Contanos el problema</h3>
                         <p className="text-[#0D4638]/80">
-                            Mandá mensaje con tu problema (texto o foto). Elegí Urgente ($50.000, hoy) o Programado ($35.000, hasta 72 hs) y coordinamos el turno.
+                            Mandá mensaje con tu problema (texto o foto). Elegí Urgente ($55.000, hoy) o Programado ($39.000, hasta 72 hs) y coordinamos el turno.
                         </p>
                     </div>
 
@@ -163,7 +170,7 @@ export default function Home() {
                         </div>
                         <h3 className="text-xl font-bold mb-3 text-[#0B3A31]">Confirmamos y pagás la visita</h3>
                         <p className="text-[#0D4638]/80">
-                            Asignamos un técnico verificado y te avisamos cuando confirma el turno. Pagás la visita con Mercado Pago — el dinero queda retenido hasta que confirmes el servicio.
+                            Asignamos un técnico verificado y te avisamos cuando confirma el turno. Pagás la visita con Mercado Pago — si después hacés el arreglo, se descuenta del total.
                         </p>
                     </div>
 
@@ -174,7 +181,7 @@ export default function Home() {
                         </div>
                         <h3 className="text-xl font-bold mb-3 text-[#0B3A31]">Arreglo in situ y QR</h3>
                         <p className="text-[#0D4638]/80">
-                            El técnico diagnostica en la visita y te manda el presupuesto del arreglo. Si aceptás y pagás, al terminar escaneás el QR y se libera el pago del trabajo.
+                            El técnico diagnostica y te manda el presupuesto del arreglo. Se descuenta lo que ya pagaste de visita. Si aceptás, pagás la diferencia y al terminar escaneás el QR para liberar el pago.
                         </p>
                     </div>
                 </div>
@@ -288,85 +295,22 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* Testimonios */}
-            <section className="w-full py-24 px-6 md:px-12 bg-[#F2F9EF]/50 flex flex-col items-center">
-                <h2 className="text-3xl md:text-5xl font-bold text-[#0B3A31] text-center mb-4">
-                    Lo que dicen quienes ya usaron Servy
+            {/* Early adopters */}
+            <section className="w-full py-24 px-6 md:px-12 bg-[#F2F9EF]/50 flex flex-col items-center text-center">
+                <h2 className="text-3xl md:text-5xl font-bold text-[#0B3A31] text-center mb-6">
+                    Estamos empezando en Pilar, Buenos Aires
                 </h2>
-                <p className="text-[#0D4638]/80 text-center text-lg mb-16 max-w-2xl">
-                    Más de 500 arreglos resueltos · 4.8★ promedio en calificaciones
+                <p className="text-[#0D4638]/80 text-center text-lg mb-10 max-w-2xl">
+                    Sé de los primeros en probar Servy y conseguí precio preferencial en tu primera visita.
                 </p>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full">
-                    {/* Testimonio 1 */}
-                    <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-                        <div className="flex items-center gap-1 mb-4">
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                        </div>
-                        <p className="text-[#0B3A31] mb-6 leading-relaxed">
-                            &quot;Se me rompió la canilla un domingo a la tarde. Mandé mensaje y en 2 horas el plomero ya estaba arreglándola. Increíble.&quot;
-                        </p>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-[#C6F6DB]/30 flex items-center justify-center font-bold text-[#0D4638]">
-                                M
-                            </div>
-                            <div>
-                                <p className="font-bold text-sm text-[#0B3A31]">María González</p>
-                                <p className="text-[#0D4638]/60 text-xs">Palermo, CABA</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Testimonio 2 */}
-                    <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-                        <div className="flex items-center gap-1 mb-4">
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                        </div>
-                        <p className="text-[#0B3A31] mb-6 leading-relaxed">
-                            &quot;No tuve que bajarme ninguna app ni registrarme. Todo por WhatsApp, re fácil. Y el precio lo sabés antes, sin vueltas.&quot;
-                        </p>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-[#C6F6DB]/30 flex items-center justify-center font-bold text-[#0D4638]">
-                                J
-                            </div>
-                            <div>
-                                <p className="font-bold text-sm text-[#0B3A31]">Javier Rodríguez</p>
-                                <p className="text-[#0D4638]/60 text-xs">Belgrano, CABA</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Testimonio 3 */}
-                    <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-                        <div className="flex items-center gap-1 mb-4">
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-slate-300 text-slate-300" size={18} />
-                        </div>
-                        <p className="text-[#0B3A31] mb-6 leading-relaxed">
-                            &quot;Me quedé afuera de casa a las 11 de la noche. El cerrajero llegó en 40 minutos. Me salvó la vida literal.&quot;
-                        </p>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-[#C6F6DB]/30 flex items-center justify-center font-bold text-[#0D4638]">
-                                C
-                            </div>
-                            <div>
-                                <p className="font-bold text-sm text-[#0B3A31]">Carolina Méndez</p>
-                                <p className="text-[#0D4638]/60 text-xs">Caballito, CABA</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <a
+                    href={WA_LINK}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-[#A7E23C] text-[#0D4638] px-8 py-4 rounded-full font-bold shadow-xl shadow-[#A7E23C]/20 hover:shadow-2xl hover:shadow-[#A7E23C]/20 hover:bg-[#A7E23C]/90 hover:-translate-y-1 transition-all duration-300"
+                >
+                    Hablar con Servy
+                </a>
             </section>
 
             {/* Dudas / FAQ */}
@@ -422,7 +366,7 @@ export default function Home() {
                             ¿Cuánto tarda en llegar el técnico?
                         </h3>
                         <p className="text-[#0D4638]/80 leading-relaxed">
-                            Si elegís &quot;urgente&quot;, llega dentro de las 24 horas. Si elegís &quot;programado&quot;, podés agendarlo para el día que mejor te venga y sale más económico.
+                            Si elegís &quot;urgente&quot;, llega dentro de las 24 horas. Si elegís &quot;programado&quot;, podés agendarlo para el día que mejor te venga y sale más económico. Recordá que si hacés el arreglo, lo que pagaste de visita se descuenta del presupuesto.
                         </p>
                     </div>
                 </div>

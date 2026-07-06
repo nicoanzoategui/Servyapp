@@ -430,7 +430,7 @@ export const createQuote = async (req: Request, res: Response) => {
 
         await WhatsAppService.sendButtonMessage(
             offer.service_request.user_phone,
-            `¡Presupuesto del arreglo! Monto: $${total_price}. Detalle: ${description}.`,
+            `¡Presupuesto del arreglo! Detalle: ${description}. Revisá el desglose en el mensaje anterior.`,
             [
                 { id: 'btn_accept', title: 'Aceptar' },
                 { id: 'btn_reject', title: 'Rechazar' },
@@ -795,16 +795,22 @@ export const completeJobByQr = async (req: Request, res: Response) => {
         if (existing.status === 'completed') {
             return res.status(400).json({ success: false, error: { message: 'El trabajo ya estaba completado' } });
         }
+        const now = new Date();
         await prisma.job.update({
             where: { id: jobId },
-            data: { status: 'completed', completed_at: new Date() },
+            data: {
+                status: 'completed',
+                completed_at: now,
+                payment_released_at: now,
+            },
         });
         await availabilityAgent.clearProfessionalBusyIfNeeded(professionalId);
         const userPhone = existing.quotation.job_offer.service_request.user_phone;
         const proPhone = existing.quotation.job_offer.professional.phone;
+        const repairAmount = existing.quotation.total_price.toLocaleString('es-AR');
         await WhatsAppService.sendTextMessage(
             proPhone,
-            '✅ QR del cliente validado. Trabajo marcado como completado. ¡Gracias por usar Servy!'
+            `💰 *¡Pago confirmado!*\n\nEl cliente validó el QR. El arreglo por *$${repairAmount}* quedó registrado como completado.\n\nPodés ver el detalle en el portal.`
         );
         const endUser = await prisma.user.findUnique({ where: { phone: userPhone } });
         const nm = endUser?.name?.trim();

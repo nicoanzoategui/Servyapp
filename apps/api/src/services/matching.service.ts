@@ -3,10 +3,12 @@ import { buildProfileCompletionFromDbRow } from './professional-profile-completi
 import { normalizeTwilioWhatsAppFrom } from '../utils/twilio-phone';
 import type { ServicePriority } from './visit-pricing';
 
-/** Técnico de prueba: ignora perfil incompleto, zona/categoría y asegura al menos una oferta. */
-const MATCHING_BYPASS_PHONE_DIGITS = '5491154142169';
+/** Técnico de prueba (solo non-production): ignora perfil incompleto, zona/categoría. */
+const MATCHING_BYPASS_PHONE_DIGITS =
+    process.env.NODE_ENV !== 'production' ? '5491154142169' : null;
 
 function isMatchingBypassPhone(phone: string | null | undefined): boolean {
+    if (!MATCHING_BYPASS_PHONE_DIGITS) return false;
     const d = normalizeTwilioWhatsAppFrom(phone || '') || String(phone || '').replace(/\D/g, '');
     return d === MATCHING_BYPASS_PHONE_DIGITS;
 }
@@ -54,11 +56,20 @@ export class ProfessionalMatchingService {
         const userPostalCode = request.user?.postal_code || '';
         const userAddress = request.address || '';
 
+        const categoryFilter = MATCHING_BYPASS_PHONE_DIGITS
+            ? {
+                  OR: [
+                      { categories: { has: request.category || '' } },
+                      { phone: MATCHING_BYPASS_PHONE_DIGITS },
+                  ],
+              }
+            : { categories: { has: request.category || '' } };
+
         const professionals = await prisma.professional.findMany({
             where: {
                 status: 'active',
                 id: excludeProfessionalIds.length ? { notIn: excludeProfessionalIds } : undefined,
-                OR: [{ categories: { has: request.category || '' } }, { phone: MATCHING_BYPASS_PHONE_DIGITS }],
+                ...categoryFilter,
             },
             select: professionalMatchSelect,
         });

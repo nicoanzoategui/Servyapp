@@ -5,6 +5,11 @@ import { WhatsAppService } from './whatsapp.service';
 import { ProfessionalMatchingService } from './matching.service';
 import { MercadoPagoService } from './mercadopago.service';
 import {
+    calculateRepairPricing,
+    formatRepairQuoteBreakdown,
+    resolveVisitFeePaidForRepair,
+} from './repair-pricing';
+import {
     formatArs,
     priorityLabel,
     SPEED_SELECTION_PROMPT,
@@ -337,11 +342,9 @@ export class VisitFlowService {
             include: { professional: true },
         });
         const proName = offer?.professional?.name?.trim() || 'Tu técnico';
-        const priceStr = formatArs(payload.totalPrice);
-        await WhatsAppService.sendTextMessage(
-            userPhone,
-            `💰 *Presupuesto del arreglo*\n\n━━━━━━━━━━━━━━━\n👤 *${proName}*\n💵 *$${priceStr}*\n⚠️ _Precio no incluye materiales_\n━━━━━━━━━━━━━━━\n\n🔒 _Pago protegido hasta que confirmes el trabajo._\n\n¿Aceptás?\n\n1. Sí, acepto\n2. No, gracias`
-        );
+        const visitFeePaid = await resolveVisitFeePaidForRepair(payload.jobOfferId);
+        const breakdown = calculateRepairPricing(payload.totalPrice, visitFeePaid);
+        await WhatsAppService.sendTextMessage(userPhone, formatRepairQuoteBreakdown(breakdown, proName));
         await saveUserSession(userPhone, 'AWAITING_REPAIR_PAYMENT_DECISION', payload as unknown as Record<string, unknown>);
     }
 }

@@ -10,6 +10,11 @@ import { mediationDirectionRedisKey, normalizeTwilioWhatsAppFrom, userRelayPause
 import { env } from '../utils/env';
 import { createProfessionalFromWhatsAppWizard } from './professional-registration.internal';
 import { VisitFlowService } from './visit-flow.service';
+import {
+    calculateRepairPricing,
+    formatRepairPaymentBreakdown,
+    resolveVisitFeePaidForRepair,
+} from './repair-pricing';
 
 const SESSION_TTL = 60 * 60 * 24;
 const REDIS_OP_TIMEOUT_MS = 500;
@@ -614,20 +619,33 @@ export class ConversationService {
         }
 
         const proName = quotation.job_offer.professional.name.trim() || 'el técnico';
-        const priceStr = quotation.total_price.toLocaleString('es-AR');
 
         try {
             const qRow = await prisma.quotation.findUnique({ where: { id: quotationId } });
             const paymentType = qRow?.quotation_type === 'repair' ? 'repair' : 'visit';
+
+            if (paymentType === 'repair') {
+                const visitFeePaid = await resolveVisitFeePaidForRepair(quotation.job_offer_id);
+                const breakdown = calculateRepairPricing(quotation.total_price, visitFeePaid);
+                const initPoint = await MercadoPagoService.createPreference(
+                    qRow!,
+                    { phone },
+                    paymentType,
+                    breakdown.clientCharge
+                );
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    formatRepairPaymentBreakdown(breakdown, proName, initPoint)
+                );
+                return;
+            }
+
+            const priceStr = quotation.total_price.toLocaleString('es-AR');
             const initPoint = await MercadoPagoService.createPreference(qRow!, { phone }, paymentType);
-            const label = paymentType === 'repair' ? 'arreglo' : 'visita';
-            const expireNote =
-                paymentType === 'repair'
-                    ? '_Tenés 48 horas para completar el pago._'
-                    : `_Tenés ${env.VISIT_PAYMENT_EXPIRE_MINUTES} minutos para completar el pago._`;
+            const expireNote = `_Tenés ${env.VISIT_PAYMENT_EXPIRE_MINUTES} minutos para completar el pago._`;
             await WhatsAppService.sendTextMessage(
                 phone,
-                `*¡Genial!* Confirmamos el ${label} con *${proName}* 🙌\n\n━━━━━━━━━━━━━━━\n💳 *Total: $${priceStr}*\n━━━━━━━━━━━━━━━\n\n🔒 *Tu dinero está protegido*\nEl pago queda retenido hasta que el trabajo esté bien hecho.\n\n👉 ${initPoint}\n\n${expireNote}`
+                `*¡Genial!* Confirmamos la visita con *${proName}* 🙌\n\n━━━━━━━━━━━━━━━\n💳 *Total: $${priceStr}*\n━━━━━━━━━━━━━━━\n\n🔒 *Tu dinero está protegido*\nEl pago queda retenido hasta que el trabajo esté bien hecho.\n\n👉 ${initPoint}\n\n${expireNote}`
             );
         } catch {
             await WhatsAppService.sendTextMessage(

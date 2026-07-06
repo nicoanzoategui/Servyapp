@@ -1,12 +1,15 @@
 import QRCode from 'qrcode';
 import { StorageService } from './storage.service';
-import { env } from '../utils/env';
+
+/** Payload escaneable por el portal del técnico (POST /professional/jobs/:id/complete-qr). */
+export function qrPayloadForJob(jobId: string): string {
+    return `servy:qr:${jobId}`;
+}
 
 export class QRService {
     static async generateAndUpload(jobId: string): Promise<string> {
-        const base = env.API_PUBLIC_URL.replace(/\/$/, '');
-        const releaseUrl = `${base}/jobs/${jobId}/release`;
-        const buffer = await QRCode.toBuffer(releaseUrl, {
+        const payload = qrPayloadForJob(jobId);
+        const buffer = await QRCode.toBuffer(payload, {
             type: 'png',
             width: 400,
             margin: 2,
@@ -16,7 +19,7 @@ export class QRService {
         return StorageService.getSignedUrl(key, 60 * 60 * 24 * 7);
     }
 
-    /** Extrae jobId de `servy:qr:…` o de URL `/jobs/:id/release`. */
+    /** Extrae jobId de `servy:qr:…` o de URL legacy `/jobs/:id/release`. */
     static parseQR(data: string): string | null {
         const t = data.trim();
         const prefix = 'servy:qr:';

@@ -3,6 +3,9 @@ import { prisma } from '@servy/db';
 import { WhatsAppService } from '../services/whatsapp.service';
 import { env } from '../utils/env';
 
+/** Estados del flujo visita: expiran en visit-hold-expiry, no en este cron legacy. */
+const VISIT_FLOW_REQUEST_STATUSES = ['awaiting_speed', 'scheduling', 'awaiting_tech', 'visit_paid'];
+
 export const startCronJobs = () => {
     cron.schedule('*/5 * * * *', async () => {
         const expireMin = env.JOB_OFFER_PENDING_EXPIRE_MINUTES;
@@ -14,6 +17,9 @@ export const startCronJobs = () => {
                 where: {
                     status: 'pending',
                     created_at: { lt: cutoff },
+                    service_request: {
+                        status: { notIn: VISIT_FLOW_REQUEST_STATUSES },
+                    },
                 },
                 include: {
                     service_request: { include: { user: true } },

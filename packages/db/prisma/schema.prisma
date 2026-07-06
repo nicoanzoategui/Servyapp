@@ -117,6 +117,8 @@ model ServiceRequest {
   user        User       @relation(fields: [user_phone], references: [phone])
   job_offers  JobOffer[]
 
+  @@index([user_phone])
+  @@index([status])
   @@map("service_requests")
 }
 
@@ -133,6 +135,9 @@ model JobOffer {
   professional    Professional   @relation(fields: [professional_id], references: [id])
   quotations      Quotation[]
 
+  @@index([request_id])
+  @@index([professional_id])
+  @@index([status, created_at])
   @@map("job_offers")
 }
 
@@ -169,6 +174,8 @@ model Payment {
 
   quotation        Quotation @relation(fields: [quotation_id], references: [id])
 
+  @@index([status, payment_type])
+  @@index([mp_payment_id])
   @@map("payments")
 }
 
@@ -188,6 +195,7 @@ model Job {
   quotation Quotation @relation(fields: [quotation_id], references: [id])
   earnings  Earning[]
 
+  @@index([status, updated_at])
   @@map("jobs")
 }
 
@@ -203,6 +211,8 @@ model Earning {
   professional    Professional @relation(fields: [professional_id], references: [id])
   job             Job          @relation(fields: [job_id], references: [id])
 
+  @@index([job_id])
+  @@index([professional_id, transferred_at])
   @@map("earnings")
 }
 

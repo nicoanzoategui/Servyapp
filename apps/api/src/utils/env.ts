@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const envSchema = z.object({
+    NODE_ENV: z.enum(['development', 'production', 'test']).optional().default('development'),
     PORT: z.string().default('3000'),
     CORS_ORIGIN: z.string().default('*'),
     FRONTEND_URL: z.string().url().default('http://localhost:3001'),
@@ -24,6 +25,16 @@ const envSchema = z.object({
         .string()
         .optional()
         .transform((v) => v === 'true'),
+    /** Solo desarrollo: saltar validación X-Twilio-Signature. */
+    TWILIO_SKIP_SIGNATURE: z
+        .string()
+        .optional()
+        .transform((v) => v === 'true'),
+    /** WhatsApp Cloud API (Meta). Desactivado por defecto; producción usa Twilio. */
+    WHATSAPP_CLOUD_ENABLED: z
+        .string()
+        .optional()
+        .transform((v) => v === 'true'),
     REDIS_URL: z.string().url().default('redis://localhost:6379'),
     R2_ACCOUNT_ID: z.string().min(1),
     R2_ACCESS_KEY: z.string().min(1),
@@ -31,6 +42,11 @@ const envSchema = z.object({
     R2_BUCKET: z.string().min(1),
     MP_ACCESS_TOKEN: z.string().min(1),
     MP_WEBHOOK_SECRET: z.string().min(1),
+    /** Solo desarrollo: saltar validación x-signature de Mercado Pago. */
+    MP_SKIP_SIGNATURE: z
+        .string()
+        .optional()
+        .transform((v) => v === 'true'),
     /** Si false, al aceptar cotización no se llama a MP (solo mensaje placeholder). */
     PAYMENTS_ENABLED: z
         .string()
@@ -77,15 +93,15 @@ const envSchema = z.object({
         .string()
         .optional()
         .transform((v) => {
-            const n = parseInt(String(v || '50000'), 10);
-            return Number.isFinite(n) && n > 0 ? n : 50000;
+            const n = parseInt(String(v || '55000'), 10);
+            return Number.isFinite(n) && n > 0 ? n : 55000;
         }),
     VISIT_FEE_SCHEDULED: z
         .string()
         .optional()
         .transform((v) => {
-            const n = parseInt(String(v || '35000'), 10);
-            return Number.isFinite(n) && n > 0 ? n : 35000;
+            const n = parseInt(String(v || '39000'), 10);
+            return Number.isFinite(n) && n > 0 ? n : 39000;
         }),
     TECH_CONFIRM_TIMEOUT_MINUTES: z
         .string()
