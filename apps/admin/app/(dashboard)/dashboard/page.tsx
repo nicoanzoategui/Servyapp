@@ -8,11 +8,22 @@ import { API_URL } from '@/lib/api';
 const fetchDashboard = async () => {
     const token = Cookies.get('token');
     const res = await fetch(`${API_URL}/admin/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error('Error fetching data');
-    return data.data;
+    let payload: { success?: boolean; data?: unknown; error?: { message?: string } };
+    try {
+        payload = await res.json();
+    } catch {
+        throw new Error('La API no respondió JSON');
+    }
+    if (!res.ok) throw new Error(payload.error?.message || 'Error al cargar el panel');
+    return payload.data as {
+        active_conversations?: number;
+        delayed_quotes?: number;
+        active_professionals?: number;
+        total_users?: number;
+        gmv?: { day?: number };
+    };
 };
 
 export default function DashboardPage() {
@@ -27,7 +38,7 @@ export default function DashboardPage() {
 
     return (
         <div className="flex flex-col gap-8 animate-fade-in">
-            <h1 className="text-3xl font-bold text-slate-900">Panel Principal</h1>
+            <h1 className="font-bold text-slate-900">Panel Principal</h1>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">

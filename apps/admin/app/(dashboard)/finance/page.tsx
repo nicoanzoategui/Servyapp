@@ -9,9 +9,18 @@ const fetchSummary = async () => {
     const res = await fetch(`${API_URL}/admin/finance/summary`, {
         headers: { Authorization: `Bearer ${token}` },
     });
-    const data = await res.json();
+    let payload: { data?: unknown };
+    try {
+        payload = await res.json();
+    } catch {
+        throw new Error('La API no respondió JSON');
+    }
     if (!res.ok) throw new Error('Error');
-    return data.data;
+    return payload.data as {
+        total_gross?: number;
+        total_net_professionals?: number;
+        total_commissions_retained?: number;
+    };
 };
 
 const fetchPending = async () => {
@@ -19,16 +28,22 @@ const fetchPending = async () => {
     const res = await fetch(`${API_URL}/admin/finance/earnings`, {
         headers: { Authorization: `Bearer ${token}` },
     });
-    const data = await res.json();
+    let payload: { data?: unknown };
+    try {
+        payload = await res.json();
+    } catch {
+        throw new Error('La API no respondió JSON');
+    }
     if (!res.ok) throw new Error('Error');
-    return data.data as any[];
+    return (Array.isArray(payload.data) ? payload.data : []) as any[];
 };
 
 export default function AdminFinancePage() {
-    const { data: summary, isLoading: s1 } = useQuery({ queryKey: ['adminFinanceSummary'], queryFn: fetchSummary });
-    const { data: pending, isLoading: s2 } = useQuery({ queryKey: ['adminFinancePending'], queryFn: fetchPending });
+    const { data: summary, isLoading: s1, isError: e1 } = useQuery({ queryKey: ['adminFinanceSummary'], queryFn: fetchSummary });
+    const { data: pending, isLoading: s2, isError: e2 } = useQuery({ queryKey: ['adminFinancePending'], queryFn: fetchPending });
 
     if (s1 || s2) return <p className="text-slate-500">Cargando...</p>;
+    if (e1 || e2) return <p className="text-amber-800">No se pudieron cargar las finanzas. Revisá que la API esté disponible.</p>;
 
     return (
         <div className="space-y-8">

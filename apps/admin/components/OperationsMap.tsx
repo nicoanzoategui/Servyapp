@@ -34,14 +34,16 @@ export function OperationsMap({
                 loading="lazy"
             />
             <div className="absolute inset-0 pointer-events-none">
-                {markers.map((m) => {
+                {(markers ?? []).map((m, i) => {
+                    if (typeof m.lat !== 'number' || typeof m.lng !== 'number') return null;
                     const { x, y } = project(m.lat, m.lng, bbox);
+                    const id = m.providerId || String(i);
                     return (
                         <div
-                            key={m.providerId}
+                            key={id}
                             className={`absolute w-3 h-3 rounded-full border-2 border-white shadow ${statusColor(m.status)}`}
                             style={{ left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)' }}
-                            title={`${m.providerId.slice(0, 8)}… · ${m.status}`}
+                            title={`${id.slice(0, 8)}… · ${m.status || 'unknown'}`}
                         />
                     );
                 })}

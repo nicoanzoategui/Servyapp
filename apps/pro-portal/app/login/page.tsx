@@ -2,11 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import AuthHero from '@/components/AuthHero';
+import { API_URL } from '@/lib/api';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -55,25 +54,10 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen flex">
-            {/* Imagen lateral */}
-            <div className="hidden lg:block flex-1 relative">
-                <Image
-                    src="/images/login-hero.png"
-                    alt="Profesional Servy"
-                    fill
-                    className="object-cover"
-                    priority
-                />
-                <div className="absolute inset-0 bg-servy-900/30" />
-                <div className="absolute bottom-12 left-12 right-12">
-                    <p className="text-white text-3xl font-bold leading-snug">
-                        Más trabajo.<br />Cobro garantizado.<br />Sin complicaciones.
-                    </p>
-                </div>
-            </div>
+            <AuthHero />
 
             {/* Formulario */}
-            <div className="flex-1 flex items-center justify-center px-8 py-12 bg-white">
+            <div className="flex-1 flex items-center justify-center px-4 sm:px-8 py-10 sm:py-12 bg-white">
                 <div className="w-full max-w-sm">
                     <div className="mb-8">
                         <div className="text-2xl font-black text-servy-600 tracking-tighter mb-6">Servy.</div>

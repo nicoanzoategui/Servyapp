@@ -136,7 +136,7 @@ export default function ProDashboard() {
                         <TrendingUp size={20} className="text-green-500" />
                         Ganancias netas del mes
                     </div>
-                    <p className="text-4xl font-extrabold text-slate-900 relative z-10">${Number(monthNet).toLocaleString()}</p>
+                    <p className="text-3xl sm:text-4xl font-extrabold text-slate-900 relative z-10">${Number(monthNet).toLocaleString()}</p>
                     <Link href="/earnings" className="mt-4 text-servy-600 font-medium relative z-10">
                         Ver desglose →
                     </Link>
@@ -147,7 +147,7 @@ export default function ProDashboard() {
                         <Calendar size={64} />
                     </div>
                     <div className="relative z-10 font-medium text-white/80">Trabajos confirmados activos</div>
-                    <p className="text-4xl font-extrabold relative z-10 my-1">{upcomingJobs}</p>
+                    <p className="text-3xl sm:text-4xl font-extrabold relative z-10 my-1">{upcomingJobs}</p>
                     <Link href="/jobs" className="mt-auto text-white underline font-medium relative z-10">
                         Ir a trabajos
                     </Link>
@@ -158,7 +158,7 @@ export default function ProDashboard() {
                         <Star size={20} className="text-amber-500" />
                         Tu calificación
                     </div>
-                    <p className="text-4xl font-extrabold text-slate-900">{rating ? `${rating.toFixed(1)} ★` : '—'}</p>
+                    <p className="text-3xl sm:text-4xl font-extrabold text-slate-900">{rating ? `${rating.toFixed(1)} ★` : '—'}</p>
                 </div>
             </div>
         </div>

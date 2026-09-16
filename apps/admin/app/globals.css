@@ -10,4 +10,7 @@
         @apply bg-slate-50 text-slate-900 antialiased;
         font-family: 'Inter', sans-serif;
     }
+    h1 {
+        @apply text-2xl md:text-3xl break-words;
+    }
 }

@@ -16,6 +16,18 @@ import { insertAgentLog } from '../lib/agent-log';
 const router = Router();
 router.use(authenticateJWT, requireRole('admin'));
 
+function isMissingRelation(e: unknown): boolean {
+    return /does not exist|42P01|relation /i.test(String(e));
+}
+
+function emptyIfMissing(res: Response, e: unknown, empty: unknown = []) {
+    if (isMissingRelation(e)) {
+        res.json({ success: true, data: empty });
+        return;
+    }
+    res.status(500).json({ success: false, error: String(e) });
+}
+
 router.get('/pricing/quote', async (req: Request, res: Response) => {
     try {
         const { category, jobType, zone, datetime } = req.query;
@@ -79,7 +91,7 @@ router.get('/pricing/materials', async (req: Request, res: Response) => {
         const rows = await listRecentMaterialPrices(cat, 40);
         res.json({ success: true, data: rows });
     } catch (e) {
-        res.status(500).json({ success: false, error: String(e) });
+        emptyIfMissing(res, e);
     }
 });
 
@@ -88,7 +100,7 @@ router.get('/pricing/quotes/recent', async (_req: Request, res: Response) => {
         const rows = await listRecentQuotes(40);
         res.json({ success: true, data: rows });
     } catch (e) {
-        res.status(500).json({ success: false, error: String(e) });
+        emptyIfMissing(res, e);
     }
 });
 
@@ -224,7 +236,7 @@ router.get('/quality/reviews', async (_req: Request, res: Response) => {
         const rows = await prisma.$queryRaw`SELECT * FROM quality_reviews ORDER BY created_at DESC LIMIT 100`;
         res.json({ success: true, data: rows });
     } catch (e) {
-        res.status(500).json({ success: false, error: String(e) });
+        emptyIfMissing(res, e);
     }
 });
 
@@ -237,7 +249,7 @@ router.get('/quality/complaints', async (_req: Request, res: Response) => {
         `;
         res.json({ success: true, data: rows });
     } catch (e) {
-        res.status(500).json({ success: false, error: String(e) });
+        emptyIfMissing(res, e);
     }
 });
 
@@ -263,7 +275,7 @@ router.get('/quality/provider/:id', async (req: Request, res: Response) => {
         );
         res.json({ success: true, data: (rows as unknown[])[0] ?? null });
     } catch (e) {
-        res.status(500).json({ success: false, error: String(e) });
+        emptyIfMissing(res, e, null);
     }
 });
 
@@ -279,7 +291,7 @@ router.get('/retention/at-risk', async (_req: Request, res: Response) => {
         `;
         res.json({ success: true, data: rows });
     } catch (e) {
-        res.status(500).json({ success: false, error: String(e) });
+        emptyIfMissing(res, e);
     }
 });
 
@@ -290,7 +302,7 @@ router.get('/retention/messages', async (_req: Request, res: Response) => {
         `;
         res.json({ success: true, data: rows });
     } catch (e) {
-        res.status(500).json({ success: false, error: String(e) });
+        emptyIfMissing(res, e);
     }
 });
 
@@ -323,7 +335,7 @@ router.get('/fraud/alerts', async (_req: Request, res: Response) => {
         `;
         res.json({ success: true, data: rows });
     } catch (e) {
-        res.status(500).json({ success: false, error: String(e) });
+        emptyIfMissing(res, e);
     }
 });
 
@@ -349,7 +361,7 @@ router.get('/fraud/patterns', async (_req: Request, res: Response) => {
         const rows = await prisma.$queryRaw`SELECT * FROM fraud_patterns WHERE is_active = true`;
         res.json({ success: true, data: rows });
     } catch (e) {
-        res.status(500).json({ success: false, error: String(e) });
+        emptyIfMissing(res, e);
     }
 });
 
@@ -360,7 +372,7 @@ router.get('/forecast/weekly', async (_req: Request, res: Response) => {
         `;
         res.json({ success: true, data: rows });
     } catch (e) {
-        res.status(500).json({ success: false, error: String(e) });
+        emptyIfMissing(res, e);
     }
 });
 
@@ -371,7 +383,7 @@ router.get('/forecast/expansion', async (_req: Request, res: Response) => {
         `;
         res.json({ success: true, data: rows });
     } catch (e) {
-        res.status(500).json({ success: false, error: String(e) });
+        emptyIfMissing(res, e);
     }
 });
 
@@ -392,7 +404,7 @@ router.get('/recruitment/candidates', async (_req: Request, res: Response) => {
         const rows = await prisma.$queryRaw`SELECT * FROM recruitment_candidates ORDER BY created_at DESC LIMIT 100`;
         res.json({ success: true, data: rows });
     } catch (e) {
-        res.status(500).json({ success: false, error: String(e) });
+        emptyIfMissing(res, e);
     }
 });
 
@@ -435,7 +447,7 @@ router.get('/recruitment/campaigns', async (_req: Request, res: Response) => {
         const rows = await prisma.$queryRaw`SELECT * FROM recruitment_campaigns ORDER BY created_at DESC LIMIT 50`;
         res.json({ success: true, data: rows });
     } catch (e) {
-        res.status(500).json({ success: false, error: String(e) });
+        emptyIfMissing(res, e);
     }
 });
 
@@ -506,7 +518,7 @@ router.get('/recruitment/groups', async (_req: Request, res: Response) => {
         const rows = await prisma.$queryRaw`SELECT * FROM facebook_groups ORDER BY group_name`;
         res.json({ success: true, data: rows });
     } catch (e) {
-        res.status(500).json({ success: false, error: String(e) });
+        emptyIfMissing(res, e);
     }
 });
 
@@ -538,10 +550,15 @@ router.get('/recruitment/coverage', async (_req: Request, res: Response) => {
             ORDER BY z
         `;
 
-        const highRows = await prisma.$queryRaw<{ zone: string }[]>`
+        let highRows: { zone: string }[] = [];
+        try {
+            highRows = await prisma.$queryRaw<{ zone: string }[]>`
             SELECT DISTINCT zone FROM expansion_opportunities
             WHERE priority = 'high' AND status = 'detected'
         `;
+        } catch (e) {
+            if (!isMissingRelation(e)) throw e;
+        }
         const high = new Set(highRows.map((r) => r.zone));
 
         const data = zones.map((r) => {
@@ -560,7 +577,7 @@ router.get('/recruitment/coverage', async (_req: Request, res: Response) => {
 
         res.json({ success: true, data });
     } catch (e) {
-        res.status(500).json({ success: false, error: String(e) });
+        emptyIfMissing(res, e);
     }
 });
 
@@ -569,7 +586,7 @@ router.get('/experiments', async (_req: Request, res: Response) => {
         const rows = await prisma.$queryRaw`SELECT * FROM experiments ORDER BY created_at DESC`;
         res.json({ success: true, data: rows });
     } catch (e) {
-        res.status(500).json({ success: false, error: String(e) });
+        emptyIfMissing(res, e);
     }
 });
 
@@ -600,7 +617,7 @@ router.get('/experiments/waitlist', async (_req: Request, res: Response) => {
         `;
         res.json({ success: true, data: rows });
     } catch (e) {
-        res.status(500).json({ success: false, error: String(e) });
+        emptyIfMissing(res, e);
     }
 });
 
@@ -622,7 +639,7 @@ router.get('/agents/logs', async (_req: Request, res: Response) => {
         `;
         res.json({ success: true, data: rows });
     } catch (e) {
-        res.status(500).json({ success: false, error: String(e) });
+        emptyIfMissing(res, e);
     }
 });
 
