@@ -105,9 +105,16 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
     console.log('[MP Webhook] Payload recibido:', {
         body: req.body,
         query: req.query,
-        hasXSignature: typeof req.headers['x-signature'] === 'string',
-        hasXRequestId: typeof req.headers['x-request-id'] === 'string',
+        hasXSignature: typeof req.headers['x-signature'] === 'string' || Array.isArray(req.headers['x-signature']),
+        hasXRequestId: typeof req.headers['x-request-id'] === 'string' || Array.isArray(req.headers['x-request-id']),
+        skipSignature: Boolean(env.MP_SKIP_SIGNATURE),
     });
+
+    if (env.MP_SKIP_SIGNATURE) {
+        console.warn(
+            '[MP webhook] MP_SKIP_SIGNATURE=true — no se rechaza por firma (diagnóstico temporal)'
+        );
+    }
 
     if (!verifyMercadoPagoWebhookSignature(req)) {
         console.error('[MP webhook] Firma inválida o ausente');

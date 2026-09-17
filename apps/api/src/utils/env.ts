@@ -41,12 +41,16 @@ const envSchema = z.object({
     R2_SECRET_KEY: z.string().min(1),
     R2_BUCKET: z.string().min(1),
     MP_ACCESS_TOKEN: z.string().min(1),
+    /** Secret de Webhooks en el panel MP (no es el Access Token). Railway: MP_WEBHOOK_SECRET */
     MP_WEBHOOK_SECRET: z.string().min(1),
-    /** Solo desarrollo: saltar validación x-signature de Mercado Pago. */
+    /**
+     * Si true, no se valida HMAC de webhooks MP (diagnóstico).
+     * Railway: MP_SKIP_SIGNATURE=true  — no dejar en producción.
+     */
     MP_SKIP_SIGNATURE: z
         .string()
         .optional()
-        .transform((v) => v === 'true'),
+        .transform((v) => ['true', '1', 'yes'].includes((v ?? '').trim().toLowerCase())),
     /** Si false, al aceptar cotización no se llama a MP (solo mensaje placeholder). */
     PAYMENTS_ENABLED: z
         .string()
