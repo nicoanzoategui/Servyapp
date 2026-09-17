@@ -79,7 +79,7 @@ export default function ConversationDetailPage() {
                         {session && (
                             <div className="mt-3 flex items-center gap-3">
                                 <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
-                                    Estado: {SESSION_STATE_LABELS[session.state] || session.state}
+                                    Estado: {SESSION_STATE_LABELS[(session.state || session.step || 'unknown').toUpperCase()] || session.state || session.step || 'Desconocido'}
                                 </span>
                                 <span className="text-sm text-slate-500">
                                     Expira: {format(new Date(session.expires_at), "dd MMM 'a las' HH:mm", { locale: es })}

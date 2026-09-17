@@ -58,9 +58,15 @@ export const getDashboard = async (req: Request, res: Response) => {
 export const getConversations = async (req: Request, res: Response) => {
     try {
         const sessions = await prisma.whatsappSession.findMany({
-            orderBy: { expires_at: 'desc' }
+            orderBy: { expires_at: 'desc' },
         });
-        res.json({ success: true, data: sessions });
+        res.json({
+            success: true,
+            data: sessions.map((s) => ({
+                ...s,
+                state: s.step,
+            })),
+        });
     } catch (error) {
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Error fetching conversations' } });
     }
@@ -100,7 +106,7 @@ export const getConversationMessages = async (req: Request, res: Response) => {
             success: true,
             data: {
                 user: user || professional,
-                session,
+                session: session ? { ...session, state: session.step } : null,
                 requests,
                 messages: [],
             },
@@ -210,9 +216,27 @@ export const getJobs = async (req: Request, res: Response) => {
 
         const jobs = await prisma.job.findMany({
             where: filter,
+            orderBy: { updated_at: 'desc' },
             include: {
-                quotation: { include: { job_offer: { include: { service_request: true, professional: true } } } }
-            }
+                quotation: {
+                    include: {
+                        payment: true,
+                        job_offer: {
+                            include: {
+                                professional: {
+                                    select: { id: true, name: true, last_name: true, phone: true },
+                                },
+                                service_request: {
+                                    include: {
+                                        user: { select: { name: true, last_name: true, phone: true } },
+                                    },
+                                },
+                                quotations: { include: { payment: true } },
+                            },
+                        },
+                    },
+                },
+            },
         });
         res.json({ success: true, data: jobs });
     } catch (error) {

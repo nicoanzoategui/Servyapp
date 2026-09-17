@@ -21,8 +21,9 @@ const SESSION_STATE_LABELS: Record<string, string> = {
     AWAITING_REVIEW: 'Calificando',
 };
 
-function sessionStateLabel(state: string): string {
-    return SESSION_STATE_LABELS[state] || state.replace(/_/g, ' ').toLowerCase();
+function sessionStateLabel(state: string | null | undefined): string {
+    const key = (state || 'unknown').toUpperCase();
+    return SESSION_STATE_LABELS[key] || key.replace(/_/g, ' ').toLowerCase();
 }
 
 const fetchConversations = async () => {
@@ -36,12 +37,13 @@ const fetchConversations = async () => {
 };
 
 export default function ConversationsPage() {
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, isError } = useQuery({
         queryKey: ['adminConversations'],
         queryFn: fetchConversations,
     });
 
     if (isLoading) return <div className="text-slate-500">Cargando conversaciones...</div>;
+    if (isError) return <p className="text-red-600">No se pudieron cargar las conversaciones.</p>;
 
     return (
         <div className="flex flex-col gap-6 animate-fade-in">
@@ -60,12 +62,12 @@ export default function ConversationsPage() {
                         </tr>
                     </thead>
                     <tbody>
-                        {(data || []).map((session: any) => (
-                            <tr key={session.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition">
+                        {(data || []).map((session: { phone: string; id?: string; state?: string; step?: string; expires_at: string }) => (
+                            <tr key={session.phone} className="border-b border-slate-100 hover:bg-slate-50/50 transition">
                                 <td className="p-4 font-medium text-slate-900 tracking-tight">+{session.phone}</td>
                                 <td className="p-4">
-                                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium" title={session.state}>
-                                        {sessionStateLabel(session.state)}
+                                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium" title={session.state || session.step}>
+                                        {sessionStateLabel(session.state || session.step)}
                                     </span>
                                 </td>
                                 <td className="p-4 text-slate-600">
