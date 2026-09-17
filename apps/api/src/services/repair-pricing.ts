@@ -1,5 +1,6 @@
 import { prisma } from '@servy/db';
 import { formatArs, visitFeeForPriority, type ServicePriority } from './visit-pricing';
+import { MP_OPEN_IN_BROWSER_HINT } from './mercadopago.service';
 
 /** Comisión Servy sobre mano de obra del técnico. */
 export const REPAIR_SERVY_COMMISSION_RATE = 0.15;
@@ -85,6 +86,7 @@ export function formatRepairPaymentBreakdown(b: RepairPricingBreakdown, proName:
         `━━━━━━━━━━━━━━━\n\n` +
         `🔒 *Tu dinero está protegido*\nEl pago queda retenido hasta que el trabajo esté bien hecho.\n\n` +
         `👉 ${initPoint}\n\n` +
+        `${MP_OPEN_IN_BROWSER_HINT}\n\n` +
         `_Tenés 48 horas para completar el pago._`
     );
 }

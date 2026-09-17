@@ -3,7 +3,7 @@ import { redis } from '../utils/redis';
 import { env } from '../utils/env';
 import { WhatsAppService } from './whatsapp.service';
 import { ProfessionalMatchingService } from './matching.service';
-import { MercadoPagoService } from './mercadopago.service';
+import { MercadoPagoService, MP_OPEN_IN_BROWSER_HINT } from './mercadopago.service';
 import {
     calculateRepairPricing,
     formatRepairQuoteBreakdown,
@@ -306,7 +306,7 @@ export class VisitFlowService {
             const initPoint = await MercadoPagoService.createPreference(quotation, user, 'visit');
             await WhatsAppService.sendTextMessage(
                 userPhone,
-                `✅ *${proName}* confirmó tu visita 🎉\n\n━━━━━━━━━━━━━━━\n📅 ${sched}\n💰 *Visita: $${priceStr}*\n━━━━━━━━━━━━━━━\n\n🔒 _Tu dinero queda retenido hasta confirmar el servicio._\n\n👉 ${initPoint}\n\n_Tenés ${env.VISIT_PAYMENT_EXPIRE_MINUTES} minutos para completar el pago._`
+                `✅ *${proName}* confirmó tu visita 🎉\n\n━━━━━━━━━━━━━━━\n📅 ${sched}\n💰 *Visita: $${priceStr}*\n━━━━━━━━━━━━━━━\n\n🔒 _Tu dinero queda retenido hasta confirmar el servicio._\n\n👉 ${initPoint}\n\n${MP_OPEN_IN_BROWSER_HINT}\n\n_Tenés ${env.VISIT_PAYMENT_EXPIRE_MINUTES} minutos para completar el pago._`
             );
         } catch {
             await WhatsAppService.sendTextMessage(

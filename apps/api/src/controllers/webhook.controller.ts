@@ -102,6 +102,13 @@ export const handleWhatsAppMessage = async (req: Request, res: Response) => {
 };
 
 export const handleMPWebhook = async (req: Request, res: Response) => {
+    console.log('[MP Webhook] Payload recibido:', {
+        body: req.body,
+        query: req.query,
+        hasXSignature: typeof req.headers['x-signature'] === 'string',
+        hasXRequestId: typeof req.headers['x-request-id'] === 'string',
+    });
+
     if (!verifyMercadoPagoWebhookSignature(req)) {
         console.error('[MP webhook] Firma inválida o ausente');
         res.sendStatus(401);

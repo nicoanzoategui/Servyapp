@@ -6,6 +6,30 @@ const client = new MercadoPagoConfig({ accessToken: env.MP_ACCESS_TOKEN });
 
 export type PaymentType = 'visit' | 'repair';
 
+export const MP_OPEN_IN_BROWSER_HINT =
+    '💡 Si el botón de pagar no funciona, tocá los 3 puntos arriba a la derecha y elegí Abrir en el navegador.';
+
+export function isMercadoPagoTestToken(token = env.MP_ACCESS_TOKEN): boolean {
+    return token.trim().startsWith('TEST-');
+}
+
+export function mercadoPagoTokenMode(token = env.MP_ACCESS_TOKEN): 'test' | 'production' | 'unknown' {
+    const t = token.trim();
+    if (t.startsWith('TEST-')) return 'test';
+    if (t.startsWith('APP_USR-')) return 'production';
+    return 'unknown';
+}
+
+export function checkoutUrlFromPreference(preference: {
+    init_point?: string | null;
+    sandbox_init_point?: string | null;
+}): string | null {
+    if (isMercadoPagoTestToken()) {
+        return preference.sandbox_init_point || preference.init_point || null;
+    }
+    return preference.init_point || preference.sandbox_init_point || null;
+}
+
 export class MercadoPagoService {
     static async createPreference(
         quotation: {
@@ -44,9 +68,9 @@ export class MercadoPagoService {
                 email: `usuario_${user.phone}@servy.lat`,
             },
             back_urls: {
-                success: `${env.FRONTEND_URL}/payment/success`,
-                failure: `${env.FRONTEND_URL}/payment/failure`,
-                pending: `${env.FRONTEND_URL}/payment/pending`,
+                success: `${env.FRONTEND_URL.replace(/\/$/, '')}/payment/success`,
+                failure: `${env.FRONTEND_URL.replace(/\/$/, '')}/payment/failure`,
+                pending: `${env.FRONTEND_URL.replace(/\/$/, '')}/payment/pending`,
             },
             auto_return: 'approved' as const,
             notification_url: `${env.API_PUBLIC_URL.replace(/\/$/, '')}/webhook/mercadopago`,
@@ -63,6 +87,16 @@ export class MercadoPagoService {
 
         try {
             const preference = await preferenceClient.create({ body });
+            const checkoutUrl = checkoutUrlFromPreference(preference);
+            console.log('[MP] preferencia creada', {
+                tokenMode: mercadoPagoTokenMode(),
+                usedSandboxUrl: isMercadoPagoTestToken(),
+                hasInitPoint: Boolean(preference.init_point),
+                hasSandboxInitPoint: Boolean(preference.sandbox_init_point),
+            });
+            if (!checkoutUrl) {
+                throw new Error('Mercado Pago no devolvió init_point ni sandbox_init_point');
+            }
 
             await prisma.payment.create({
                 data: {
@@ -74,7 +108,7 @@ export class MercadoPagoService {
                 },
             });
 
-            return preference.init_point;
+            return checkoutUrl;
         } catch (error) {
             console.error('Error creating MP preference:', error);
             throw new Error('Could not create preference');

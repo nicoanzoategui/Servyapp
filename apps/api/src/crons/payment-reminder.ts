@@ -2,6 +2,7 @@ import { prisma } from '@servy/db';
 import { redis } from '../utils/redis';
 import { env } from '../utils/env';
 import { WhatsAppService } from '../services/whatsapp.service';
+import { checkoutUrlFromPreference, MP_OPEN_IN_BROWSER_HINT } from '../services/mercadopago.service';
 
 const REDIS_OP_TIMEOUT_MS = 500;
 const REMINDER_TTL_SEC = 24 * 60 * 60;
@@ -27,8 +28,8 @@ async function getPreferenceInitPoint(preferenceId: string): Promise<string | nu
             { headers: { Authorization: `Bearer ${env.MP_ACCESS_TOKEN}` } }
         );
         if (!res.ok) return null;
-        const body = (await res.json()) as { init_point?: string };
-        return body.init_point ?? null;
+        const body = (await res.json()) as { init_point?: string; sandbox_init_point?: string };
+        return checkoutUrlFromPreference(body);
     } catch (e) {
         console.error('[payment-reminder] MP preference get failed', e);
         return null;
@@ -85,7 +86,7 @@ export async function runPaymentReminder(): Promise<void> {
 
         await WhatsAppService.sendTextMessage(
             userPhone,
-            `⏰ *Todavía tenés un pago pendiente.*\n\n*${proName}* está esperando confirmación para tu servicio.\n\nCompletá el pago acá:\n👉 ${link}\n\n_Si ya no querés continuar, escribí cancelar._`
+            `⏰ *Todavía tenés un pago pendiente.*\n\n*${proName}* está esperando confirmación para tu servicio.\n\nCompletá el pago acá:\n👉 ${link}\n\n${MP_OPEN_IN_BROWSER_HINT}\n\n_Si ya no querés continuar, escribí cancelar._`
         );
 
         try {

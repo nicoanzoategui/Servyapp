@@ -4,7 +4,7 @@ import type { Professional, User } from '@servy/db';
 import { insertAgentLog } from '../lib/agent-log';
 import { WhatsAppService } from './whatsapp.service';
 import { StorageService } from './storage.service';
-import { MercadoPagoService } from './mercadopago.service';
+import { MercadoPagoService, MP_OPEN_IN_BROWSER_HINT } from './mercadopago.service';
 import { GeminiService } from './gemini.service';
 import { mediationDirectionRedisKey, normalizeTwilioWhatsAppFrom, userRelayPauseRedisKey } from '../utils/twilio-phone';
 import { env } from '../utils/env';
@@ -654,7 +654,7 @@ export class ConversationService {
             const expireNote = `_Tenés ${env.VISIT_PAYMENT_EXPIRE_MINUTES} minutos para completar el pago._`;
             await WhatsAppService.sendTextMessage(
                 phone,
-                `*¡Genial!* Confirmamos la visita con *${proName}* 🙌\n\n━━━━━━━━━━━━━━━\n💳 *Total: $${priceStr}*\n━━━━━━━━━━━━━━━\n\n🔒 *Tu dinero está protegido*\nEl pago queda retenido hasta que el trabajo esté bien hecho.\n\n👉 ${initPoint}\n\n${expireNote}`
+                `*¡Genial!* Confirmamos la visita con *${proName}* 🙌\n\n━━━━━━━━━━━━━━━\n💳 *Total: $${priceStr}*\n━━━━━━━━━━━━━━━\n\n🔒 *Tu dinero está protegido*\nEl pago queda retenido hasta que el trabajo esté bien hecho.\n\n👉 ${initPoint}\n\n${MP_OPEN_IN_BROWSER_HINT}\n\n${expireNote}`
             );
         } catch {
             await WhatsAppService.sendTextMessage(
