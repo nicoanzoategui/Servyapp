@@ -2,10 +2,35 @@ import { prisma, type JobOffer, type Professional, type ServiceRequest, type Use
 import { redis } from '../utils/redis';
 import { WhatsAppService } from './whatsapp.service';
 import { formatArs, visitFeeForPriority, type ServicePriority } from './visit-pricing';
+import { foldText } from './service-categories';
 
 const SESSION_TTL = 60 * 60 * 24;
 
+function isJobAccept(content: string, jobOfferId: string): boolean {
+    const raw = content.trim();
+    if (raw === `job_accept_${jobOfferId}`) return true;
+    const n = foldText(raw);
+    if (n === '1' || n === 'si' || n === 'ok' || n === 'dale' || n === 'acepto' || n === 'confirmo' || n === 'vamos') {
+        return true;
+    }
+    if (n.startsWith('si,') || n.startsWith('si ') || n.includes('acepto') || n.includes('confirmo')) return true;
+    return false;
+}
+
+function isJobReject(content: string, jobOfferId: string): boolean {
+    const raw = content.trim();
+    if (raw === `job_reject_${jobOfferId}`) return true;
+    const n = foldText(raw);
+    if (n === '2' || n === 'no' || n === 'paso' || n === 'nop' || n === 'rechazo' || n === 'rechazar') return true;
+    if (n.includes('no, paso') || n.includes('no paso') || n === 'no, gracias') return true;
+    return false;
+}
+
 export class ProfessionalConversationService {
+    static async peekSession(phone: string) {
+        return this.getSession(phone);
+    }
+
     private static async getSession(phone: string) {
         try {
             const cached = await redis.get(`pro_session:${phone}`);
@@ -114,19 +139,7 @@ export class ProfessionalConversationService {
             const userPhone = session.data.userPhone as string;
             const requestId = session.data.requestId as string;
 
-            if (content === `job_accept_${jobOfferId}` || content.toLowerCase().includes('acepto') || content === '1') {
-                await prisma.jobOffer.update({ where: { id: jobOfferId }, data: { status: 'accepted' } });
-                const { markProfessionalBusy } = await import('../agents/availability-agent');
-                await markProfessionalBusy(professional.id).catch(() => {});
-                await this.clearSession(phone);
-                await WhatsAppService.sendTextMessage(
-                    phone,
-                    `*Perfecto.* Turno confirmado ✅\n\nLe enviamos al cliente el link de pago de la visita. Te avisamos cuando abone.\n\n_Comandos útiles cuando estés en camino: *estoy yendo*, *llego en X minutos*_`
-                );
-
-                const { VisitFlowService } = await import('./visit-flow.service');
-                await VisitFlowService.onTechConfirmedVisit(jobOfferId, userPhone);
-            } else if (content === `job_reject_${jobOfferId}` || content.toLowerCase().includes('paso') || content === '2') {
+            if (isJobReject(content, jobOfferId)) {
                 await prisma.jobOffer.update({ where: { id: jobOfferId }, data: { status: 'rejected' } });
                 const { clearProfessionalBusyIfNeeded } = await import('../agents/availability-agent');
                 await clearProfessionalBusyIfNeeded(professional.id).catch(() => {});
@@ -138,6 +151,18 @@ export class ProfessionalConversationService {
 
                 const { VisitFlowService } = await import('./visit-flow.service');
                 await VisitFlowService.onTechRejectedVisit(jobOfferId, requestId, userPhone);
+            } else if (isJobAccept(content, jobOfferId)) {
+                await prisma.jobOffer.update({ where: { id: jobOfferId }, data: { status: 'accepted' } });
+                const { markProfessionalBusy } = await import('../agents/availability-agent');
+                await markProfessionalBusy(professional.id).catch(() => {});
+                await this.clearSession(phone);
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    `*Perfecto.* Turno confirmado ✅\n\nLe enviamos al cliente el link de pago de la visita. Te avisamos cuando abone.\n\n_Comandos útiles cuando estés en camino: *estoy yendo*, *llego en X minutos*_`
+                );
+
+                const { VisitFlowService } = await import('./visit-flow.service');
+                await VisitFlowService.onTechConfirmedVisit(jobOfferId, userPhone);
             } else {
                 await WhatsAppService.sendTextMessage(phone, 'Respondé *1* para confirmar o *2* para pasar.');
             }

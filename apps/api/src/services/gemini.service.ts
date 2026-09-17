@@ -1,8 +1,12 @@
 import { env } from '../utils/env';
+import {
+    SERVICE_CATEGORIES,
+    classifyProblemByKeywords,
+    finalizeClassification,
+    type UrgencyLevel,
+} from './service-categories';
 
-const CATEGORIES = ['Plomería', 'Electricidad', 'Cerrajería', 'Gas', 'Aires acondicionados'];
-
-export type UrgencyLevel = 'alta' | 'media' | 'baja';
+export type { UrgencyLevel };
 
 export interface GeminiClassification {
     category: string | null;
@@ -13,15 +17,13 @@ export interface GeminiClassification {
 /** Si el modelo corta el JSON (MAX_TOKENS), extrae lo mínimo con regex. */
 function parseClassificationFromPartialJson(clean: string): GeminiClassification | null {
     const catM = clean.match(/"category"\s*:\s*"([^"]*)/);
-    const category =
-        catM?.[1]?.trim() ? catM[1].trim() : null;
+    const category = catM?.[1]?.trim() ? catM[1].trim() : null;
 
     const urgM = clean.match(/"urgency"\s*:\s*"([a-z]*)/);
     const u = urgM?.[1];
     const urgency: UrgencyLevel = u === 'alta' || u === 'media' || u === 'baja' ? u : 'media';
 
     const undM = clean.match(/"understood"\s*:\s*(true|false)/);
-    // Si el JSON se cortó antes de "understood" pero hay categoría, seguimos el flujo
     const understood = undM ? undM[1] === 'true' : !!category;
 
     if (!category && !urgM) return null;
@@ -30,6 +32,8 @@ function parseClassificationFromPartialJson(clean: string): GeminiClassification
 
 export class GeminiService {
     static async classifyProblem(description: string): Promise<GeminiClassification> {
+        const fallback = () => classifyProblemByKeywords(description);
+
         try {
             const prompt = `Sos un asistente de servicios del hogar argentino.
 Tu trabajo es identificar el problema principal que describe el usuario.
@@ -38,7 +42,7 @@ Si el usuario describe múltiples problemas, elegí el MÁS URGENTE.
 Si el problema es confuso o muy vago, igual intentá clasificarlo.
 Solo marcá understood=false si el mensaje no tiene absolutamente nada que ver con servicios del hogar.
 
-Categorías disponibles: ${CATEGORIES.join(', ')}
+Categorías disponibles: ${SERVICE_CATEGORIES.join(', ')}
 
 Niveles de urgencia:
 - alta: sin gas, pérdida de gas, inundación, sin luz, puerta trabada, emergencia
@@ -48,7 +52,7 @@ Niveles de urgencia:
 Respondé SOLO con JSON válido en UNA LÍNEA sin espacios ni saltos:
 {"category":"categoría","urgency":"alta|media|baja","understood":true}
 
-Mensaje del usuario: "${description}"`;
+Mensaje del usuario: "${description.replace(/"/g, "'")}"`;
 
             const key = env.GOOGLE_AI_API_KEY?.trim() || env.GEMINI_API_KEY;
             const response = await fetch(
@@ -69,7 +73,7 @@ Mensaje del usuario: "${description}"`;
             if (!response.ok) {
                 const err = await response.text();
                 console.error('[Gemini HTTP error]', response.status, err);
-                return { category: null, urgency: 'media', understood: false };
+                return fallback();
             }
 
             const data = await response.json();
@@ -77,13 +81,11 @@ Mensaje del usuario: "${description}"`;
             if (candidate?.finishReason === 'MAX_TOKENS') {
                 console.warn('[Gemini] Respuesta truncada (MAX_TOKENS); se intenta parseo parcial');
             }
-            const parts = (data as any)?.candidates?.[0]?.content?.parts || [];
-            // Concatenar todos los parts por si viene fragmentado
-            const text = parts.map((p: { text?: string }) => p.text || '').join('').trim();
+            const parts = (data as { candidates?: { content?: { parts?: { text?: string }[] } }[] })?.candidates?.[0]
+                ?.content?.parts || [];
+            const text = parts.map((p) => p.text || '').join('').trim();
             console.log('[Gemini response]', text);
-            // Limpiar markdown y extraer JSON
             let clean = text.replace(/```json|```/g, '').trim();
-            // Si empieza con texto antes del JSON, buscar desde la primera {
             const firstBrace = clean.indexOf('{');
             if (firstBrace > 0) {
                 clean = clean.slice(firstBrace);
@@ -100,11 +102,8 @@ Mensaje del usuario: "${description}"`;
                         typeof raw.category === 'string' && raw.category.trim()
                             ? raw.category.trim()
                             : null;
-                    return {
-                        category,
-                        urgency,
-                        understood: raw.understood === true,
-                    };
+                    const understood = raw.understood === false ? false : raw.understood === true || !!category;
+                    return finalizeClassification(description, { category, urgency, understood });
                 } catch {
                     /* intentar parseo parcial */
                 }
@@ -112,14 +111,14 @@ Mensaje del usuario: "${description}"`;
 
             const partial = parseClassificationFromPartialJson(clean);
             if (partial) {
-                return partial;
+                return finalizeClassification(description, partial);
             }
 
             console.error('[Gemini] No se pudo parsear la respuesta:', clean);
-            return { category: null, urgency: 'media', understood: false };
+            return fallback();
         } catch (err) {
             console.error('Gemini error:', err);
-            return { category: null, urgency: 'media', understood: false };
+            return fallback();
         }
     }
 }

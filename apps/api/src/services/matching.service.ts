@@ -2,6 +2,7 @@ import { prisma } from '@servy/db';
 import { buildProfileCompletionFromDbRow } from './professional-profile-completion.service';
 import { normalizeTwilioWhatsAppFrom } from '../utils/twilio-phone';
 import type { ServicePriority } from './visit-pricing';
+import { categoryMatches, foldText } from './service-categories';
 
 /** Técnico de prueba (solo non-production): ignora perfil incompleto, zona/categoría. */
 const MATCHING_BYPASS_PHONE_DIGITS =
@@ -35,6 +36,34 @@ const professionalMatchSelect = {
     documents: { select: { kind: true } },
 } as const;
 
+function isProfileComplete(p: {
+    phone?: string | null;
+    documents: { kind: string }[];
+    [k: string]: unknown;
+}): boolean {
+    if (isMatchingBypassPhone(p.phone as string | undefined)) return true;
+    const { documents, phone: _phone, ...rest } = p;
+    return buildProfileCompletionFromDbRow(rest as Parameters<typeof buildProfileCompletionFromDbRow>[0], documents)
+        .complete;
+}
+
+function zoneMatches(
+    zones: string[] | null | undefined,
+    userPostalCode: string,
+    userAddress: string
+): boolean {
+    if (!zones || zones.length === 0) return true;
+    const cp = foldText(userPostalCode);
+    const addr = foldText(userAddress);
+    return zones.some((zone) => {
+        const z = foldText(zone);
+        if (!z) return false;
+        if (cp && (z === cp || z.includes(cp) || cp.includes(z))) return true;
+        if (addr && (addr.includes(z) || z.includes(addr))) return true;
+        return false;
+    });
+}
+
 export class ProfessionalMatchingService {
     /** @deprecated Use checkCapacity / assignProfessional for visit flow */
     static async findProfessionalsAndCreateOffers(requestId: string) {
@@ -54,49 +83,28 @@ export class ProfessionalMatchingService {
         if (!request) return [];
 
         const userPostalCode = request.user?.postal_code || '';
-        const userAddress = request.address || '';
-
-        const categoryFilter = MATCHING_BYPASS_PHONE_DIGITS
-            ? {
-                  OR: [
-                      { categories: { has: request.category || '' } },
-                      { phone: MATCHING_BYPASS_PHONE_DIGITS },
-                  ],
-              }
-            : { categories: { has: request.category || '' } };
+        const userAddress = request.address || request.user?.address || '';
 
         const professionals = await prisma.professional.findMany({
             where: {
                 status: 'active',
                 id: excludeProfessionalIds.length ? { notIn: excludeProfessionalIds } : undefined,
-                ...categoryFilter,
             },
             select: professionalMatchSelect,
         });
 
-        const profileComplete = professionals.filter((p) => {
+        const matched = professionals.filter((p) => {
             if (isMatchingBypassPhone(p.phone)) return true;
-            const { documents, ...rest } = p;
-            return buildProfileCompletionFromDbRow(rest, documents).complete;
-        });
-
-        const matched = profileComplete.filter((p) => {
-            if (isMatchingBypassPhone(p.phone)) return true;
-            if (!p.zones || p.zones.length === 0) return true;
-            return p.zones.some(
-                (zone) =>
-                    zone.trim() === userPostalCode.trim() ||
-                    userAddress.toLowerCase().includes(zone.toLowerCase()) ||
-                    zone.toLowerCase().includes(userPostalCode.toLowerCase())
-            );
-        });
-
-        const filtered = matched.filter((p) => {
-            if (isMatchingBypassPhone(p.phone)) return true;
+            if (!categoryMatches(p.categories, request.category)) return false;
+            if (!zoneMatches(p.zones, userPostalCode, userAddress)) return false;
             return priority === 'urgent' ? p.is_urgent : p.is_scheduled;
         });
 
-        return filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        return matched.sort((a, b) => {
+            const completeDelta = Number(isProfileComplete(b)) - Number(isProfileComplete(a));
+            if (completeDelta !== 0) return completeDelta;
+            return (b.rating || 0) - (a.rating || 0);
+        });
     }
 
     static async checkCapacity(requestId: string, priority: ServicePriority): Promise<boolean> {

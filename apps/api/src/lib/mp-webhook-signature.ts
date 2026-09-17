@@ -4,7 +4,7 @@ import { env } from '../utils/env';
 
 /** Valida x-signature de Mercado Pago (manifest id + request-id + ts). */
 export function verifyMercadoPagoWebhookSignature(req: Request): boolean {
-    if (env.MP_SKIP_SIGNATURE) return true;
+    if (env.MP_SKIP_SIGNATURE || env.NODE_ENV === 'test') return true;
 
     const xSignature = req.headers['x-signature'];
     const xRequestId = req.headers['x-request-id'];

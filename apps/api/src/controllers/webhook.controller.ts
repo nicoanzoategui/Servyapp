@@ -111,10 +111,13 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
     res.sendStatus(200);
 
     try {
-        const { type, data } = req.body || {};
-        if (type !== 'payment' || !data?.id) return;
+        const { type, data, topic } = req.body || {};
+        const queryTopic = req.query?.topic;
+        const eventType = String(type || topic || queryTopic || '').toLowerCase();
+        const dataId = data?.id ?? req.query?.id ?? req.query?.['data.id'];
+        if (!eventType.includes('payment') || !dataId) return;
 
-        const mpPaymentId = String(data.id);
+        const mpPaymentId = String(dataId);
         const alreadyProcessed = await prisma.payment.findFirst({
             where: { mp_payment_id: mpPaymentId, status: 'approved' },
         });
@@ -122,20 +125,28 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
 
         const paymentData = await MercadoPagoService.getPayment(mpPaymentId);
         const status = paymentData.status;
-        const metadata = paymentData.metadata as {
-            quotation_id?: string;
-            user_phone?: string;
-            payment_type?: 'visit' | 'repair';
-        };
-
-        const quotationId = metadata.quotation_id;
+        const metadata = (paymentData.metadata || {}) as Record<string, unknown>;
+        const quotationId = String(
+            metadata.quotation_id || metadata.quotationId || paymentData.external_reference || ''
+        ).trim();
+        const userPhoneMeta = String(metadata.user_phone || metadata.userPhone || '').trim();
+        const paymentTypeMeta = String(metadata.payment_type || metadata.paymentType || '').trim() as
+            | 'visit'
+            | 'repair'
+            | '';
         if (!quotationId) return;
 
         const quotation = await prisma.quotation.findUnique({
             where: { id: quotationId },
-            include: { job_offer: true },
+            include: { job_offer: { include: { service_request: true } } },
         });
-        const paymentType = metadata.payment_type || quotation?.quotation_type || 'visit';
+        const notifyPhone = userPhoneMeta || quotation?.job_offer.service_request.user_phone || '';
+        const paymentType =
+            paymentTypeMeta === 'repair' || paymentTypeMeta === 'visit'
+                ? paymentTypeMeta
+                : quotation?.quotation_type === 'repair'
+                  ? 'repair'
+                  : 'visit';
 
         if (status === 'approved') {
             if (paymentType === 'repair') {
@@ -155,7 +166,7 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
 
                 await prisma.job.update({ where: { id: job.id }, data: { status: 'in_progress' } });
 
-                const userPhone = String(metadata.user_phone);
+                const userPhone = notifyPhone;
                 let qrUrl: string | null = null;
                 try {
                     qrUrl = await QRService.generateAndUpload(job.id);
@@ -224,7 +235,7 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
                 data: { status: 'visit_paid' },
             });
 
-            const userPhone = String(metadata.user_phone);
+            const userPhone = notifyPhone;
 
             const proJob = job.quotation.job_offer;
             const serviceRequest = await prisma.serviceRequest.findUnique({
@@ -292,9 +303,9 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
                 data: { status, mp_payment_id: mpPaymentId },
             });
 
-            if (metadata.user_phone) {
+            if (notifyPhone) {
                 await WhatsAppService.sendTextMessage(
-                    String(metadata.user_phone),
+                    notifyPhone,
                     '⚠️ El pago no se pudo procesar.\n\n¿Querés intentar de nuevo? Escribí _ayuda_ si necesitás asistencia.'
                 );
             }
@@ -401,45 +412,55 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
         const professional = await prisma.professional.findUnique({ where: { phone } });
         if (professional) {
             console.log('[twilio] flujo profesional', { phoneMask: maskPhoneDigitsTail(phone) });
-            const PRO_GREETED_TTL = 8 * 60 * 60;
-            const greetKey = professionalGreetedRedisKey(phone);
-            try {
-                const alreadyGreeted = await redis.get(greetKey);
-                if (!alreadyGreeted) {
-                    await redis.set(greetKey, '1', 'EX', PRO_GREETED_TTL);
-                    const nm = professional.name.trim() || 'vos';
-                    await WhatsAppService.sendTextMessage(
-                        phone,
-                        `Hola *${nm}* 👋\n\n¿En qué te puedo ayudar hoy?`
-                    );
-                }
-            } catch {
-                /* no bloquear flujo si Redis falla */
-            }
-            const handledAvail = await processAvailabilityMessage({
-                professional,
-                body: content,
-                messageType,
-                lat,
-                lng,
-            }).catch(() => false);
-            if (handledAvail) {
-                console.log('[twilio] availability agent handled');
-                return;
-            }
-
-            const mediated = await ConversationService.handleProfessionalMediatedMessaging({
-                professional,
-                phone,
-                body: content,
-                messageType,
-            }).catch(() => false);
-            if (mediated) {
-                console.log('[twilio] mediación pro↔cliente handled');
-                return;
-            }
-
             const { ProfessionalConversationService } = await import('../services/professional.conversation.service');
+            const proSession = await ProfessionalConversationService.peekSession(phone).catch(() => ({
+                state: 'IDLE',
+                data: {} as Record<string, unknown>,
+            }));
+            const awaitingJob = proSession.state === 'AWAITING_JOB_RESPONSE';
+
+            if (!awaitingJob) {
+                const PRO_GREETED_TTL = 8 * 60 * 60;
+                const greetKey = professionalGreetedRedisKey(phone);
+                try {
+                    const alreadyGreeted = await redis.get(greetKey);
+                    if (!alreadyGreeted) {
+                        await redis.set(greetKey, '1', 'EX', PRO_GREETED_TTL);
+                        const nm = professional.name.trim() || 'vos';
+                        await WhatsAppService.sendTextMessage(
+                            phone,
+                            `Hola *${nm}* 👋\n\n¿En qué te puedo ayudar hoy?`
+                        );
+                    }
+                } catch {
+                    /* no bloquear flujo si Redis falla */
+                }
+            }
+            if (!awaitingJob) {
+                const handledAvail = await processAvailabilityMessage({
+                    professional,
+                    body: content,
+                    messageType,
+                    lat,
+                    lng,
+                }).catch(() => false);
+                if (handledAvail) {
+                    console.log('[twilio] availability agent handled');
+                    return;
+                }
+
+                const mediated = await ConversationService.handleProfessionalMediatedMessaging({
+                    professional,
+                    phone,
+                    body: content,
+                    messageType,
+                }).catch(() => false);
+                if (mediated) {
+                    console.log('[twilio] mediación pro↔cliente handled');
+                    return;
+                }
+            }
+
             await ProfessionalConversationService.processMessage(phone, content).catch(console.error);
             console.log('[twilio] ProfessionalConversationService.processMessage fin');
             return;

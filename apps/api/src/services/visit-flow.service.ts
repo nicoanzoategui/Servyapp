@@ -280,6 +280,7 @@ export class VisitFlowService {
         });
 
         if (!env.PAYMENTS_ENABLED) {
+            console.error('[payments] PAYMENTS_ENABLED=false; la visita no avanza a cobro (activá PAYMENTS_ENABLED en Railway)');
             await WhatsAppService.sendTextMessage(
                 userPhone,
                 `✅ *${proName}* confirmó tu visita.\n\n📅 ${sched}\n💰 Visita: *$${priceStr}*\n\n_Pagos deshabilitados en este entorno._`

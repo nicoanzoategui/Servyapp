@@ -620,6 +620,15 @@ export class ConversationService {
 
         const proName = quotation.job_offer.professional.name.trim() || 'el técnico';
 
+        if (!env.PAYMENTS_ENABLED) {
+            console.error('[payments] PAYMENTS_ENABLED=false; no se genera link de Mercado Pago');
+            await WhatsAppService.sendTextMessage(
+                phone,
+                `*¡Genial!* Confirmamos con *${proName}*.\n\n_Pagos deshabilitados en este entorno. Activá PAYMENTS_ENABLED para generar el link._`
+            );
+            return;
+        }
+
         try {
             const qRow = await prisma.quotation.findUnique({ where: { id: quotationId } });
             const paymentType = qRow?.quotation_type === 'repair' ? 'repair' : 'visit';
@@ -738,11 +747,8 @@ export class ConversationService {
         }
 
         if (!user) {
-            if (session.state === 'UNKNOWN' || session.state === 'IDLE') {
-                await this.saveSession(phone, 'ROLE_SELECTION', {});
-                await WhatsAppService.sendTextMessage(phone, ROLE_SELECTION_PROMPT);
-                return;
-            }
+            await this.saveSession(phone, 'ROLE_SELECTION', {});
+            await WhatsAppService.sendTextMessage(phone, ROLE_SELECTION_PROMPT);
             return;
         }
 
@@ -1035,7 +1041,7 @@ export class ConversationService {
         text: string,
         session: { state: string; data: Record<string, unknown> }
     ): Promise<boolean> {
-        const forwardStates = new Set(['IDLE', 'AWAITING_PAYMENT_DECISION', 'PAYMENT_PENDING', 'COMPLETED']);
+        const forwardStates = new Set(['IDLE', 'PAYMENT_PENDING', 'COMPLETED']);
         if (!forwardStates.has(session.state)) return false;
         if (await redis.get(userRelayPauseRedisKey(phone))) {
             console.log('[conversation] relay usuario→técnico omitido (tras cancelar o pausa explícita)');

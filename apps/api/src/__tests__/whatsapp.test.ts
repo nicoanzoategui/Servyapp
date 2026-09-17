@@ -8,6 +8,8 @@ vi.mock('@servy/db', () => ({
     prisma: {
         user: {
             findUnique: vi.fn(),
+            create: vi.fn(),
+            update: vi.fn(),
         },
         professional: {
             findUnique: vi.fn(),
@@ -17,6 +19,13 @@ vi.mock('@servy/db', () => ({
             delete: vi.fn(),
             upsert: vi.fn(),
         },
+        professionalSession: {
+            findUnique: vi.fn(),
+            delete: vi.fn(),
+            upsert: vi.fn(),
+        },
+        $queryRaw: vi.fn().mockResolvedValue([]),
+        $executeRawUnsafe: vi.fn().mockResolvedValue(0),
     },
 }));
 

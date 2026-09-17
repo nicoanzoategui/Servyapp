@@ -37,22 +37,20 @@ export class MercadoPagoService {
                     title,
                     quantity: 1,
                     unit_price: unitPrice,
+                    currency_id: 'ARS',
                 },
             ],
             payer: {
                 email: `usuario_${user.phone}@servy.lat`,
-                phone: {
-                    area_code: '54',
-                    number: String(user.phone || ''),
-                },
             },
             back_urls: {
                 success: `${env.FRONTEND_URL}/payment/success`,
                 failure: `${env.FRONTEND_URL}/payment/failure`,
                 pending: `${env.FRONTEND_URL}/payment/pending`,
             },
-            auto_return: 'approved',
+            auto_return: 'approved' as const,
             notification_url: `${env.API_PUBLIC_URL.replace(/\/$/, '')}/webhook/mercadopago`,
+            external_reference: quotation.id,
             metadata: {
                 quotation_id: quotation.id,
                 job_offer_id: quotation.job_offer_id,

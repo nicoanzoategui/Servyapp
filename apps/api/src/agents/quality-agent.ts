@@ -1,8 +1,6 @@
 import { prisma } from '@servy/db';
 import { WhatsAppService } from '../services/whatsapp.service';
-import { geminiGenerateJson } from '../lib/gemini-json';
 import { insertAgentLog } from '../lib/agent-log';
-import { QUALITY_ANALYSIS_PROMPT } from './prompts/quality';
 import type { QualityGeminiAnalysisResult } from './types';
 
 function parseStars(text: string): number | null {
@@ -99,37 +97,18 @@ export async function processQualityUserReply(userPhone: string, body: string): 
     if (!p) return false;
 
     const trimmed = body.trim();
-    let stars = parseStars(trimmed);
-    let analysis: QualityGeminiAnalysisResult | null = null;
-    let tokensUsed: number | undefined;
+    const stars = parseStars(trimmed);
+    // Solo números 1-5 / estrellas. El resto del chat (nuevo pedido, "hola") no se come como reseña.
+    if (stars == null) return false;
 
-    if (stars == null) {
-        const g = await geminiGenerateJson<QualityGeminiAnalysisResult>(QUALITY_ANALYSIS_PROMPT, trimmed);
-        tokensUsed = g.tokensUsed;
-        if (g.ok && g.data) {
-            analysis = g.data;
-            stars = Math.min(5, Math.max(1, Math.round(Number(g.data.stars) || 3)));
-        } else {
-            stars = 3;
-            analysis = {
-                stars,
-                sentiment: 'neutral',
-                isComplaint: false,
-                complaintCategory: null,
-                complaintSummary: null,
-            };
-        }
-    } else {
-        analysis = {
-            stars,
-            sentiment: stars <= 2 ? 'negative' : stars >= 4 ? 'positive' : 'neutral',
-            isComplaint: stars <= 2,
-            complaintCategory: stars <= 2 ? 'quality' : null,
-            complaintSummary: stars <= 2 ? 'Calificación baja' : null,
-        };
-    }
-
-    const isComplaint = Boolean(analysis?.isComplaint);
+    const analysis: QualityGeminiAnalysisResult = {
+        stars,
+        sentiment: stars <= 2 ? 'negative' : stars >= 4 ? 'positive' : 'neutral',
+        isComplaint: stars <= 2,
+        complaintCategory: stars <= 2 ? 'quality' : null,
+        complaintSummary: stars <= 2 ? 'Calificación baja' : null,
+    };
+    const isComplaint = Boolean(analysis.isComplaint);
     const sentiment = analysis?.sentiment ?? 'neutral';
 
     await prisma.$executeRawUnsafe(
@@ -180,7 +159,6 @@ export async function processQualityUserReply(userPhone: string, body: string): 
         entityType: 'job',
         entityId: p.job_id,
         details: { stars, isComplaint },
-        tokensUsed: tokensUsed ?? null,
     });
 
     return true;

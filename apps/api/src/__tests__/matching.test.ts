@@ -110,4 +110,34 @@ describe('ProfessionalMatchingService', () => {
         expect(result).toEqual({ id: 'offer1' });
         expect(prisma.jobOffer.create).toHaveBeenCalledTimes(1);
     });
+
+    it('matches an active technician even if the operational profile is incomplete', async () => {
+        (prisma.serviceRequest.findUnique as any).mockResolvedValue({
+            id: 'req1',
+            category: 'plomeria',
+            address: 'Pilar, Buenos Aires (1631)',
+            user: { postal_code: '1631' },
+        });
+
+        (prisma.professional.findMany as any).mockResolvedValue([
+            completePro({
+                id: 'pro-incomplete',
+                categories: ['Plomería'],
+                zones: ['Pilar'],
+                is_urgent: true,
+                is_scheduled: true,
+                bio: '',
+                skills: [],
+                dni: null,
+                documents: [],
+                cbu_alias: null,
+                payout_institution: null,
+                payout_account_type: null,
+            }),
+        ]);
+
+        const result = await ProfessionalMatchingService.findProfessionalsAndCreateOffers('req1');
+        expect(result.urgent?.id).toBe('pro-incomplete');
+        expect(result.scheduled?.id).toBe('pro-incomplete');
+    });
 });
