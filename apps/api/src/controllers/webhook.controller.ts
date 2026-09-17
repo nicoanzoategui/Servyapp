@@ -215,6 +215,7 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
                 data: {
                     quotation_id: quotationId,
                     status: 'confirmed',
+                    qr_token: crypto.randomUUID().replace(/-/g, ''),
                 },
                 include: {
                     quotation: {
