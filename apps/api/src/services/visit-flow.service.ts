@@ -49,16 +49,30 @@ export class VisitFlowService {
     ) {
         const address = (sessionData.serviceAddress as string) || user.address || '';
 
-        const request = await prisma.serviceRequest.create({
-            data: {
+        let request;
+        try {
+            request = await prisma.serviceRequest.create({
+                data: {
+                    user_phone: phone,
+                    category: sessionData.category as string,
+                    description: sessionData.description as string,
+                    photos: (sessionData.photos as string[]) || [],
+                    address,
+                    status: 'awaiting_speed',
+                    // priority / visit_fee se setean en handleSpeedSelection (aún no se eligió urgente vs programado)
+                },
+            });
+        } catch (error) {
+            console.error('[ServiceRequest.create] ERROR DETALLADO:', {
+                message: (error as { message?: string })?.message,
+                code: (error as { code?: string })?.code,
+                meta: (error as { meta?: unknown })?.meta,
+                stack: (error as { stack?: string })?.stack,
                 user_phone: phone,
-                category: sessionData.category as string,
-                description: sessionData.description as string,
-                photos: (sessionData.photos as string[]) || [],
-                address,
-                status: 'awaiting_speed',
-            },
-        });
+                category: sessionData.category,
+            });
+            throw error;
+        }
 
         const hasUrgent = await ProfessionalMatchingService.checkCapacity(request.id, 'urgent');
         const hasScheduled = await ProfessionalMatchingService.checkCapacity(request.id, 'scheduled');
