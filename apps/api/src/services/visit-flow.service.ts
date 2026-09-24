@@ -74,17 +74,24 @@ export class VisitFlowService {
             throw error;
         }
 
-        const hasUrgent = await ProfessionalMatchingService.checkCapacity(request.id, 'urgent');
-        const hasScheduled = await ProfessionalMatchingService.checkCapacity(request.id, 'scheduled');
+        // PAUSADO 2026-09-24 para MVP asignación manual: no exigir técnicos en zona
+        // antes de cobrar la visita. Reactivar el bloque de checkCapacity cuando
+        // MANUAL_TECH_ASSIGNMENT=false (cascada).
+        let hasUrgent = true;
+        let hasScheduled = true;
+        if (!env.MANUAL_TECH_ASSIGNMENT) {
+            hasUrgent = await ProfessionalMatchingService.checkCapacity(request.id, 'urgent');
+            hasScheduled = await ProfessionalMatchingService.checkCapacity(request.id, 'scheduled');
 
-        if (!hasUrgent && !hasScheduled) {
-            await WhatsAppService.sendTextMessage(
-                phone,
-                'No encontramos técnicos disponibles en tu zona en este momento. Probá más tarde o escribí *ayuda*.'
-            );
-            await prisma.serviceRequest.update({ where: { id: request.id }, data: { status: 'cancelled' } });
-            await saveUserSession(phone, 'IDLE', {});
-            return;
+            if (!hasUrgent && !hasScheduled) {
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    'No encontramos técnicos disponibles en tu zona en este momento. Probá más tarde o escribí *ayuda*.'
+                );
+                await prisma.serviceRequest.update({ where: { id: request.id }, data: { status: 'cancelled' } });
+                await saveUserSession(phone, 'IDLE', {});
+                return;
+            }
         }
 
         let prompt = SPEED_SELECTION_PROMPT;
@@ -195,6 +202,11 @@ export class VisitFlowService {
     }
 
     static async finalizeScheduleAndAssignTech(phone: string, sessionData: Record<string, unknown>) {
+        if (env.MANUAL_TECH_ASSIGNMENT) {
+            await this.finalizeScheduleWithoutTech(phone, sessionData);
+            return;
+        }
+
         const requestId = sessionData.requestId as string;
         const priority = sessionData.priority as ServicePriority;
         const schedule = (sessionData.schedule as string) || null;
@@ -202,6 +214,9 @@ export class VisitFlowService {
 
         await ProfessionalMatchingService.cancelOffersForRequest(requestId);
 
+        // PAUSADO 2026-09-24 para MVP manual — ver finalizeScheduleWithoutTech.
+        // Reactivar reemplazando el bloque MANUAL_TECH_ASSIGNMENT de arriba por
+        // esta llamada a assignProfessional (y notifyNewJob más abajo).
         const offer = await ProfessionalMatchingService.assignProfessional(requestId, priority, schedule, excluded);
         if (!offer) {
             await WhatsAppService.sendTextMessage(
@@ -238,16 +253,77 @@ export class VisitFlowService {
         });
         if (!request) return;
 
+        if (!offer.professional) return;
+
         const u = request.user ?? ({ phone, name: null, last_name: null } as User);
         const { ProfessionalConversationService } = await import('./professional.conversation.service');
         await ProfessionalConversationService.notifyNewJob(offer.professional, offer, { ...request, user: u }, u);
     }
 
-    static persistScheduleDay(sessionData: Record<string, unknown>, dayKey: string) {
-        sessionData.scheduledDateIso = scheduleDateFromDayKey(dayKey).toISOString();
+    /**
+     * MVP 2026-09-24: JobOffer sin professional_id + pago de visita inmediato.
+     * No llama assignProfessional ni CascadeQueueService.
+     */
+    private static async finalizeScheduleWithoutTech(phone: string, sessionData: Record<string, unknown>) {
+        const requestId = sessionData.requestId as string;
+        const priority = sessionData.priority as ServicePriority;
+        const schedule = (sessionData.schedule as string) || null;
+
+        const existing = await prisma.jobOffer.findFirst({
+            where: { request_id: requestId, status: { in: ['held', 'accepted'] } },
+            orderBy: { created_at: 'desc' },
+        });
+        if (!existing) {
+            await prisma.jobOffer.updateMany({
+                where: { request_id: requestId, status: 'pending' },
+                data: { status: 'cancelled' },
+            });
+        }
+        const offer =
+            existing ??
+            (await prisma.jobOffer.create({
+                data: {
+                    request_id: requestId,
+                    professional_id: null,
+                    priority,
+                    status: 'held',
+                    schedule,
+                },
+            }));
+
+        const updateData: { scheduled_slot: string | null; status: string; scheduled_date?: Date } = {
+            scheduled_slot: schedule,
+            status: 'awaiting_payment',
+        };
+        if (sessionData.scheduledDateIso) {
+            updateData.scheduled_date = new Date(sessionData.scheduledDateIso as string);
+        }
+        await prisma.serviceRequest.update({ where: { id: requestId }, data: updateData });
+
+        sessionData.jobOfferId = offer.id;
+        await saveUserSession(phone, 'VISIT_PAYMENT_PENDING', sessionData);
+
+        if (priority === 'urgent') {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                '✅ *Turno confirmado — Urgente*\n\nTe mandamos el link para pagar la visita. En cuanto se acredite el pago, en breve te confirmamos los datos del técnico que te va a atender hoy.'
+            );
+        } else {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                `✅ *Turno confirmado*\n\n📅 ${schedule || 'A coordinar'}\n\nTe mandamos el link para pagar la visita. En cuanto se acredite el pago, en breve te confirmamos los datos de tu técnico asignado.`
+            );
+        }
+
+        await this.createVisitPaymentForOffer(offer.id, phone, { mentionTechnician: false });
     }
 
-    static async onTechConfirmedVisit(jobOfferId: string, userPhone: string) {
+    /** Crea cotización de visita + preferencia MP. Usado por cascada (tech confirmó) y por MVP sin técnico. */
+    private static async createVisitPaymentForOffer(
+        jobOfferId: string,
+        userPhone: string,
+        opts: { mentionTechnician: boolean }
+    ) {
         const offer = await prisma.jobOffer.findUnique({
             where: { id: jobOfferId },
             include: { professional: true, service_request: true },
@@ -295,19 +371,33 @@ export class VisitFlowService {
 
         if (!env.PAYMENTS_ENABLED) {
             console.error('[payments] PAYMENTS_ENABLED=false; la visita no avanza a cobro (activá PAYMENTS_ENABLED en Railway)');
-            await WhatsAppService.sendTextMessage(
-                userPhone,
-                `✅ *${proName}* confirmó tu visita.\n\n📅 ${sched}\n💰 Visita: *$${priceStr}*\n\n_Pagos deshabilitados en este entorno._`
-            );
+            if (opts.mentionTechnician) {
+                await WhatsAppService.sendTextMessage(
+                    userPhone,
+                    `✅ *${proName}* confirmó tu visita.\n\n📅 ${sched}\n💰 Visita: *$${priceStr}*\n\n_Pagos deshabilitados en este entorno._`
+                );
+            } else {
+                await WhatsAppService.sendTextMessage(
+                    userPhone,
+                    `💰 Visita: *$${priceStr}*\n\n_Pagos deshabilitados en este entorno._`
+                );
+            }
             return;
         }
 
         try {
             const initPoint = await MercadoPagoService.createPreference(quotation, user, 'visit');
-            await WhatsAppService.sendTextMessage(
-                userPhone,
-                `✅ *${proName}* confirmó tu visita 🎉\n\n━━━━━━━━━━━━━━━\n📅 ${sched}\n💰 *Visita: $${priceStr}*\n━━━━━━━━━━━━━━━\n\n🔒 _Tu dinero queda retenido hasta confirmar el servicio._\n\n👉 ${initPoint}\n\n${MP_OPEN_IN_BROWSER_HINT}\n\n_Tenés ${env.VISIT_PAYMENT_EXPIRE_MINUTES} minutos para completar el pago._`
-            );
+            if (opts.mentionTechnician) {
+                await WhatsAppService.sendTextMessage(
+                    userPhone,
+                    `✅ *${proName}* confirmó tu visita 🎉\n\n━━━━━━━━━━━━━━━\n📅 ${sched}\n💰 *Visita: $${priceStr}*\n━━━━━━━━━━━━━━━\n\n🔒 _Tu dinero queda retenido hasta confirmar el servicio._\n\n👉 ${initPoint}\n\n${MP_OPEN_IN_BROWSER_HINT}\n\n_Tenés ${env.VISIT_PAYMENT_EXPIRE_MINUTES} minutos para completar el pago._`
+                );
+            } else {
+                await WhatsAppService.sendTextMessage(
+                    userPhone,
+                    `💰 *Visita: $${priceStr}*\n\n🔒 _Tu dinero queda retenido hasta confirmar el servicio._\n\n👉 ${initPoint}\n\n${MP_OPEN_IN_BROWSER_HINT}\n\n_Tenés ${env.VISIT_PAYMENT_EXPIRE_MINUTES} minutos para completar el pago._`
+                );
+            }
         } catch {
             await WhatsAppService.sendTextMessage(
                 userPhone,
@@ -316,16 +406,34 @@ export class VisitFlowService {
         }
     }
 
+    static persistScheduleDay(sessionData: Record<string, unknown>, dayKey: string) {
+        sessionData.scheduledDateIso = scheduleDateFromDayKey(dayKey).toISOString();
+    }
+
+    static async onTechConfirmedVisit(jobOfferId: string, userPhone: string) {
+        await this.createVisitPaymentForOffer(jobOfferId, userPhone, { mentionTechnician: true });
+    }
+
     static async onTechRejectedVisit(jobOfferId: string, requestId: string, userPhone: string) {
         const rejectedOffers = await prisma.jobOffer.findMany({
             where: { request_id: requestId },
             select: { professional_id: true },
         });
-        const excludedIds = [...new Set(rejectedOffers.map((o) => o.professional_id))];
+        const excludedIds = [
+            ...new Set(rejectedOffers.map((o) => o.professional_id).filter((id): id is string => Boolean(id))),
+        ];
 
         const sessionRow = await prisma.whatsappSession.findUnique({ where: { phone: userPhone } });
         const sessionData = (sessionRow?.data_json as Record<string, unknown>) || {};
         const attempts = ((sessionData.assignAttempts as number) || 0) + 1;
+
+        if (env.MANUAL_TECH_ASSIGNMENT) {
+            await WhatsAppService.sendTextMessage(
+                userPhone,
+                'El técnico no pudo tomar ese turno. Un administrador te va a asignar otro profesional en breve.'
+            );
+            return;
+        }
 
         if (attempts >= env.MAX_TECH_ASSIGNMENT_ATTEMPTS) {
             await WhatsAppService.sendTextMessage(

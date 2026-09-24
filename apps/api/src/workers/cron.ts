@@ -4,7 +4,14 @@ import { WhatsAppService } from '../services/whatsapp.service';
 import { env } from '../utils/env';
 
 /** Estados del flujo visita: expiran en visit-hold-expiry, no en este cron legacy. */
-const VISIT_FLOW_REQUEST_STATUSES = ['awaiting_speed', 'scheduling', 'awaiting_tech', 'visit_paid'];
+const VISIT_FLOW_REQUEST_STATUSES = [
+    'awaiting_speed',
+    'scheduling',
+    'awaiting_tech',
+    'awaiting_payment',
+    'visit_paid',
+    'technician_assigned',
+];
 
 export const startCronJobs = () => {
     cron.schedule('*/5 * * * *', async () => {
@@ -101,10 +108,12 @@ export const startCronJobs = () => {
                         `🔔 Servy: recordatorio — tenés un servicio programado (${when}).`
                     );
                 }
-                await WhatsAppService.sendTextMessage(
-                    pro.phone,
-                    `🔔 Servy: recordatorio — trabajo con cliente, turno aprox. ${when}.`
-                );
+                if (pro) {
+                    await WhatsAppService.sendTextMessage(
+                        pro.phone,
+                        `🔔 Servy: recordatorio — trabajo con cliente, turno aprox. ${when}.`
+                    );
+                }
 
                 await prisma.job.update({
                     where: { id: job.id },

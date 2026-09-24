@@ -4,6 +4,13 @@ import { prisma } from '@servy/db';
 import { WhatsAppService } from '../services/whatsapp.service';
 import { MercadoPagoService } from '../services/mercadopago.service';
 import { redis } from '../utils/redis';
+import { StorageService } from '../services/storage.service';
+import { assignTechnicianToServiceRequest } from '../services/manual-assignment.service';
+import {
+    deleteDocumentForProfessional,
+    listDocumentsForProfessional,
+    saveDocumentForProfessional,
+} from '../services/professional-documents.service';
 
 export const getDashboard = async (req: Request, res: Response) => {
     try {
@@ -342,6 +349,136 @@ export const updateConfig = async (req: Request, res: Response) => {
         await redis.set('system_config', JSON.stringify(req.body));
         res.json({ success: true, data: req.body });
     } catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR' } });
+    }
+};
+
+async function signedPhotoUrls(photos: string[]): Promise<string[]> {
+    return Promise.all(
+        photos.map(async (p) => {
+            if (!p) return p;
+            if (p.startsWith('http://') || p.startsWith('https://')) return p;
+            return StorageService.getSignedUrl(p);
+        })
+    );
+}
+
+export const listAdminProfessionalDocuments = async (req: Request, res: Response) => {
+    try {
+        const data = await listDocumentsForProfessional(req.params.id);
+        res.json({ success: true, data });
+    } catch {
+        res.status(500).json({ success: false, error: { message: 'Error al listar documentos' } });
+    }
+};
+
+export const uploadAdminProfessionalDocument = async (req: Request, res: Response) => {
+    try {
+        const result = await saveDocumentForProfessional(req.params.id, req.body);
+        if (result.ok === false) {
+            return res.status(result.status).json({ success: false, error: { message: result.message } });
+        }
+        res.status(201).json({ success: true, data: result.data });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: { message: 'Error al subir documento' } });
+    }
+};
+
+export const deleteAdminProfessionalDocument = async (req: Request, res: Response) => {
+    try {
+        const result = await deleteDocumentForProfessional(req.params.id, req.params.docId);
+        if (result.ok === false) {
+            return res.status(result.status).json({ success: false, error: { message: result.message } });
+        }
+        res.json({ success: true });
+    } catch {
+        res.status(500).json({ success: false, error: { message: 'Error al eliminar' } });
+    }
+};
+
+export const getUnassignedServiceRequests = async (_req: Request, res: Response) => {
+    try {
+        const rows = await prisma.serviceRequest.findMany({
+            where: {
+                status: { in: ['visit_paid', 'awaiting_assignment'] },
+                job_offers: {
+                    some: {
+                        professional_id: null,
+                        quotations: {
+                            some: {
+                                quotation_type: 'visit',
+                                payment: { status: 'approved' },
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: { created_at: 'asc' },
+            include: {
+                user: { select: { name: true, last_name: true, phone: true } },
+                job_offers: {
+                    orderBy: { created_at: 'desc' },
+                    include: {
+                        quotations: { include: { payment: true } },
+                    },
+                },
+            },
+        });
+
+        const data = await Promise.all(
+            rows.map(async (row) => {
+                const offer = row.job_offers.find((o) => o.professional_id == null) ?? row.job_offers[0];
+                const visitQuote = offer?.quotations.find((q) => q.quotation_type === 'visit');
+                const paidAt = visitQuote?.payment?.paid_at ?? null;
+                const waitingSince = paidAt ?? row.created_at;
+                return {
+                    id: row.id,
+                    category: row.category,
+                    description: row.description,
+                    address: row.address,
+                    priority: row.priority,
+                    scheduled_slot: row.scheduled_slot,
+                    scheduled_date: row.scheduled_date,
+                    visit_fee: row.visit_fee,
+                    status: row.status,
+                    photos: await signedPhotoUrls(row.photos || []),
+                    created_at: row.created_at,
+                    waiting_since: waitingSince,
+                    waiting_ms: Date.now() - waitingSince.getTime(),
+                    client: {
+                        name: row.user?.name ?? null,
+                        last_name: row.user?.last_name ?? null,
+                        phone: row.user_phone,
+                    },
+                    job_offer_id: offer?.id ?? null,
+                };
+            })
+        );
+
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR' } });
+    }
+};
+
+export const assignTechnician = async (req: Request, res: Response) => {
+    try {
+        const professionalId = String(req.body?.professionalId || '').trim();
+        if (!professionalId) {
+            return res.status(400).json({
+                success: false,
+                error: { message: 'professionalId es requerido' },
+            });
+        }
+        const result = await assignTechnicianToServiceRequest(req.params.id, professionalId);
+        if (result.ok === false) {
+            return res.status(result.status).json({ success: false, error: { message: result.message } });
+        }
+        res.json({ success: true, data: result.jobOffer });
+    } catch (error) {
+        console.error(error);
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR' } });
     }
 };

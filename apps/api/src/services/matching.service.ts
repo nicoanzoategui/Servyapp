@@ -112,7 +112,11 @@ export class ProfessionalMatchingService {
         return list.length > 0;
     }
 
-    /** Creates a single pending JobOffer for the best available professional. */
+    /**
+     * Creates a single pending JobOffer for the best available professional.
+     * PAUSADO 2026-09-24 en el flujo de visita (MANUAL_TECH_ASSIGNMENT). No borrar:
+     * visit-flow.service.ts vuelve a llamarlo si el flag es false.
+     */
     static async assignProfessional(
         requestId: string,
         priority: ServicePriority,
@@ -148,7 +152,8 @@ export class ProfessionalMatchingService {
         });
     }
 
-    static formatProName(pro: { name: string; last_name: string }): string {
+    static formatProName(pro: { name: string; last_name: string } | null | undefined): string {
+        if (!pro) return 'Tu técnico';
         return `${pro.name} ${pro.last_name}`.trim() || 'Tu técnico';
     }
 }

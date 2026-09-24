@@ -618,7 +618,7 @@ export class ConversationService {
             return;
         }
 
-        const proName = quotation.job_offer.professional.name.trim() || 'el técnico';
+        const proName = quotation.job_offer.professional?.name?.trim() || 'el técnico';
 
         if (!env.PAYMENTS_ENABLED) {
             console.error('[payments] PAYMENTS_ENABLED=false; no se genera link de Mercado Pago');
@@ -710,11 +710,13 @@ export class ConversationService {
         });
 
         const proId = job.quotation.job_offer.professional_id;
-        const allJobs = await prisma.job.findMany({
-            where: { quotation: { job_offer: { professional_id: proId } }, rating: { not: null } },
-        });
-        const avg = allJobs.reduce((s, j) => s + (j.rating || 0), 0) / allJobs.length;
-        await prisma.professional.update({ where: { id: proId }, data: { rating: Math.round(avg * 10) / 10 } });
+        if (proId) {
+            const allJobs = await prisma.job.findMany({
+                where: { quotation: { job_offer: { professional_id: proId } }, rating: { not: null } },
+            });
+            const avg = allJobs.reduce((s, j) => s + (j.rating || 0), 0) / allJobs.length;
+            await prisma.professional.update({ where: { id: proId }, data: { rating: Math.round(avg * 10) / 10 } });
+        }
 
         if (rating >= 4) {
             await this.clearSession(phone);
@@ -1062,7 +1064,8 @@ export class ConversationService {
             orderBy: { id: 'desc' },
         });
         if (!job) return false;
-        const proPhone = job.quotation.job_offer.professional.phone;
+        const proPhone = job.quotation.job_offer.professional?.phone;
+        if (!proPhone) return false;
         const safe = text.replace(/"/g, '“');
         await WhatsAppService.sendTextMessage(proPhone, `💬 *Mensaje del cliente*\n\n_${safe}_`);
         await insertAgentLog({
@@ -1105,7 +1108,7 @@ export class ConversationService {
         if (!job) return false;
 
         const userPhone = job.quotation.job_offer.service_request.user_phone;
-        const proName = job.quotation.job_offer.professional.name;
+        const proName = job.quotation.job_offer.professional?.name ?? args.professional.name;
         const trimmed = body.trim();
 
         const llegoMatch = trimmed.match(/llego\s+en\s+(\d+)/i);

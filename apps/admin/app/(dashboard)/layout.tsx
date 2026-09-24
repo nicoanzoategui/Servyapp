@@ -8,6 +8,7 @@ import {
     Home,
     MessageCircle,
     Users,
+    UserPlus,
     Briefcase,
     DollarSign,
     Settings,
@@ -28,6 +29,7 @@ import {
 const MAIN_LINKS = [
     { href: '/dashboard', label: 'Panel Principal', icon: Home },
     { href: '/conversations', label: 'Conversaciones', icon: MessageCircle },
+    { href: '/unassigned', label: 'Pedidos sin técnico', icon: UserPlus },
     { href: '/professionals', label: 'Profesionales', icon: Users },
     { href: '/jobs', label: 'Trabajos', icon: Briefcase },
     { href: '/finance', label: 'Finanzas', icon: DollarSign },

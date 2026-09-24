@@ -251,42 +251,48 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
             });
 
             const userPhone = notifyPhone;
-
-            const proJob = job.quotation.job_offer;
-            const serviceRequest = await prisma.serviceRequest.findUnique({
-                where: { id: proJob.request_id },
-                include: { user: true },
-            });
-            const franja = serviceRequest?.scheduled_slot ?? proJob.schedule ?? 'a confirmar';
-            const fecha = serviceRequest?.scheduled_date
-                ? new Date(serviceRequest.scheduled_date).toLocaleDateString('es-AR')
-                : 'a confirmar';
-            const addr = serviceRequest?.address ?? 'Ver portal';
-
             const pro = job.quotation.job_offer.professional;
-            const proFullName = `${pro.name}${pro.last_name ? ' ' + pro.last_name : ''}`;
-            const proPhone = pro.phone;
-            const proPhoneFormatted = proPhone.startsWith('549')
-                ? `+${proPhone.slice(0, 2)} ${proPhone.slice(2, 4)} ${proPhone.slice(4)}`
-                : proPhone;
-            const proBio = pro.bio
-                ? `\n📝 ${pro.bio.slice(0, 150)}${pro.bio.length > 150 ? '...' : ''}`
-                : '';
-            const proSkills =
-                pro.skills && pro.skills.length > 0 ? `\n🔧 ${pro.skills.slice(0, 3).join(', ')}` : '';
-            const proCategories =
-                pro.categories && pro.categories.length > 0 ? `\n✅ ${pro.categories.join(', ')}` : '';
 
-            await WhatsAppService.sendTextMessage(
-                userPhone,
-                `✅ *¡Visita pagada!*\n\nTu técnico está confirmado 🎉\n\n━━━━━━━━━━━━━━━\n*DATOS DEL TÉCNICO*\n━━━━━━━━━━━━━━━\n👤 ${proFullName}\n📞 ${proPhoneFormatted}${pro.dni ? `\n🆔 DNI: ${pro.dni}` : ''}${proBio}${proSkills}${proCategories}\n━━━━━━━━━━━━━━━\n📅 ${fecha} · ${franja}\n📍 ${addr}\n━━━━━━━━━━━━━━━\n\n_El arreglo se cotiza in situ. Cualquier consulta escribí acá._`
-            );
+            if (!pro) {
+                await WhatsAppService.sendTextMessage(
+                    userPhone,
+                    '✅ *¡Pago confirmado!*\n\nYa estamos coordinando tu técnico. En breve te mandamos sus datos y documentación.'
+                );
+            } else {
+                const serviceRequest = await prisma.serviceRequest.findUnique({
+                    where: { id: job.quotation.job_offer.request_id },
+                    include: { user: true },
+                });
+                const franja = serviceRequest?.scheduled_slot ?? job.quotation.job_offer.schedule ?? 'a confirmar';
+                const fecha = serviceRequest?.scheduled_date
+                    ? new Date(serviceRequest.scheduled_date).toLocaleDateString('es-AR')
+                    : 'a confirmar';
+                const addr = serviceRequest?.address ?? 'Ver portal';
 
-            const totalStr = job.quotation.total_price.toLocaleString('es-AR');
-            await WhatsAppService.sendTextMessage(
-                job.quotation.job_offer.professional.phone,
-                `💼 *Visita confirmada y pagada*\n\n━━━━━━━━━━━━━━━\n📍 ${serviceRequest?.address ?? 'Ver portal'}\n🔧 ${serviceRequest?.description?.slice(0, 80) ?? 'Ver portal'}\n📅 ${fecha} · turno ${franja}\n💰 Visita: *$${totalStr}*\n━━━━━━━━━━━━━━━\n\n🔗 _portal.servy.lat/jobs/${job.id}_\n\n*Comandos:* _estoy yendo_ · _llego en X minutos_ · _no encuentro la dirección_`
-            );
+                const proFullName = `${pro.name}${pro.last_name ? ' ' + pro.last_name : ''}`;
+                const proPhone = pro.phone;
+                const proPhoneFormatted = proPhone.startsWith('549')
+                    ? `+${proPhone.slice(0, 2)} ${proPhone.slice(2, 4)} ${proPhone.slice(4)}`
+                    : proPhone;
+                const proBio = pro.bio
+                    ? `\n📝 ${pro.bio.slice(0, 150)}${pro.bio.length > 150 ? '...' : ''}`
+                    : '';
+                const proSkills =
+                    pro.skills && pro.skills.length > 0 ? `\n🔧 ${pro.skills.slice(0, 3).join(', ')}` : '';
+                const proCategories =
+                    pro.categories && pro.categories.length > 0 ? `\n✅ ${pro.categories.join(', ')}` : '';
+
+                await WhatsAppService.sendTextMessage(
+                    userPhone,
+                    `✅ *¡Visita pagada!*\n\nTu técnico está confirmado 🎉\n\n━━━━━━━━━━━━━━━\n*DATOS DEL TÉCNICO*\n━━━━━━━━━━━━━━━\n👤 ${proFullName}\n📞 ${proPhoneFormatted}${pro.dni ? `\n🆔 DNI: ${pro.dni}` : ''}${proBio}${proSkills}${proCategories}\n━━━━━━━━━━━━━━━\n📅 ${fecha} · ${franja}\n📍 ${addr}\n━━━━━━━━━━━━━━━\n\n_El arreglo se cotiza in situ. Cualquier consulta escribí acá._`
+                );
+
+                const totalStr = job.quotation.total_price.toLocaleString('es-AR');
+                await WhatsAppService.sendTextMessage(
+                    pro.phone,
+                    `💼 *Visita confirmada y pagada*\n\n━━━━━━━━━━━━━━━\n📍 ${serviceRequest?.address ?? 'Ver portal'}\n🔧 ${serviceRequest?.description?.slice(0, 80) ?? 'Ver portal'}\n📅 ${fecha} · turno ${franja}\n💰 Visita: *$${totalStr}*\n━━━━━━━━━━━━━━━\n\n🔗 _portal.servy.lat/jobs/${job.id}_\n\n*Comandos:* _estoy yendo_ · _llego en X minutos_ · _no encuentro la dirección_`
+                );
+            }
 
             try {
                 await prisma.whatsappSession.upsert({

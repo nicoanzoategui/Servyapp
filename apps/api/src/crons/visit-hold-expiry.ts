@@ -32,13 +32,17 @@ export async function runVisitHoldExpiry(): Promise<void> {
             offer.service_request.user_phone,
             '⏰ La reserva de visita venció porque no se completó el pago a tiempo.\n\nEscribí cuando quieras hacer un nuevo pedido.'
         ).catch(() => {});
-        await WhatsAppService.sendTextMessage(
-            offer.professional.phone,
-            'La reserva de visita expiró (el cliente no pagó a tiempo). Ya podés recibir nuevos pedidos.'
-        ).catch(() => {});
+        if (offer.professional) {
+            await WhatsAppService.sendTextMessage(
+                offer.professional.phone,
+                'La reserva de visita expiró (el cliente no pagó a tiempo). Ya podés recibir nuevos pedidos.'
+            ).catch(() => {});
+        }
         try {
             await redis.del(`session:${offer.service_request.user_phone}`);
-            await redis.del(`pro_session:${offer.professional.phone}`);
+            if (offer.professional) {
+                await redis.del(`pro_session:${offer.professional.phone}`);
+            }
         } catch {
             /* ignore */
         }
@@ -63,7 +67,10 @@ export async function runVisitHoldExpiry(): Promise<void> {
         if (session?.step === 'AWAITING_TECH_CONFIRMATION') {
             const { VisitFlowService } = await import('../services/visit-flow.service');
             const data = (session.data_json as Record<string, unknown>) || {};
-            data.excludedProIds = [...((data.excludedProIds as string[]) || []), offer.professional_id];
+            data.excludedProIds = [
+                ...((data.excludedProIds as string[]) || []),
+                ...(offer.professional_id ? [offer.professional_id] : []),
+            ];
             await VisitFlowService.finalizeScheduleAndAssignTech(req.user_phone, data);
         }
     }

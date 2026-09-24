@@ -270,6 +270,129 @@ export default function EditProfessionalPage() {
                     {saveMut.isPending ? 'Guardando…' : 'Guardar cambios'}
                 </button>
             </form>
+
+            <ProfessionalDocumentsSection professionalId={id} />
         </div>
     );
+}
+
+const DOC_SLOTS: { kind: string; label: string; accept: string }[] = [
+    { kind: 'dni_front', label: 'DNI frente', accept: 'image/jpeg,image/png' },
+    { kind: 'dni_back', label: 'DNI dorso', accept: 'image/jpeg,image/png' },
+    { kind: 'criminal_record', label: 'Antecedentes penales', accept: 'image/jpeg,image/png,application/pdf' },
+    { kind: 'certification', label: 'Matrícula / certificación', accept: 'image/jpeg,image/png,application/pdf' },
+];
+
+type ProDoc = {
+    id: string;
+    kind: string;
+    filename: string | null;
+    content_type: string;
+    url: string;
+};
+
+function ProfessionalDocumentsSection({ professionalId }: { professionalId: string }) {
+    const qc = useQueryClient();
+    const { data, isLoading } = useQuery({
+        queryKey: ['adminProfessionalDocs', professionalId],
+        queryFn: async () => {
+            const res = await fetch(`${API_URL}/admin/professionals/${professionalId}/documents`, {
+                headers: authHeaders(),
+            });
+            const payload = await res.json();
+            if (!res.ok) throw new Error(payload?.error?.message || 'No se pudieron cargar los documentos');
+            return (payload.data || []) as ProDoc[];
+        },
+        enabled: Boolean(professionalId),
+    });
+
+    const [busyKind, setBusyKind] = useState<string | null>(null);
+    const [docError, setDocError] = useState<string | null>(null);
+
+    const byKind = new Map((data || []).map((d) => [d.kind, d]));
+
+    const uploadFile = async (kind: string, file: File) => {
+        setDocError(null);
+        setBusyKind(kind);
+        try {
+            const content_base64 = await fileToBase64(file);
+            const res = await fetch(`${API_URL}/admin/professionals/${professionalId}/documents`, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({
+                    kind,
+                    filename: file.name,
+                    content_type: file.type || 'image/jpeg',
+                    content_base64,
+                }),
+            });
+            const payload = await res.json();
+            if (!res.ok) throw new Error(payload?.error?.message || 'No se pudo subir');
+            await qc.invalidateQueries({ queryKey: ['adminProfessionalDocs', professionalId] });
+        } catch (e) {
+            setDocError((e as Error).message);
+        } finally {
+            setBusyKind(null);
+        }
+    };
+
+    return (
+        <section className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+            <div>
+                <h2 className="text-lg font-semibold text-slate-900">Documentación</h2>
+                <p className="text-sm text-slate-500">DNI, antecedentes y matrícula. Se envían al cliente al asignar el técnico.</p>
+            </div>
+            {isLoading && <p className="text-sm text-slate-500">Cargando documentos…</p>}
+            {docError && <p className="text-sm text-red-600">{docError}</p>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {DOC_SLOTS.map((slot) => {
+                    const current = byKind.get(slot.kind);
+                    return (
+                        <div key={slot.kind} className="border border-slate-200 rounded-lg p-3 space-y-2">
+                            <p className="text-sm font-medium text-slate-800">{slot.label}</p>
+                            {current?.content_type.startsWith('image/') && current.url ? (
+                                <a href={current.url} target="_blank" rel="noreferrer">
+                                    <img src={current.url} alt={slot.label} className="h-28 w-full object-cover rounded-md border" />
+                                </a>
+                            ) : current ? (
+                                <a href={current.url} target="_blank" rel="noreferrer" className="text-sm text-blue-600">
+                                    {current.filename || 'Ver archivo'}
+                                </a>
+                            ) : (
+                                <p className="text-xs text-slate-400">Sin archivo</p>
+                            )}
+                            <label className="block">
+                                <span className="sr-only">Subir {slot.label}</span>
+                                <input
+                                    type="file"
+                                    accept={slot.accept}
+                                    disabled={busyKind === slot.kind}
+                                    className="text-xs w-full"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        e.target.value = '';
+                                        if (file) void uploadFile(slot.kind, file);
+                                    }}
+                                />
+                            </label>
+                            {busyKind === slot.kind && <p className="text-xs text-slate-500">Subiendo…</p>}
+                        </div>
+                    );
+                })}
+            </div>
+        </section>
+    );
+}
+
+function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = String(reader.result || '');
+            const comma = result.indexOf(',');
+            resolve(comma >= 0 ? result.slice(comma + 1) : result);
+        };
+        reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+        reader.readAsDataURL(file);
+    });
 }

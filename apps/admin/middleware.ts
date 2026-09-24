@@ -31,6 +31,8 @@ export const config = {
         '/conversations/:path*',
         '/professionals/:path*',
         '/jobs/:path*',
+        '/unassigned',
+        '/unassigned/:path*',
         '/finance/:path*',
         '/settings/:path*',
         '/pricing',

@@ -82,7 +82,7 @@ export async function runPaymentReminder(): Promise<void> {
         if (!link) continue;
 
         const userPhone = payment.quotation.job_offer.service_request.user_phone;
-        const proName = payment.quotation.job_offer.professional.name.trim() || 'Tu técnico';
+        const proName = payment.quotation.job_offer.professional?.name?.trim() || 'Tu técnico';
 
         await WhatsAppService.sendTextMessage(
             userPhone,

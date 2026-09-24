@@ -806,12 +806,14 @@ export const completeJobByQr = async (req: Request, res: Response) => {
         });
         await availabilityAgent.clearProfessionalBusyIfNeeded(professionalId);
         const userPhone = existing.quotation.job_offer.service_request.user_phone;
-        const proPhone = existing.quotation.job_offer.professional.phone;
+        const proPhone = existing.quotation.job_offer.professional?.phone;
         const repairAmount = existing.quotation.total_price.toLocaleString('es-AR');
-        await WhatsAppService.sendTextMessage(
-            proPhone,
-            `💰 *¡Pago confirmado!*\n\nEl cliente validó el QR. El arreglo por *$${repairAmount}* quedó registrado como completado.\n\nPodés ver el detalle en el portal.`
-        );
+        if (proPhone) {
+            await WhatsAppService.sendTextMessage(
+                proPhone,
+                `💰 *¡Pago confirmado!*\n\nEl cliente validó el QR. El arreglo por *$${repairAmount}* quedó registrado como completado.\n\nPodés ver el detalle en el portal.`
+            );
+        }
         const endUser = await prisma.user.findUnique({ where: { phone: userPhone } });
         const nm = endUser?.name?.trim();
         await WhatsAppService.sendTextMessage(

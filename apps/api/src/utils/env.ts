@@ -128,7 +128,15 @@ const envSchema = z.object({
             const n = parseInt(String(v || '3'), 10);
             return Number.isFinite(n) && n >= 1 ? n : 3;
         }),
-});
+    /**
+     * true (default) = MVP asignación manual: no cascada, pago de visita al elegir horario.
+     * MANUAL_TECH_ASSIGNMENT=false reactiva assignProfessional + notifyNewJob.
+     */
+    MANUAL_TECH_ASSIGNMENT: z
+        .string()
+        .optional()
+        .transform((v) => v !== 'false' && v !== '0'),
+})
 
 const _env = envSchema.safeParse(process.env);
 

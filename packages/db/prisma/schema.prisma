@@ -33,6 +33,7 @@ enum ProfessionalDocumentKind {
   dni_front
   dni_back
   certification
+  criminal_record
 }
 
 model Professional {
@@ -125,14 +126,14 @@ model ServiceRequest {
 model JobOffer {
   id              String   @id @default(cuid())
   request_id      String
-  professional_id String
+  professional_id String?
   priority        String   @default("normal")
   status          String   @default("pending") // pending, held, accepted, rejected, quoted, expired, cancelled
   schedule        String?
   created_at      DateTime @default(now())
 
   service_request ServiceRequest @relation(fields: [request_id], references: [id])
-  professional    Professional   @relation(fields: [professional_id], references: [id])
+  professional    Professional?  @relation(fields: [professional_id], references: [id])
   quotations      Quotation[]
 
   @@index([request_id])

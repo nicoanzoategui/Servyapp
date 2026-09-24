@@ -40,11 +40,13 @@ export async function runJobTimeout(): Promise<void> {
             data: { status: 'completed', completed_at: new Date() },
         });
 
-        try {
-            const { clearProfessionalBusyIfNeeded } = await import('../agents/availability-agent');
-            await clearProfessionalBusyIfNeeded(professionalId);
-        } catch {
-            /* no bloquear el cierre */
+        if (professionalId) {
+            try {
+                const { clearProfessionalBusyIfNeeded } = await import('../agents/availability-agent');
+                await clearProfessionalBusyIfNeeded(professionalId);
+            } catch {
+                /* no bloquear el cierre */
+            }
         }
 
         // TODO: liberación de fondos al técnico (integración de pagos / earnings).

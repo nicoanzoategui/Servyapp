@@ -9,6 +9,9 @@ import {
     createProfessional,
     updateProfessional,
     updateProfessionalStatus,
+    listAdminProfessionalDocuments,
+    uploadAdminProfessionalDocument,
+    deleteAdminProfessionalDocument,
     getJobs,
     getJobDetail,
     reassignJob,
@@ -17,7 +20,9 @@ import {
     getPendingEarnings,
     processEarning,
     getConfig,
-    updateConfig
+    updateConfig,
+    getUnassignedServiceRequests,
+    assignTechnician,
 } from '../controllers/admin.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth.middleware';
 
@@ -38,6 +43,12 @@ router.post('/professionals', createProfessional);
 router.get('/professionals/:id', getProfessionalDetail);
 router.put('/professionals/:id', updateProfessional);
 router.put('/professionals/:id/status', updateProfessionalStatus);
+router.get('/professionals/:id/documents', listAdminProfessionalDocuments);
+router.post('/professionals/:id/documents', uploadAdminProfessionalDocument);
+router.delete('/professionals/:id/documents/:docId', deleteAdminProfessionalDocument);
+
+router.get('/service-requests/unassigned', getUnassignedServiceRequests);
+router.post('/service-requests/:id/assign-technician', assignTechnician);
 
 // Jobs
 router.get('/jobs', getJobs);
