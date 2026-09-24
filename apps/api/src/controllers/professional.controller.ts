@@ -4,6 +4,7 @@ import { StorageService } from '../services/storage.service';
 import { WhatsAppService } from '../services/whatsapp.service';
 import { ConversationService } from '../services/conversation.service';
 import { QRService } from '../services/qr.service';
+import { signedUrlsForPhotos } from '../services/photo-urls';
 import { availabilityAgent } from '../agents/availability-agent';
 import {
     buildProfileCompletionFromDbRow,
@@ -255,7 +256,7 @@ export const getJobDetail = async (req: Request, res: Response) => {
                     service_request: {
                         ...job.quotation.job_offer.service_request,
                         address: isConfirmed ? job.quotation.job_offer.service_request.address : null,
-                        photos: job.quotation.job_offer.service_request.photos,
+                        photos: await signedUrlsForPhotos(job.quotation.job_offer.service_request.photos),
                         description: job.quotation.job_offer.service_request.description,
                     },
                 },

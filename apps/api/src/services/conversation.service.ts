@@ -385,11 +385,29 @@ export class ConversationService {
                 if (messageType === 'image') {
                     session.data.photos = (session.data.photos as string[] | undefined) || [];
                     const buffer = await WhatsAppService.downloadMedia(content);
-                    if (buffer) {
+                    if (!buffer) {
+                        console.error('[photos] downloadMedia falló; no se guardó la foto', {
+                            phoneMask: phone.slice(-4),
+                            mediaPreview: String(content || '').slice(0, 80),
+                        });
+                        await WhatsAppService.sendTextMessage(
+                            phone,
+                            'No pude guardar esa foto. Probá mandarla de nuevo o escribí *2* para continuar sin foto.'
+                        );
+                        return;
+                    }
+                    try {
                         const key = `requests/temp_${phone}_${Date.now()}.jpg`;
-                        await StorageService.uploadFile(key, buffer);
-                        const url = await StorageService.getSignedUrl(key);
-                        (session.data.photos as string[]).push(url);
+                        await StorageService.uploadFile(key, buffer, 'image/jpeg');
+                        // Guardar la key de R2 (no la URL firmada: vence en 1h).
+                        (session.data.photos as string[]).push(key);
+                    } catch (err) {
+                        console.error('[photos] upload R2 falló', err);
+                        await WhatsAppService.sendTextMessage(
+                            phone,
+                            'No pude guardar esa foto. Probá mandarla de nuevo o escribí *2* para continuar sin foto.'
+                        );
+                        return;
                     }
                     await this.saveSession(phone, 'AWAITING_PHOTOS', session.data);
                     await WhatsAppService.sendTextMessage(

@@ -6,6 +6,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useMemo, useState } from 'react';
 import { API_URL } from '@/lib/api';
+import { ProblemPhotos } from '@/components/ProblemPhotos';
 
 type UnassignedRequest = {
     id: string;
@@ -179,19 +180,7 @@ export default function UnassignedRequestsPage() {
                                     </div>
                                 </dl>
 
-                                {r.photos?.length > 0 && (
-                                    <div className="flex flex-wrap gap-2">
-                                        {r.photos.map((url) => (
-                                            <a key={url} href={url} target="_blank" rel="noreferrer">
-                                                <img
-                                                    src={url}
-                                                    alt="Foto del problema"
-                                                    className="h-20 w-20 object-cover rounded-lg border border-slate-200"
-                                                />
-                                            </a>
-                                        ))}
-                                    </div>
-                                )}
+                                <ProblemPhotos photos={r.photos} />
 
                                 <div className="flex flex-col sm:flex-row gap-2 sm:items-center pt-2">
                                     <select

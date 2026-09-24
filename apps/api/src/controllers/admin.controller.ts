@@ -4,7 +4,7 @@ import { prisma } from '@servy/db';
 import { WhatsAppService } from '../services/whatsapp.service';
 import { MercadoPagoService } from '../services/mercadopago.service';
 import { redis } from '../utils/redis';
-import { StorageService } from '../services/storage.service';
+import { signedUrlsForPhotos } from '../services/photo-urls';
 import { assignTechnicianToServiceRequest } from '../services/manual-assignment.service';
 import {
     deleteDocumentForProfessional,
@@ -245,6 +245,10 @@ export const getJobs = async (req: Request, res: Response) => {
                 },
             },
         });
+        for (const job of jobs) {
+            const sr = job.quotation.job_offer.service_request;
+            sr.photos = await signedUrlsForPhotos(sr.photos);
+        }
         res.json({ success: true, data: jobs });
     } catch (error) {
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR' } });
@@ -259,6 +263,11 @@ export const getJobDetail = async (req: Request, res: Response) => {
                 quotation: { include: { job_offer: { include: { service_request: true, professional: true } } } }
             }
         });
+        if (job?.quotation.job_offer.service_request) {
+            job.quotation.job_offer.service_request.photos = await signedUrlsForPhotos(
+                job.quotation.job_offer.service_request.photos
+            );
+        }
         res.json({ success: true, data: job });
     } catch (error) {
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR' } });
@@ -353,16 +362,6 @@ export const updateConfig = async (req: Request, res: Response) => {
     }
 };
 
-async function signedPhotoUrls(photos: string[]): Promise<string[]> {
-    return Promise.all(
-        photos.map(async (p) => {
-            if (!p) return p;
-            if (p.startsWith('http://') || p.startsWith('https://')) return p;
-            return StorageService.getSignedUrl(p);
-        })
-    );
-}
-
 export const listAdminProfessionalDocuments = async (req: Request, res: Response) => {
     try {
         const data = await listDocumentsForProfessional(req.params.id);
@@ -442,7 +441,7 @@ export const getUnassignedServiceRequests = async (_req: Request, res: Response)
                     scheduled_date: row.scheduled_date,
                     visit_fee: row.visit_fee,
                     status: row.status,
-                    photos: await signedPhotoUrls(row.photos || []),
+                    photos: await signedUrlsForPhotos(row.photos || []),
                     created_at: row.created_at,
                     waiting_since: waitingSince,
                     waiting_ms: Date.now() - waitingSince.getTime(),

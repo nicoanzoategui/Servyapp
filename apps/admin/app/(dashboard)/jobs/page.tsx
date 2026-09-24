@@ -5,6 +5,8 @@ import Cookies from 'js-cookie';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { API_URL } from '@/lib/api';
+import { ProblemPhotos } from '@/components/ProblemPhotos';
+import Link from 'next/link';
 
 type Payment = {
     amount?: number;
@@ -35,6 +37,7 @@ type AdminJob = {
                 address?: string | null;
                 visit_fee?: number | null;
                 user_phone?: string;
+                photos?: string[];
                 user?: { name?: string | null; last_name?: string | null; phone?: string } | null;
             };
         };
@@ -118,13 +121,14 @@ export default function AdminJobsPage() {
         <div>
             <h1 className="text-2xl font-bold text-slate-900 mb-6">Trabajos</h1>
             <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
-                <table className="w-full text-sm min-w-[960px]">
+                <table className="w-full text-sm min-w-[1100px]">
                     <thead className="bg-slate-50 text-left text-slate-500">
                         <tr>
                             <th className="p-3 font-medium">Cliente</th>
                             <th className="p-3 font-medium">Técnico</th>
                             <th className="p-3 font-medium">Categoría</th>
                             <th className="p-3 font-medium">Dirección</th>
+                            <th className="p-3 font-medium">Fotos</th>
                             <th className="p-3 font-medium">Montos</th>
                             <th className="p-3 font-medium">Estado</th>
                             <th className="p-3 font-medium">Fecha</th>
@@ -139,10 +143,17 @@ export default function AdminJobsPage() {
                             const repairPaid = paidAmount(repair);
                             return (
                                 <tr key={j.id} className="border-t border-slate-100 align-top" title={`ID ${j.id}`}>
-                                    <td className="p-3 font-medium text-slate-900">{clientLabel(j)}</td>
+                                    <td className="p-3 font-medium text-slate-900">
+                                        <Link href={`/jobs/${j.id}`} className="text-blue-700 hover:underline">
+                                            {clientLabel(j)}
+                                        </Link>
+                                    </td>
                                     <td className="p-3 text-slate-700">{techLabel(j)}</td>
                                     <td className="p-3">{sr?.category ?? '—'}</td>
                                     <td className="p-3 text-slate-600 max-w-[180px]">{sr?.address || '—'}</td>
+                                    <td className="p-3">
+                                        <ProblemPhotos photos={sr?.photos} />
+                                    </td>
                                     <td className="p-3 text-slate-700 whitespace-nowrap">
                                         <div>Visita: {money(visitPaid ?? visit?.total_price ?? sr?.visit_fee)}</div>
                                         <div>Arreglo: {repair ? money(repairPaid ?? repair.total_price) : '—'}</div>
