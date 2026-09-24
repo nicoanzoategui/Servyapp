@@ -30,6 +30,25 @@ function parseClassificationFromPartialJson(clean: string): GeminiClassification
     return { category, urgency, understood };
 }
 
+function normalizeGeminiAudioMime(raw: string): string {
+    const base = String(raw || '')
+        .split(';')[0]
+        .trim()
+        .toLowerCase();
+    if (base === 'audio/mpeg' || base === 'audio/mp3') return 'audio/mp3';
+    if (base === 'audio/ogg' || base === 'audio/opus' || base === 'application/ogg') return 'audio/ogg';
+    if (base === 'audio/wav' || base === 'audio/x-wav' || base === 'audio/wave') return 'audio/wav';
+    if (base === 'audio/mp4' || base === 'audio/m4a' || base === 'audio/x-m4a' || base === 'audio/aac') return 'audio/aac';
+    if (base === 'audio/flac') return 'audio/flac';
+    if (base.startsWith('audio/')) return base;
+    return 'audio/ogg';
+}
+
+export type GeminiTranscript = {
+    transcript: string;
+    summary: string;
+};
+
 export class GeminiService {
     static async classifyProblem(description: string): Promise<GeminiClassification> {
         const fallback = () => classifyProblemByKeywords(description);
@@ -119,6 +138,82 @@ Mensaje del usuario: "${description.replace(/"/g, "'")}"`;
         } catch (err) {
             console.error('Gemini error:', err);
             return fallback();
+        }
+    }
+
+    /** Transcribe una nota de voz (Twilio/WhatsApp) con el mismo modelo y API key de classifyProblem. */
+    static async transcribeAudio(buffer: Buffer, mimeType: string): Promise<GeminiTranscript | null> {
+        if (!buffer?.length) return null;
+        const key = env.GOOGLE_AI_API_KEY?.trim() || env.GEMINI_API_KEY;
+        const mime = normalizeGeminiAudioMime(mimeType);
+        const prompt = `Transcribí esta nota de voz de WhatsApp en español rioplatense (Argentina).
+Devolvé el texto COMPLETO, fiel, sin resumir ni omitir detalles.
+También armá un resumen de UNA línea (máx. 120 caracteres) para confirmarle al cliente lo que se entendió.
+
+Respondé SOLO con JSON válido en una línea:
+{"transcript":"texto completo","summary":"una línea"}`;
+
+        try {
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [
+                            {
+                                parts: [
+                                    { inline_data: { mime_type: mime, data: buffer.toString('base64') } },
+                                    { text: prompt },
+                                ],
+                            },
+                        ],
+                        generationConfig: {
+                            temperature: 0.1,
+                            maxOutputTokens: 2048,
+                        },
+                    }),
+                }
+            );
+            if (!response.ok) {
+                const err = await response.text();
+                console.error('[Gemini transcribe HTTP error]', response.status, err);
+                return null;
+            }
+            const data = await response.json();
+            const parts =
+                (data as { candidates?: { content?: { parts?: { text?: string }[] } }[] })?.candidates?.[0]?.content
+                    ?.parts || [];
+            const text = parts
+                .map((p) => p.text || '')
+                .join('')
+                .trim();
+            let clean = text.replace(/```json|```/g, '').trim();
+            const firstBrace = clean.indexOf('{');
+            if (firstBrace >= 0) clean = clean.slice(firstBrace);
+            const jsonMatch = clean.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                try {
+                    const raw = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+                    const transcript = typeof raw.transcript === 'string' ? raw.transcript.trim() : '';
+                    const summary = typeof raw.summary === 'string' ? raw.summary.trim() : '';
+                    if (transcript) {
+                        return {
+                            transcript,
+                            summary: summary || transcript.slice(0, 120),
+                        };
+                    }
+                } catch {
+                    /* usar texto plano */
+                }
+            }
+            if (clean.length > 8) {
+                return { transcript: clean, summary: clean.slice(0, 120) };
+            }
+            return null;
+        } catch (err) {
+            console.error('[Gemini transcribe error]', err);
+            return null;
         }
     }
 }

@@ -160,6 +160,16 @@ function randomEmpathy(urgency: string): string {
     return msgs[Math.floor(Math.random() * msgs.length)];
 }
 
+function problemAskMessage(name?: string | null): string {
+    const intro = name?.trim() ? `*${name.trim()}*, contame ¿qué necesitás?` : 'Contame ¿qué necesitás?';
+    return (
+        `${intro}\n\n` +
+        'Cuanto más detalle me des, mejor: el técnico va a saber qué herramientas y repuestos llevar antes de ir.\n\n' +
+        '_Por ejemplo: qué es exactamente lo que pasa, hace cuánto, si empeoró, qué probaste._\n\n' +
+        'También podés mandarme un *audio* contándomelo si te resulta más fácil.'
+    );
+}
+
 export class ConversationService {
     private static async withRedisTimeout<T>(p: Promise<T>, ms = REDIS_OP_TIMEOUT_MS): Promise<T> {
         let id: ReturnType<typeof setTimeout> | undefined;
@@ -324,11 +334,7 @@ export class ConversationService {
             case 'IDLE': {
                 await redis.del(userRelayPauseRedisKey(phone));
                 await this.saveSession(phone, 'AWAITING_PROBLEM_DESCRIPTION', {});
-                const nm = user.name?.trim();
-                const line = nm
-                    ? `*${nm}*, contame ¿qué necesitás?\n\n_Describime el problema — cuanto más detalle, mejor cotiza el técnico._`
-                    : `Contame ¿qué necesitás?\n\n_Describime el problema — cuanto más detalle, mejor cotiza el técnico._`;
-                await WhatsAppService.sendTextMessage(phone, line);
+                await WhatsAppService.sendTextMessage(phone, problemAskMessage(user.name));
                 break;
             }
 
@@ -336,8 +342,12 @@ export class ConversationService {
                 if (messageType === 'image') {
                     await WhatsAppService.sendTextMessage(
                         phone,
-                        '📸 Foto recibida.\n\nContame también con palabras qué está pasando, así el técnico entiende bien el problema.'
+                        '📸 Foto recibida.\n\nContame también con palabras (o un *audio*) qué está pasando, así el técnico entiende bien el problema.'
                     );
+                    return;
+                }
+                if (messageType === 'audio') {
+                    await this.handleProblemAudio(phone, content, session);
                     return;
                 }
                 const greetings = [
@@ -353,31 +363,10 @@ export class ConversationService {
                 if (greetings.includes(content.toLowerCase().trim())) {
                     const nm = user.name?.trim() || '';
                     const greetLine = nm ? `Hola *${nm}* 👋\n\n` : `Hola 👋\n\n`;
-                    await WhatsAppService.sendTextMessage(
-                        phone,
-                        `${greetLine}Contame ¿qué necesitás?\n\n_Describime el problema — cuanto más detalle, mejor cotiza el técnico._`
-                    );
+                    await WhatsAppService.sendTextMessage(phone, `${greetLine}${problemAskMessage(null)}`);
                     return;
                 }
-                const classification = await GeminiService.classifyProblem(content);
-                if (!classification.understood || !classification.category) {
-                    await WhatsAppService.sendTextMessage(
-                        phone,
-                        'No entendí bien el problema. ¿Podés contarme con más detalle qué está pasando?'
-                    );
-                    return;
-                }
-                session.data.description = content;
-                session.data.category = classification.category;
-                session.data.urgency = classification.urgency;
-                await this.saveSession(phone, 'AWAITING_PHOTOS', session.data);
-                const empathy = randomEmpathy(String(classification.urgency));
-                const emoji = CATEGORY_EMOJIS[classification.category] || '🔧';
-                await WhatsAppService.sendTextMessage(phone, empathy);
-                await WhatsAppService.sendTextMessage(
-                    phone,
-                    `${emoji} *${classification.category}*\n\n¿Tenés una foto del problema? Le ayuda al técnico a cotizar mejor.\n\n1. Sí, mando una foto\n2. No, continuamos`
-                );
+                await this.advanceAfterProblemDescription(phone, session, content);
                 break;
             }
 
@@ -577,13 +566,7 @@ export class ConversationService {
             case 'COMPLETED':
                 await this.clearSession(phone);
                 await this.saveSession(phone, 'IDLE', {});
-                {
-                    const nm = user.name?.trim();
-                    const line = nm
-                        ? `*${nm}*, contame ¿qué necesitás?\n\n_Describime el problema — cuanto más detalle, mejor cotiza el técnico._`
-                        : `Contame ¿qué necesitás?\n\n_Describime el problema — cuanto más detalle, mejor cotiza el técnico._`;
-                    await WhatsAppService.sendTextMessage(phone, line);
-                }
+                await WhatsAppService.sendTextMessage(phone, problemAskMessage(user.name));
                 break;
 
             default:
@@ -749,6 +732,63 @@ export class ConversationService {
                 'Gracias por contarnos. Lamentamos que no haya sido la experiencia que esperabas.\n\n¿Podés contarnos qué pasó? Tu feedback nos ayuda a mejorar.'
             );
         }
+    }
+
+    private static async handleProblemAudio(
+        phone: string,
+        mediaUrl: string,
+        session: { state: string; data: Record<string, unknown> }
+    ) {
+        await WhatsAppService.sendTextMessage(phone, 'Escuchando tu audio…');
+        const media = await WhatsAppService.downloadMediaWithMeta(mediaUrl);
+        if (!media?.buffer?.length) {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'No pude escuchar el audio. ¿Podés mandarlo de nuevo o escribirme el problema?'
+            );
+            return;
+        }
+        const transcribed = await GeminiService.transcribeAudio(media.buffer, media.contentType);
+        const transcript = transcribed?.transcript?.trim() || '';
+        if (!transcript) {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'No pude entender bien el audio. ¿Podés mandarlo de nuevo o escribirme el problema con más detalle?'
+            );
+            return;
+        }
+        await this.advanceAfterProblemDescription(phone, session, transcript, transcribed?.summary);
+    }
+
+    private static async advanceAfterProblemDescription(
+        phone: string,
+        session: { state: string; data: Record<string, unknown> },
+        description: string,
+        audioSummary?: string
+    ) {
+        const classification = await GeminiService.classifyProblem(description);
+        if (!classification.understood || !classification.category) {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'No entendí bien el problema. ¿Podés contarme con más detalle qué está pasando? También podés mandar un *audio*.'
+            );
+            return;
+        }
+        session.data.description = description;
+        session.data.category = classification.category;
+        session.data.urgency = classification.urgency;
+        await this.saveSession(phone, 'AWAITING_PHOTOS', session.data);
+        const summary = (audioSummary || '').trim();
+        if (summary) {
+            await WhatsAppService.sendTextMessage(phone, `Entendí: _${summary.replace(/\n/g, ' ')}_`);
+        }
+        const empathy = randomEmpathy(String(classification.urgency));
+        const emoji = CATEGORY_EMOJIS[classification.category] || '🔧';
+        await WhatsAppService.sendTextMessage(phone, empathy);
+        await WhatsAppService.sendTextMessage(
+            phone,
+            `${emoji} *${classification.category}*\n\n¿Tenés una foto del problema? Le ayuda al técnico a cotizar mejor.\n\n1. Sí, mando una foto\n2. No, continuamos`
+        );
     }
 
     private static async handleOnboardingFlow(phone: string, messageType: string, content: string, user: { phone: string } | null) {

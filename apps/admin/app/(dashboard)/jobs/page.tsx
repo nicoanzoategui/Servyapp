@@ -35,6 +35,7 @@ type AdminJob = {
             service_request?: {
                 category?: string | null;
                 address?: string | null;
+                description?: string | null;
                 visit_fee?: number | null;
                 user_phone?: string;
                 photos?: string[];
@@ -127,6 +128,7 @@ export default function AdminJobsPage() {
                             <th className="p-3 font-medium">Cliente</th>
                             <th className="p-3 font-medium">Técnico</th>
                             <th className="p-3 font-medium">Categoría</th>
+                            <th className="p-3 font-medium">Problema</th>
                             <th className="p-3 font-medium">Dirección</th>
                             <th className="p-3 font-medium">Fotos</th>
                             <th className="p-3 font-medium">Montos</th>
@@ -150,6 +152,9 @@ export default function AdminJobsPage() {
                                     </td>
                                     <td className="p-3 text-slate-700">{techLabel(j)}</td>
                                     <td className="p-3">{sr?.category ?? '—'}</td>
+                                    <td className="p-3 text-slate-700 max-w-[220px] whitespace-pre-wrap line-clamp-3">
+                                        {sr?.description || '—'}
+                                    </td>
                                     <td className="p-3 text-slate-600 max-w-[180px]">{sr?.address || '—'}</td>
                                     <td className="p-3">
                                         <ProblemPhotos photos={sr?.photos} />

@@ -118,6 +118,13 @@ export class WhatsAppService {
 
     /** Para Twilio: URL del media (`MediaUrl0`). */
     static async downloadMedia(mediaUrl: string): Promise<Buffer | null> {
+        const meta = await this.downloadMediaWithMeta(mediaUrl);
+        return meta?.buffer ?? null;
+    }
+
+    static async downloadMediaWithMeta(
+        mediaUrl: string
+    ): Promise<{ buffer: Buffer; contentType: string } | null> {
         try {
             const response = await fetch(mediaUrl, {
                 headers: {
@@ -125,7 +132,8 @@ export class WhatsAppService {
                 },
             });
             if (!response.ok) return null;
-            return Buffer.from(await response.arrayBuffer());
+            const contentType = String(response.headers.get('content-type') || 'application/octet-stream');
+            return { buffer: Buffer.from(await response.arrayBuffer()), contentType };
         } catch (err) {
             console.error('Error downloading Twilio media:', err);
             return null;

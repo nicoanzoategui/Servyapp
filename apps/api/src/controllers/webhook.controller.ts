@@ -21,6 +21,14 @@ import {
     userRelayPauseRedisKey,
 } from '../utils/twilio-phone';
 
+function twilioInboundMessageType(body: Record<string, string>): 'text' | 'image' | 'audio' {
+    const n = parseInt(String(body.NumMedia || '0'), 10);
+    if (!n || Number.isNaN(n)) return 'text';
+    const ct = String(body.MediaContentType0 || '').toLowerCase();
+    if (ct.startsWith('audio/') || ct === 'application/ogg' || ct.includes('opus')) return 'audio';
+    return 'image';
+}
+
 export const verifyWebhook = (req: Request, res: Response) => {
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
@@ -361,7 +369,7 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
         const fromTail = phone.length >= 4 ? phone.slice(-4) : '';
 
         await twilioWebhookAls.run({ inboundMessageSid, fromTail }, async () => {
-        const messageType = req.body.NumMedia && parseInt(req.body.NumMedia) > 0 ? 'image' : 'text';
+        const messageType = twilioInboundMessageType(req.body as Record<string, string>);
         const latRaw = req.body.Latitude;
         const lngRaw = req.body.Longitude;
         const lat =
@@ -374,7 +382,7 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
                 : undefined;
 
         let content =
-            messageType === 'image'
+            messageType === 'image' || messageType === 'audio'
                 ? String(req.body.MediaUrl0 || '')
                 : String(req.body.Body || '').trim();
 
