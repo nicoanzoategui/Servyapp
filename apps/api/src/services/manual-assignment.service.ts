@@ -32,14 +32,40 @@ function isImageContentType(contentType: string): boolean {
     return contentType.startsWith('image/');
 }
 
+function formatClientChosenSchedule(args: {
+    scheduled_slot: string | null;
+    scheduled_date: Date | null;
+    offerSchedule: string | null;
+}): string {
+    const slot = (args.scheduled_slot || args.offerSchedule || '').trim();
+    const datePart = args.scheduled_date
+        ? new Intl.DateTimeFormat('es-AR', {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+              timeZone: 'America/Argentina/Buenos_Aires',
+          }).format(args.scheduled_date)
+        : '';
+    if (datePart && slot) return `${datePart} · ${slot}`;
+    return slot || datePart || 'A coordinar';
+}
+
 async function notifyClientTechnicianAssigned(args: {
     userPhone: string;
     professional: Professional;
     category: string | null;
+    scheduled_slot: string | null;
+    scheduled_date: Date | null;
+    offerSchedule: string | null;
 }): Promise<void> {
     const { userPhone, professional, category } = args;
     const fullName = ProfessionalMatchingService.formatProName(professional);
     const cat = category?.trim() || 'Servicio';
+    const when = formatClientChosenSchedule({
+        scheduled_slot: args.scheduled_slot,
+        scheduled_date: args.scheduled_date,
+        offerSchedule: args.offerSchedule,
+    });
 
     const docs = await prisma.professionalDocument.findMany({
         where: { professional_id: professional.id },
@@ -69,7 +95,7 @@ async function notifyClientTechnicianAssigned(args: {
 
     await WhatsAppService.sendTextMessage(
         userPhone,
-        `✅ *¡Ya tenemos tu técnico asignado!*\n\n━━━━━━━━━━━━━━━\n👤 *${fullName}*\n🔧 ${cat}\n━━━━━━━━━━━━━━━\n${docsBlock}\nSe va a comunicar con vos para coordinar el horario exacto de la visita.`
+        `✅ *¡Ya tenemos tu técnico asignado!*\n\n━━━━━━━━━━━━━━━\n👤 *${fullName}*\n🔧 ${cat}\n📅 ${when}\n━━━━━━━━━━━━━━━\n${docsBlock}\nUn rato antes de la visita te confirmamos que el técnico está en camino.`
     );
 
     for (const img of imageDocs) {
@@ -160,6 +186,9 @@ export async function assignTechnicianToServiceRequest(
         userPhone: request.user_phone,
         professional,
         category: request.category,
+        scheduled_slot: request.scheduled_slot,
+        scheduled_date: request.scheduled_date,
+        offerSchedule: offer.schedule,
     });
     await notifyTechnicianAssigned({
         professional,
