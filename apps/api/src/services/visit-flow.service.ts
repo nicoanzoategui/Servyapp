@@ -10,11 +10,17 @@ import {
     resolveVisitFeePaidForRepair,
 } from './repair-pricing';
 import {
+    buildScheduledDayOptions,
     formatArs,
     isLocksmithCategory,
     priorityLabel,
+    scheduledDayPrompt,
+    scheduledTimePrompt,
+    scheduledVisitFee,
     speedSelectionPrompt,
     visitFeeForPriority,
+    SCHEDULED_TIME_SLOTS,
+    type ScheduledDayOption,
     type ServicePriority,
 } from './visit-pricing';
 
@@ -33,13 +39,20 @@ async function saveUserSession(phone: string, state: string, data: Record<string
     });
 }
 
-function scheduleDateFromDayKey(dayKey: string): Date {
-    const d = new Date();
-    d.setHours(12, 0, 0, 0);
-    if (dayKey === 'day_tomorrow') d.setDate(d.getDate() + 1);
-    else if (dayKey === 'day_after') d.setDate(d.getDate() + 2);
-    else if (dayKey === 'day_3') d.setDate(d.getDate() + 3);
-    return d;
+function visitQuotationItems(fee: number, nightShift: boolean) {
+    if (!nightShift) {
+        return [{ description: 'Visita diagnóstico Servy', price: fee }];
+    }
+    return [
+        { description: 'Visita diagnóstico Servy', price: env.VISIT_FEE_SCHEDULED },
+        { description: 'Tarifa nocturna (18 a 21 hs)', price: env.NIGHT_SHIFT_SURCHARGE },
+    ];
+}
+
+function isNightSchedule(schedule?: string | null, fee?: number | null, priority?: string | null): boolean {
+    if ((schedule || '').includes('18 a 21')) return true;
+    if (priority === 'scheduled' && fee != null && fee > env.VISIT_FEE_SCHEDULED) return true;
+    return false;
 }
 
 export class VisitFlowService {
@@ -211,11 +224,84 @@ export class VisitFlowService {
             return;
         }
 
+        const days = buildScheduledDayOptions();
+        session.data.scheduleDayOptions = days;
         await saveUserSession(phone, 'AWAITING_SCHEDULE_DAY', session.data);
-        await WhatsAppService.sendTextMessage(
-            phone,
-            `📅 *Programado* — $${formatArs(fee)}\n\n¿Qué día preferís?\n\n1. Mañana\n2. Pasado mañana\n3. En 3 días`
-        );
+        await WhatsAppService.sendTextMessage(phone, scheduledDayPrompt(days));
+        return;
+    }
+
+    static async handleScheduledDaySelection(
+        phone: string,
+        content: string,
+        session: { data: Record<string, unknown> }
+    ) {
+        let options = session.data.scheduleDayOptions as ScheduledDayOption[] | undefined;
+        if (!Array.isArray(options) || options.length !== 5) {
+            options = buildScheduledDayOptions();
+            session.data.scheduleDayOptions = options;
+        }
+
+        const trimmed = content.trim();
+        const idx = /^[1-5]$/.test(trimmed) ? parseInt(trimmed, 10) - 1 : -1;
+        const chosen = idx >= 0 ? options[idx] : undefined;
+        if (!chosen) {
+            await WhatsAppService.sendTextMessage(phone, 'Escribí *1* a *5* para elegir el día.');
+            return;
+        }
+
+        session.data.scheduleDay = chosen.label;
+        session.data.scheduledDateIso = chosen.iso;
+
+        const requestId = session.data.requestId as string | undefined;
+        if (requestId) {
+            await prisma.serviceRequest.update({
+                where: { id: requestId },
+                data: { scheduled_date: new Date(chosen.iso) },
+            });
+        }
+
+        await saveUserSession(phone, 'AWAITING_SCHEDULE_TIME', session.data);
+        await WhatsAppService.sendTextMessage(phone, scheduledTimePrompt());
+    }
+
+    static async handleScheduledTimeSelection(
+        phone: string,
+        content: string,
+        session: { data: Record<string, unknown> }
+    ) {
+        const trimmed = content.trim();
+        let idx = /^[1-3]$/.test(trimmed) ? parseInt(trimmed, 10) - 1 : -1;
+        if (idx < 0) {
+            idx = SCHEDULED_TIME_SLOTS.findIndex((s) => s.id === trimmed);
+        }
+        const slot = idx >= 0 ? SCHEDULED_TIME_SLOTS[idx] : undefined;
+        if (!slot) {
+            await WhatsAppService.sendTextMessage(phone, 'Escribí *1*, *2* o *3* para el horario.');
+            return;
+        }
+
+        const dayLabel = (session.data.scheduleDay as string) || 'Programado';
+        const fee = scheduledVisitFee(slot.night);
+        session.data.schedule = slot.night
+            ? `${dayLabel} ${slot.label} (tarifa nocturna)`
+            : `${dayLabel} ${slot.label}`;
+        session.data.visitFee = fee;
+        session.data.nightShift = slot.night;
+
+        const requestId = session.data.requestId as string;
+        await prisma.serviceRequest.update({
+            where: { id: requestId },
+            data: {
+                visit_fee: fee,
+                scheduled_slot: session.data.schedule as string,
+                ...(session.data.scheduledDateIso
+                    ? { scheduled_date: new Date(session.data.scheduledDateIso as string) }
+                    : {}),
+            },
+        });
+
+        await this.finalizeScheduleAndAssignTech(phone, session.data);
     }
 
     static async finalizeScheduleAndAssignTech(phone: string, sessionData: Record<string, unknown>) {
@@ -327,9 +413,10 @@ export class VisitFlowService {
                 `✅ *Turno confirmado — ${title}*\n\nTe mandamos el link para pagar la visita. En cuanto se acredite el pago, en breve te confirmamos los datos del técnico que te va a atender hoy.`
             );
         } else {
+            const fee = Number(sessionData.visitFee) || visitFeeForPriority('scheduled');
             await WhatsAppService.sendTextMessage(
                 phone,
-                `✅ *Turno confirmado*\n\n📅 ${schedule || 'A coordinar'}\n\nTe mandamos el link para pagar la visita. En cuanto se acredite el pago, en breve te confirmamos los datos de tu técnico asignado.`
+                `✅ *Turno confirmado*\n\n📅 ${schedule || 'A coordinar'}\n💰 Visita: *$${formatArs(fee)}*\n\nTe mandamos el link para pagar la visita. En cuanto se acredite el pago, en breve te confirmamos los datos de tu técnico asignado.`
             );
         }
 
@@ -351,6 +438,8 @@ export class VisitFlowService {
         await prisma.jobOffer.update({ where: { id: jobOfferId }, data: { status: 'held' } });
 
         const fee = offer.service_request.visit_fee ?? visitFeeForPriority(offer.priority as ServicePriority);
+        const nightShift = isNightSchedule(offer.schedule, fee, offer.priority);
+        const items = visitQuotationItems(fee, nightShift);
 
         let quotation = await prisma.quotation.findFirst({
             where: { job_offer_id: jobOfferId, quotation_type: 'visit' },
@@ -361,11 +450,20 @@ export class VisitFlowService {
                 data: {
                     job_offer_id: jobOfferId,
                     quotation_type: 'visit',
-                    items_json: [{ description: 'Visita diagnóstico Servy', price: fee }],
+                    items_json: items,
                     total_price: fee,
                     description: `Visita ${priorityLabel(offer.priority as ServicePriority)} — diagnóstico`,
                     estimated_duration: offer.schedule || 'A coordinar',
                     status: 'pending',
+                },
+            });
+        } else if (quotation.total_price !== fee) {
+            quotation = await prisma.quotation.update({
+                where: { id: quotation.id },
+                data: {
+                    items_json: items,
+                    total_price: fee,
+                    estimated_duration: offer.schedule || quotation.estimated_duration,
                 },
             });
         }
@@ -422,10 +520,6 @@ export class VisitFlowService {
                 '⚠️ Hubo un problema al generar el link de pago. Escribí _ayuda_ y te ayudamos.'
             );
         }
-    }
-
-    static persistScheduleDay(sessionData: Record<string, unknown>, dayKey: string) {
-        sessionData.scheduledDateIso = scheduleDateFromDayKey(dayKey).toISOString();
     }
 
     static async onTechConfirmedVisit(jobOfferId: string, userPhone: string) {

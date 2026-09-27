@@ -107,6 +107,14 @@ const envSchema = z.object({
             const n = parseInt(String(v || '39000'), 10);
             return Number.isFinite(n) && n > 0 ? n : 39000;
         }),
+    /** Recargo de visita programada 18–21 hs (ARS). */
+    NIGHT_SHIFT_SURCHARGE: z
+        .string()
+        .optional()
+        .transform((v) => {
+            const n = parseInt(String(v || '20000'), 10);
+            return Number.isFinite(n) && n >= 0 ? n : 20000;
+        }),
     TECH_CONFIRM_TIMEOUT_MINUTES: z
         .string()
         .optional()

@@ -108,7 +108,7 @@ export default function Home() {
                                         <div className="self-start bg-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
                                             <p className="text-slate-800 text-[13px] m-0 mb-1">¿Urgente $55.000 o Programado $39.000?</p>
                                             <p className="text-slate-600 text-[12px] m-0">1 Urgente — coordinamos lo antes posible</p>
-                                            <p className="text-slate-600 text-[12px] m-0">2 Programado — hasta 72 hs</p>
+                                            <p className="text-slate-600 text-[12px] m-0">2 Programado — hasta 5 días</p>
                                             <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:24</p>
                                         </div>
 
@@ -159,7 +159,7 @@ export default function Home() {
                         </div>
                         <h3 className="text-xl font-bold mb-3 text-[#0B3A31]">Contanos el problema</h3>
                         <p className="text-[#0D4638]/80">
-                            Mandá mensaje con tu problema (texto o foto). Elegí Urgente ($55.000) — coordinamos el horario más rápido posible — o Programado ($39.000, hasta 72 hs) y coordinamos el turno.
+                            Mandá mensaje con tu problema (texto o foto). Elegí Urgente ($55.000) — coordinamos el horario más rápido posible — o Programado ($39.000, hasta 5 días) y coordinamos el turno.
                         </p>
                     </div>
 

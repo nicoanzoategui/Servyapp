@@ -7,6 +7,7 @@ import { es } from 'date-fns/locale';
 import { useMemo, useState } from 'react';
 import { API_URL } from '@/lib/api';
 import { ProblemPhotos } from '@/components/ProblemPhotos';
+import { moneyArs, visitFeeNightNote } from '@/lib/visit-fee';
 
 type UnassignedRequest = {
     id: string;
@@ -134,6 +135,7 @@ export default function UnassignedRequestsPage() {
                     {(requests || []).map((r) => {
                         const candidates = activePros.filter((p) => matchesCategory(p, r.category));
                         const professionalId = selected[r.id] || '';
+                        const nightNote = visitFeeNightNote(r.visit_fee, r.priority, r.scheduled_slot);
                         return (
                             <article key={r.id} className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
                                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -169,6 +171,15 @@ export default function UnassignedRequestsPage() {
                                     <div>
                                         <dt className="text-slate-500">Horario</dt>
                                         <dd className="text-slate-900">{r.scheduled_slot || 'A coordinar'}</dd>
+                                    </div>
+                                    <div>
+                                        <dt className="text-slate-500">Visita</dt>
+                                        <dd className="text-slate-900">
+                                            {r.visit_fee != null ? moneyArs(r.visit_fee) : '—'}
+                                            {nightNote ? (
+                                                <span className="text-xs text-slate-500"> ({nightNote})</span>
+                                            ) : null}
+                                        </dd>
                                     </div>
                                     <div className="sm:col-span-2">
                                         <dt className="text-slate-500">Dirección</dt>

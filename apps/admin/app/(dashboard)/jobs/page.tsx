@@ -7,6 +7,7 @@ import { es } from 'date-fns/locale';
 import { API_URL } from '@/lib/api';
 import { ProblemPhotos } from '@/components/ProblemPhotos';
 import Link from 'next/link';
+import { moneyArs, visitFeeNightNote } from '@/lib/visit-fee';
 
 type Payment = {
     amount?: number;
@@ -37,6 +38,8 @@ type AdminJob = {
                 address?: string | null;
                 description?: string | null;
                 visit_fee?: number | null;
+                priority?: string | null;
+                scheduled_slot?: string | null;
                 user_phone?: string;
                 photos?: string[];
                 user?: { name?: string | null; last_name?: string | null; phone?: string } | null;
@@ -53,8 +56,7 @@ const JOB_STATUS_LABELS: Record<string, string> = {
 };
 
 function money(n: number | null | undefined): string {
-    if (n == null || Number.isNaN(n)) return '—';
-    return `$${Number(n).toLocaleString('es-AR')}`;
+    return moneyArs(n);
 }
 
 function jobStatusLabel(status: string | undefined): string {
@@ -143,6 +145,8 @@ export default function AdminJobsPage() {
                             const repair = quoteByType(j, 'repair');
                             const visitPaid = paidAmount(visit);
                             const repairPaid = paidAmount(repair);
+                            const visitAmount = visitPaid ?? visit?.total_price ?? sr?.visit_fee;
+                            const nightNote = visitFeeNightNote(visitAmount, sr?.priority, sr?.scheduled_slot);
                             return (
                                 <tr key={j.id} className="border-t border-slate-100 align-top" title={`ID ${j.id}`}>
                                     <td className="p-3 font-medium text-slate-900">
@@ -160,7 +164,14 @@ export default function AdminJobsPage() {
                                         <ProblemPhotos photos={sr?.photos} />
                                     </td>
                                     <td className="p-3 text-slate-700 whitespace-nowrap">
-                                        <div>Visita: {money(visitPaid ?? visit?.total_price ?? sr?.visit_fee)}</div>
+                                        <div>
+                                            Visita: {money(visitAmount)}
+                                            {nightNote ? (
+                                                <span className="block text-xs text-slate-500 font-normal whitespace-normal max-w-[180px]">
+                                                    ({nightNote})
+                                                </span>
+                                            ) : null}
+                                        </div>
                                         <div>Arreglo: {repair ? money(repairPaid ?? repair.total_price) : '—'}</div>
                                         <div className="font-semibold">Pagado: {money(totalPaid(j))}</div>
                                     </td>

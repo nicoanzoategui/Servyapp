@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { API_URL } from '@/lib/api';
 import { ProblemPhotos } from '@/components/ProblemPhotos';
+import { moneyArs, visitFeeNightNote } from '@/lib/visit-fee';
 
 type JobDetail = {
     id: string;
@@ -20,6 +21,7 @@ type JobDetail = {
                 description?: string | null;
                 photos?: string[];
                 scheduled_slot?: string | null;
+                visit_fee?: number | null;
                 priority?: string | null;
                 user_phone?: string;
                 user?: { name?: string | null; last_name?: string | null; phone?: string } | null;
@@ -65,6 +67,7 @@ export default function AdminJobDetailPage() {
     const client = sr?.user;
     const clientName = `${client?.name || ''} ${client?.last_name || ''}`.trim() || sr?.user_phone || '—';
     const techName = `${pro?.name || ''} ${pro?.last_name || ''}`.trim() || '—';
+    const nightNote = visitFeeNightNote(sr?.visit_fee, sr?.priority, sr?.scheduled_slot);
 
     return (
         <div className="max-w-3xl space-y-6">
@@ -100,6 +103,15 @@ export default function AdminJobDetailPage() {
                     <div>
                         <dt className="text-slate-500">Horario</dt>
                         <dd className="text-slate-900">{sr?.scheduled_slot || '—'}</dd>
+                    </div>
+                    <div>
+                        <dt className="text-slate-500">Visita</dt>
+                        <dd className="text-slate-900">
+                            {sr?.visit_fee != null ? moneyArs(sr.visit_fee) : '—'}
+                            {nightNote ? (
+                                <span className="text-xs text-slate-500"> ({nightNote})</span>
+                            ) : null}
+                        </dd>
                     </div>
                     <div className="sm:col-span-2">
                         <dt className="text-slate-500">Dirección</dt>

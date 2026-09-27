@@ -479,51 +479,13 @@ export class ConversationService {
                 break;
             }
 
-            case 'AWAITING_SCHEDULE_DAY': {
-                const dayMap: Record<string, string> = {
-                    day_tomorrow: 'Mañana',
-                    day_after: 'Pasado mañana',
-                    day_3: 'En 3 días',
-                };
-                const dayKeys = ['day_tomorrow', 'day_after', 'day_3'] as const;
-                let dayKey: string | null = dayMap[content] ? content : null;
-                if (!dayKey && /^[123]$/.test(content.trim())) {
-                    dayKey = dayKeys[parseInt(content.trim(), 10) - 1] ?? null;
-                }
-                if (!dayKey || !dayMap[dayKey]) {
-                    await WhatsAppService.sendTextMessage(
-                        phone,
-                        'Escribí *1*, *2* o *3* para elegir el día.'
-                    );
-                    break;
-                }
-                session.data.scheduleDay = dayMap[dayKey];
-                VisitFlowService.persistScheduleDay(session.data, dayKey);
-                await this.saveSession(phone, 'AWAITING_SCHEDULE_TIME', session.data);
-                await WhatsAppService.sendTextMessage(phone, '¿En qué horario?\n\n1. 9 a 12hs\n2. 12 a 15hs\n3. 15 a 18hs');
+            case 'AWAITING_SCHEDULE_DAY':
+                await VisitFlowService.handleScheduledDaySelection(phone, content, session);
                 break;
-            }
 
-            case 'AWAITING_SCHEDULE_TIME': {
-                const timeMap: Record<string, string> = {
-                    sch_9_12: '9 a 12hs',
-                    sch_12_15: '12 a 15hs',
-                    sch_15_18: '15 a 18hs',
-                };
-                const timeKeys = ['sch_9_12', 'sch_12_15', 'sch_15_18'] as const;
-                const trimmedT = content.trim();
-                let tk: string | null = Object.prototype.hasOwnProperty.call(timeMap, trimmedT) ? trimmedT : null;
-                if (!tk && /^[123]$/.test(trimmedT)) {
-                    tk = timeKeys[parseInt(trimmedT, 10) - 1] ?? null;
-                }
-                if (!tk || !timeMap[tk]) {
-                    await WhatsAppService.sendTextMessage(phone, 'Escribí *1*, *2* o *3* para el horario.');
-                    break;
-                }
-                session.data.schedule = `${session.data.scheduleDay} ${timeMap[tk]}`;
-                await VisitFlowService.finalizeScheduleAndAssignTech(phone, session.data);
+            case 'AWAITING_SCHEDULE_TIME':
+                await VisitFlowService.handleScheduledTimeSelection(phone, content, session);
                 break;
-            }
 
             case 'VISIT_PAYMENT_PENDING':
             case 'PAYMENT_PENDING':
