@@ -16,6 +16,13 @@ import {
     formatRepairPaymentBreakdown,
     resolveVisitFeePaidForRepair,
 } from './repair-pricing';
+import {
+    findActiveRepairJobForUser,
+    formatRepairAmountConfirmForTech,
+    isRepairQuoteCommand,
+    parseRepairAmount,
+    type EligibleRepairJob,
+} from './repair-quote-whatsapp.service';
 
 const SESSION_TTL = 60 * 60 * 24;
 const REDIS_OP_TIMEOUT_MS = 500;
@@ -331,6 +338,12 @@ export class ConversationService {
             }
         }
 
+        // Presupuesto de arreglo: ANTES del relay y del chequeo "pedido en curso".
+        if (messageType === 'text' && user && isRepairQuoteCommand(content)) {
+            await this.handleRepairQuoteCommand(phone, session);
+            return;
+        }
+
         // Visita pagada sin técnico: ANTES de tryForward / userRelayPause.
         // Solo IDLE/COMPLETED (mismo alcance que el fix anterior); el resto de estados no se toca.
         if (
@@ -506,6 +519,17 @@ export class ConversationService {
                 );
                 break;
 
+            case 'AWAITING_REPAIR_AMOUNT_FROM_CLIENT':
+                await this.handleClientRepairAmount(phone, content);
+                break;
+
+            case 'AWAITING_REPAIR_TECH_CONFIRM':
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    'Le mandamos el presupuesto al técnico para que lo confirme. Te avisamos en cuanto responda.\n\nSi querés reenviarle el pedido, escribí *presupuesto* de nuevo.'
+                );
+                break;
+
             case 'AWAITING_REPAIR_PAYMENT_DECISION':
             case 'AWAITING_PAYMENT_DECISION': {
                 const acceptWords = ['btn_accept', 'aceptar', 'acepto', 'si', 'sí', '1', 'ok', 'dale'];
@@ -559,7 +583,7 @@ export class ConversationService {
         if (t === 'ayuda' || t === '?') {
             await WhatsAppService.sendTextMessage(
                 phone,
-                '*Servy* — técnicos verificados para tu hogar 🏠\n\nServicios disponibles:\n🔧 Plomería\n⚡ Electricidad\n🔑 Cerrajería\n🔥 Gas\n❄️ Aires acondicionados\n\n━━━━━━━━━━━━━━━\n*Comandos*\n━━━━━━━━━━━━━━━\n_estado_ → ver tu pedido actual\n_cancelar_ → cancelar pedido en curso\n_cambiar dirección_ → actualizar tu domicilio'
+                '*Servy* — técnicos verificados para tu hogar 🏠\n\nServicios disponibles:\n🔧 Plomería\n⚡ Electricidad\n🔑 Cerrajería\n🔥 Gas\n❄️ Aires acondicionados\n\n━━━━━━━━━━━━━━━\n*Comandos*\n━━━━━━━━━━━━━━━\n_estado_ → ver tu pedido actual\n_presupuesto_ → cargar el monto del arreglo\n_cancelar_ → cancelar pedido en curso\n_cambiar dirección_ → actualizar tu domicilio'
             );
             return true;
         }
@@ -658,15 +682,142 @@ export class ConversationService {
         if (rejectedOffer?.professional?.phone) {
             await WhatsAppService.sendTextMessage(
                 rejectedOffer.professional.phone,
-                'El cliente rechazó el presupuesto del arreglo. Podés enviar uno nuevo desde el portal si acordaron otro monto.'
+                'El cliente no aceptó el presupuesto del arreglo. No se continúa con el arreglo.'
             );
         }
 
         await this.clearSession(phone);
         await WhatsAppService.sendTextMessage(
             phone,
-            'Entendido, no avanzamos con ese presupuesto.\n\nSi acordás otro monto con el técnico, te avisamos. También podés escribir *ayuda* si necesitás algo.'
+            'Entendido, no continuamos con el arreglo. La visita queda registrada. Gracias por confiar en Servy.'
         );
+    }
+
+    private static async handleRepairQuoteCommand(
+        phone: string,
+        session: { state: string; data: Record<string, unknown> }
+    ) {
+        if (session.state === 'AWAITING_REPAIR_PAYMENT_DECISION') {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'Ya tenés un presupuesto de arreglo. Respondé *1* para aceptar o *2* para rechazar.'
+            );
+            return;
+        }
+        if (session.state === 'AWAITING_REPAIR_AMOUNT_FROM_CLIENT') {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                '¿Cuánto te cotizó el técnico por el arreglo? Mandá solo el número, sin materiales.\n\n_Ejemplo: 180000 o $180.000_'
+            );
+            return;
+        }
+        if (session.state === 'AWAITING_REPAIR_TECH_CONFIRM') {
+            const jobOfferId = session.data.jobOfferId as string | undefined;
+            const techAmount = Number(session.data.techAmount);
+            const proPhone = session.data.professionalPhone as string | undefined;
+            if (jobOfferId && proPhone && Number.isFinite(techAmount) && techAmount > 0) {
+                await this.notifyTechRepairAmountConfirm({ ...session.data, userPhone: phone });
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    'Le volvimos a pedir confirmación al técnico. Te avisamos en cuanto responda.'
+                );
+                return;
+            }
+        }
+
+        const found = await findActiveRepairJobForUser(phone);
+        if (found.repairQuoteStatus === 'pending') {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'Ya tenés un presupuesto de arreglo. Respondé *1* para aceptar o *2* para rechazar.'
+            );
+            return;
+        }
+        if (found.repairQuoteStatus) {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                found.repairQuoteStatus === 'rejected'
+                    ? 'Este pedido ya no continúa con arreglo. Si necesitás otro servicio, escribí el problema o *ayuda*.'
+                    : 'Este pedido ya tiene un presupuesto de arreglo en curso.'
+            );
+            return;
+        }
+        if (!found.job) {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                found.hasPaidVisit
+                    ? 'Todavía estamos coordinando tu técnico. Cuando esté asignado, escribí *presupuesto* con el monto del arreglo.'
+                    : 'El presupuesto de arreglo se carga cuando hay una visita en curso con técnico asignado.\n\nSi querés un servicio nuevo, contame el problema o escribí *ayuda*.'
+            );
+            return;
+        }
+
+        await this.saveSession(phone, 'AWAITING_REPAIR_AMOUNT_FROM_CLIENT', {
+            jobId: found.job.jobId,
+            jobOfferId: found.job.jobOfferId,
+            requestId: found.job.requestId,
+            professionalPhone: found.job.professionalPhone,
+            professionalId: found.job.professionalId,
+            userPhone: phone,
+        });
+        await WhatsAppService.sendTextMessage(
+            phone,
+            '¿Cuánto te cotizó el técnico por el arreglo? Mandá solo el número, sin materiales.\n\n_Ejemplo: 180000 o $180.000_'
+        );
+    }
+
+    private static async handleClientRepairAmount(phone: string, content: string) {
+        const amount = parseRepairAmount(content);
+        if (amount == null) {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'No pude leer el monto. Mandá solo el número, por ejemplo *180000* o *$180.000*.'
+            );
+            return;
+        }
+
+        const found = await findActiveRepairJobForUser(phone);
+        const job: EligibleRepairJob | null = found.job;
+        if (!job || found.repairQuoteStatus) {
+            await this.clearSession(phone);
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'No pudimos cargar ese presupuesto. Si tu visita sigue en curso, escribí *presupuesto* de nuevo.'
+            );
+            return;
+        }
+
+        const sessionData = {
+            jobId: job.jobId,
+            jobOfferId: job.jobOfferId,
+            requestId: job.requestId,
+            professionalPhone: job.professionalPhone,
+            professionalId: job.professionalId,
+            techAmount: amount,
+            userPhone: phone,
+        };
+        await this.saveSession(phone, 'AWAITING_REPAIR_TECH_CONFIRM', sessionData);
+        await this.notifyTechRepairAmountConfirm(sessionData);
+        await WhatsAppService.sendTextMessage(
+            phone,
+            'Perfecto, le mandamos el presupuesto al técnico para que lo confirme. Te avisamos en cuanto responda.'
+        );
+    }
+
+    private static async notifyTechRepairAmountConfirm(data: Record<string, unknown>) {
+        const proPhone = String(data.professionalPhone || '');
+        const techAmount = Number(data.techAmount);
+        if (!proPhone || !Number.isFinite(techAmount)) return;
+
+        const { ProfessionalConversationService } = await import('./professional.conversation.service');
+        await ProfessionalConversationService.beginRepairAmountConfirm(proPhone, {
+            jobId: data.jobId,
+            jobOfferId: data.jobOfferId,
+            requestId: data.requestId,
+            userPhone: data.userPhone,
+            techAmount,
+        });
+        await WhatsAppService.sendTextMessage(proPhone, formatRepairAmountConfirmForTech(techAmount));
     }
 
     private static async handleReview(phone: string, content: string, data: Record<string, unknown>) {

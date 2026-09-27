@@ -11,29 +11,6 @@ import {
     recomputeProfileOperationalCompleteAndNotify,
 } from '../services/professional-profile-completion.service';
 
-function normalizeQuoteBody(body: any) {
-    let items = body.items;
-    let total_price = body.total_price != null ? Number(body.total_price) : NaN;
-    const description = body.description ?? '';
-    const estimated_duration = body.estimated_duration ?? '';
-
-    if ((!items || !Array.isArray(items) || items.length === 0) && !Number.isNaN(total_price)) {
-        items = [{ description: description || 'Servicio', price: total_price }];
-    }
-    if (!Array.isArray(items) || items.length === 0) return null;
-
-    items = items.map((i: any) => ({
-        description: String(i.description ?? ''),
-        price: Number(i.price),
-    }));
-    if (items.some((i: { price: number }) => Number.isNaN(i.price))) return null;
-
-    const computed = items.reduce((s: number, i: { price: number }) => s + i.price, 0);
-    if (Number.isNaN(total_price) || total_price <= 0) total_price = computed;
-
-    return { items, total_price, description, estimated_duration };
-}
-
 const PROFESSIONAL_PROFILE_SELECT = {
     name: true,
     last_name: true,
@@ -362,86 +339,14 @@ export const getJobOfferDetail = async (req: Request, res: Response) => {
 };
 
 export const createQuote = async (req: Request, res: Response) => {
-    try {
-        const professionalId = req.user!.userId;
-        const { jobOfferId } = req.params;
-        const normalized = normalizeQuoteBody(req.body);
-        if (!normalized) {
-            return res.status(400).json({
-                success: false,
-                error: { code: 'BAD_REQUEST', message: 'Se requiere items[] o total_price válido' },
-            });
-        }
-        const { items, total_price, description, estimated_duration } = normalized;
-
-        const offer = await prisma.jobOffer.findUnique({
-            where: { id: jobOfferId },
-            include: { service_request: true },
-        });
-
-        if (!offer || offer.professional_id !== professionalId) {
-            return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Job offer not found' } });
-        }
-
-        if (offer.status === 'cancelled' || offer.status === 'rejected') {
-            return res.status(400).json({ success: false, error: { code: 'INVALID_STATE', message: 'Esta oferta ya no está activa' } });
-        }
-
-        const visitJob = await prisma.quotation.findFirst({
-            where: { job_offer_id: jobOfferId, quotation_type: 'visit' },
-            include: { job: true },
-        });
-        if (!visitJob?.job || !['confirmed', 'in_progress'].includes(visitJob.job.status)) {
-            return res.status(400).json({
-                success: false,
-                error: { code: 'INVALID_STATE', message: 'Solo podés cotizar el arreglo después de la visita confirmada' },
-            });
-        }
-
-        const existing = await prisma.quotation.findFirst({
-            where: { job_offer_id: jobOfferId, quotation_type: 'repair' },
-        });
-        if (existing) {
-            return res.status(400).json({ success: false, error: { code: 'ALREADY_QUOTED', message: 'Ya existe un presupuesto de arreglo para esta visita' } });
-        }
-
-        const quotation = await prisma.quotation.create({
-            data: {
-                job_offer_id: jobOfferId,
-                quotation_type: 'repair',
-                items_json: items,
-                total_price,
-                description,
-                estimated_duration,
-                status: 'pending',
-            },
-        });
-
-        await prisma.jobOffer.update({
-            where: { id: jobOfferId },
-            data: { status: 'quoted' },
-        });
-
-        await ConversationService.afterQuotationSent(offer.service_request.user_phone, {
-            quotationId: quotation.id,
-            jobOfferId,
-            requestId: offer.request_id,
-            totalPrice: total_price,
-        });
-
-        await WhatsAppService.sendButtonMessage(
-            offer.service_request.user_phone,
-            `¡Presupuesto del arreglo! Detalle: ${description}. Revisá el desglose en el mensaje anterior.`,
-            [
-                { id: 'btn_accept', title: 'Aceptar' },
-                { id: 'btn_reject', title: 'Rechazar' },
-            ]
-        );
-
-        res.json({ success: true, data: quotation });
-    } catch (error: any) {
-        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: error.message } });
-    }
+    return res.status(410).json({
+        success: false,
+        error: {
+            code: 'GONE',
+            message:
+                'El presupuesto de arreglo ahora se confirma por WhatsApp. Pedile al cliente que le escriba a Servy *presupuesto* con el monto que le pasaste.',
+        },
+    });
 };
 
 export const getProfile = async (req: Request, res: Response) => {

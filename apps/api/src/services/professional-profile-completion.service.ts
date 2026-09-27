@@ -176,7 +176,7 @@ export async function recomputeProfileOperationalCompleteAndNotify(professionalI
         const first = (name || '').trim() || 'Hola';
         const text =
             `✅ *¡Listo, ${first}!* Completaste tu perfil en Servy.\n\n` +
-            `Ya podés recibir solicitudes de trabajo por WhatsApp y usar el portal para cotizar y gestionar trabajos. ¡Éxitos con Servy! 💪`;
+            `Ya podés recibir solicitudes de trabajo por WhatsApp. El presupuesto del arreglo también se confirma por ahí. El portal sirve para ver trabajos y documentación. ¡Éxitos con Servy! 💪`;
 
         try {
             await WhatsAppService.sendTextMessage(phone, text);

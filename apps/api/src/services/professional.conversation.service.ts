@@ -119,6 +119,10 @@ export class ProfessionalConversationService {
         });
     }
 
+    static async beginRepairAmountConfirm(phone: string, data: Record<string, unknown>) {
+        await this.saveSession(phone, 'AWAITING_REPAIR_AMOUNT_CONFIRM', data);
+    }
+
     static async processMessage(phone: string, content: string) {
         if (content.toLowerCase() === 'cancelar') {
             await this.clearSession(phone);
@@ -168,5 +172,82 @@ export class ProfessionalConversationService {
             }
             return;
         }
+
+        if (session.state === 'AWAITING_REPAIR_AMOUNT_CONFIRM') {
+            const jobOfferId = String(session.data.jobOfferId || '');
+            if (isJobReject(content, jobOfferId)) {
+                await this.saveSession(phone, 'AWAITING_REPAIR_AMOUNT_CORRECTION', session.data);
+                await WhatsAppService.sendTextMessage(phone, '¿Cuál es el monto correcto?');
+                return;
+            }
+            if (isJobAccept(content, jobOfferId)) {
+                const techAmount = Number(session.data.techAmount);
+                if (!Number.isFinite(techAmount) || techAmount <= 0) {
+                    await WhatsAppService.sendTextMessage(
+                        phone,
+                        'No tenemos el monto guardado. Pedile al cliente que escriba *presupuesto* de nuevo.'
+                    );
+                    return;
+                }
+                await this.finalizeRepairQuoteFromTech(phone, session.data, techAmount);
+                return;
+            }
+            await WhatsAppService.sendTextMessage(phone, 'Respondé *1* si el monto es correcto o *2* si es otro.');
+            return;
+        }
+
+        if (session.state === 'AWAITING_REPAIR_AMOUNT_CORRECTION') {
+            const { parseRepairAmount } = await import('./repair-quote-whatsapp.service');
+            const amount = parseRepairAmount(content);
+            if (amount == null) {
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    'No pude leer el monto. Mandá solo el número, por ejemplo *180000* o *$180.000*.'
+                );
+                return;
+            }
+            await this.finalizeRepairQuoteFromTech(phone, session.data, amount);
+            return;
+        }
+    }
+
+    private static async finalizeRepairQuoteFromTech(
+        phone: string,
+        data: Record<string, unknown>,
+        techAmount: number
+    ) {
+        const { createRepairQuotationAndNotifyClient } = await import('./repair-quote-whatsapp.service');
+        const userPhone = String(data.userPhone || '');
+        const jobOfferId = String(data.jobOfferId || '');
+        const requestId = String(data.requestId || '');
+        if (!userPhone || !jobOfferId || !requestId) {
+            await this.clearSession(phone);
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'No pudimos confirmar el presupuesto. Si el cliente escribe *presupuesto* de nuevo, te vuelve a llegar.'
+            );
+            return;
+        }
+
+        const result = await createRepairQuotationAndNotifyClient({
+            jobOfferId,
+            requestId,
+            userPhone,
+            techAmount,
+        });
+        await this.clearSession(phone);
+        if (result.ok === false) {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                result.reason === 'already_quoted'
+                    ? 'Este trabajo ya tiene un presupuesto de arreglo cargado.'
+                    : 'No pudimos enviar el presupuesto. Probá de nuevo en un momento.'
+            );
+            return;
+        }
+        await WhatsAppService.sendTextMessage(
+            phone,
+            'Listo, le enviamos el desglose al cliente. Te avisamos cuando acepte o rechace.'
+        );
     }
 }

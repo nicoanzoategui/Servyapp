@@ -88,7 +88,7 @@ export default function ProJobsPage() {
 
             <section>
                 <h2 className="text-xl font-bold text-slate-900 mb-2">Visitas confirmadas</h2>
-                <p className="text-slate-500 text-sm mb-4">Visitas pagadas — cotizá el arreglo desde el detalle</p>
+                <p className="text-slate-500 text-sm mb-4">Visitas pagadas — el arreglo se confirma por WhatsApp</p>
                 <div className="flex flex-col gap-4">
                     {(jobs || []).map((job: any) => (
                         <Link

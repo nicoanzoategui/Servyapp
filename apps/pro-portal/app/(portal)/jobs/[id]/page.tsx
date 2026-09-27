@@ -2,7 +2,6 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Cookies from 'js-cookie';
-import { useState } from 'react';
 import { ArrowLeft, Clock, MapPin, Image as ImageIcon, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { API_URL } from '@/lib/api';
@@ -64,42 +63,10 @@ const OFFER_STATUS_LABELS: Record<string, string> = {
 
 export default function JobDetailPage({ params }: { params: { id: string } }) {
     const queryClient = useQueryClient();
-    const [quotePrice, setQuotePrice] = useState('');
-    const [quoteDesc, setQuoteDesc] = useState('Arreglo in situ');
-    const [quoting, setQuoting] = useState(false);
 
     const { data, isLoading, error } = useQuery({
         queryKey: ['proJobDetail', params.id],
         queryFn: () => fetchDetail(params.id),
-    });
-
-    const jobOfferId = data?.kind === 'job' ? data.data.quotation.job_offer.id : params.id;
-
-    const quoteMutation = useMutation({
-        mutationFn: async () => {
-            const token = Cookies.get('token');
-            const total = Number(quotePrice);
-            if (!total || Number.isNaN(total)) throw new Error('Precio inválido');
-            const res = await fetch(`${API_URL}/professional/offers/${jobOfferId}/quote`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({
-                    items: [{ description: quoteDesc || 'Arreglo', price: total }],
-                    total_price: total,
-                    description: quoteDesc,
-                    estimated_duration: 'A coordinar',
-                }),
-            });
-            const json = await res.json();
-            if (!res.ok) throw new Error(json.error?.message || 'Error al cotizar');
-            return json;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['proJobDetail', params.id] });
-            queryClient.invalidateQueries({ queryKey: ['proOffers'] });
-            queryClient.invalidateQueries({ queryKey: ['proJobs'] });
-            setQuoting(false);
-        },
     });
 
     const completeMutation = useMutation({
@@ -222,51 +189,15 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
                     )}
 
                     {canQuoteRepair && (
-                        <div className="mt-4 border-t border-slate-100 pt-6">
-                            <h3 className="text-sm font-bold text-slate-700 mb-3">Presupuesto del arreglo (post-visita)</h3>
-                            {quoting ? (
-                                <div className="flex flex-col gap-3">
-                                    <label className="text-sm font-bold text-slate-700">Detalle (opcional)</label>
-                                    <input
-                                        type="text"
-                                        className="px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-servy-500"
-                                        value={quoteDesc}
-                                        onChange={(e) => setQuoteDesc(e.target.value)}
-                                    />
-                                    <label className="text-sm font-bold text-slate-700">Mano de obra ($, sin materiales)</label>
-                                    <div className="flex gap-3">
-                                        <input
-                                            type="number"
-                                            className="flex-1 px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-servy-500"
-                                            placeholder="Ej: 45000"
-                                            value={quotePrice}
-                                            onChange={(e) => setQuotePrice(e.target.value)}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => quoteMutation.mutate()}
-                                            disabled={!quotePrice || quoteMutation.isPending}
-                                            className="bg-servy-600 hover:bg-servy-500 text-white font-bold px-6 py-3 rounded-xl disabled:opacity-50"
-                                        >
-                                            {quoteMutation.isPending ? 'Enviando...' : 'Enviar presupuesto'}
-                                        </button>
-                                    </div>
-                                    {quoteMutation.isError && (
-                                        <p className="text-sm text-red-600">{(quoteMutation.error as Error).message}</p>
-                                    )}
-                                    <button type="button" className="text-slate-500 text-sm font-medium self-start" onClick={() => setQuoting(false)}>
-                                        Cancelar
-                                    </button>
-                                </div>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={() => setQuoting(true)}
-                                    className="w-full bg-servy-600 hover:bg-servy-500 text-white font-bold py-4 rounded-xl text-lg shadow-lg transition-all"
-                                >
-                                    Cotizar arreglo in situ
-                                </button>
-                            )}
+                        <div className="mt-4 border-t border-slate-100 pt-6 bg-blue-50 border border-blue-100 rounded-xl p-5 flex gap-3">
+                            <MessageCircle className="text-blue-700 shrink-0 mt-0.5" size={22} />
+                            <div>
+                                <p className="font-bold text-blue-900 mb-1">El presupuesto de arreglo se confirma por WhatsApp</p>
+                                <p className="text-sm text-blue-800 leading-relaxed">
+                                    Pedile al cliente que le escriba a Servy <strong>presupuesto</strong> con el monto que le
+                                    pasaste. Te va a llegar un mensaje para confirmarlo. Ya no se carga desde el portal.
+                                </p>
+                            </div>
                         </div>
                     )}
 

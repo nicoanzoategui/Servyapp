@@ -302,7 +302,7 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
 
                 await WhatsAppService.sendTextMessage(
                     userPhone,
-                    `✅ *¡Visita pagada!*\n\nTu técnico está confirmado 🎉\n\n━━━━━━━━━━━━━━━\n*DATOS DEL TÉCNICO*\n━━━━━━━━━━━━━━━\n👤 ${proFullName}\n📞 ${proPhoneFormatted}${pro.dni ? `\n🆔 DNI: ${pro.dni}` : ''}${proBio}${proSkills}${proCategories}\n━━━━━━━━━━━━━━━\n📅 ${fecha} · ${franja}\n📍 ${addr}\n━━━━━━━━━━━━━━━\n\n_El arreglo se cotiza in situ. Cualquier consulta escribí acá._`
+                    `✅ *¡Visita pagada!*\n\nTu técnico está confirmado 🎉\n\n━━━━━━━━━━━━━━━\n*DATOS DEL TÉCNICO*\n━━━━━━━━━━━━━━━\n👤 ${proFullName}\n📞 ${proPhoneFormatted}${pro.dni ? `\n🆔 DNI: ${pro.dni}` : ''}${proBio}${proSkills}${proCategories}\n━━━━━━━━━━━━━━━\n📅 ${fecha} · ${franja}\n📍 ${addr}\n━━━━━━━━━━━━━━━\n\n_El arreglo se cotiza in situ. Cuando te pasen el monto, escribí *presupuesto*._`
                 );
 
                 const totalStr = job.quotation.total_price.toLocaleString('es-AR');
@@ -476,9 +476,13 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
                 state: 'IDLE',
                 data: {} as Record<string, unknown>,
             }));
-            const awaitingJob = proSession.state === 'AWAITING_JOB_RESPONSE';
+            const awaitingStructured = [
+                'AWAITING_JOB_RESPONSE',
+                'AWAITING_REPAIR_AMOUNT_CONFIRM',
+                'AWAITING_REPAIR_AMOUNT_CORRECTION',
+            ].includes(proSession.state);
 
-            if (!awaitingJob) {
+            if (!awaitingStructured) {
                 const PRO_GREETED_TTL = 8 * 60 * 60;
                 const greetKey = professionalGreetedRedisKey(phone);
                 try {
@@ -495,7 +499,7 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
                     /* no bloquear flujo si Redis falla */
                 }
             }
-            if (!awaitingJob) {
+            if (!awaitingStructured) {
                 const handledAvail = await processAvailabilityMessage({
                     professional,
                     body: content,
