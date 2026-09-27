@@ -222,7 +222,7 @@ export default function TecnicosPage() {
 
             <section className="w-full py-24 px-6 md:px-12 bg-slate-50 flex flex-col items-center text-center">
                 <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-4">
-                    Estamos armando la red de técnicos en Pilar
+                    Estamos armando la red de técnicos
                 </h2>
                 <p className="text-slate-600 text-center text-lg mb-10 max-w-2xl">
                     Sumate ahora y sé de los primeros.

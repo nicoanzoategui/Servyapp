@@ -28,7 +28,7 @@ export default function TerminosPage() {
                         &ldquo;LA PLATAFORMA&rdquo;) y el técnico o contratista (en adelante, el &ldquo;PRESTADOR&rdquo;) que
                         utilice el ecosistema digital de SERVY para la captación de clientes y gestión de servicios de
                         mantenimiento, oficios y reparación. Se establece que, en su etapa inicial, LA PLATAFORMA operará
-                        prioritariamente en la zona de Pilar, Provincia de Buenos Aires.
+                        en las zonas donde se encuentre habilitada.
                     </p>
 
                     <section>
@@ -184,13 +184,13 @@ export default function TerminosPage() {
                         <p className="text-slate-600 leading-relaxed">
                             Para todos los efectos legales, las partes se someten a la aplicación de las leyes de la
                             República Argentina. Ante cualquier controversia, las partes se someten a la jurisdicción de los
-                            Tribunales Ordinarios de Pilar, Provincia de Buenos Aires, renunciando a cualquier otro fuero o
+                            Tribunales Ordinarios competentes de la República Argentina, renunciando a cualquier otro fuero o
                             jurisdicción que pudiera corresponder.
                         </p>
                     </section>
 
                     <p className="text-slate-500 text-sm border-t border-slate-200 pt-8">
-                        Documento final definitivo con garantía reforzada y jurisdicción en Pilar para SERVY.
+                        Documento final definitivo con garantía reforzada para SERVY.
                     </p>
 
                     <section>

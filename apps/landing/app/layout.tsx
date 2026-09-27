@@ -12,12 +12,15 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-    title: 'Servy | Tu solución rápida para servicios del hogar',
-    description: 'Conectamos a profesionales de plomería, cerrajería y electricidad en tu zona con tus problemas urgentes de hogar. ¡Cotizaciones rápidas vía WhatsApp!',
+    metadataBase: new URL('https://servy.lat'),
+    title: 'Servy | Pedí un técnico por WhatsApp',
+    description:
+        'Conectamos profesionales de plomería, electricidad, cerrajería, gas y aires acondicionados con tu problema de hogar. Pedí un técnico por WhatsApp.',
     openGraph: {
-        title: 'Servy | Tu solución rápida',
-        description: 'Encuentra a los mejores profesionales aprobados para tu hogar al instante.',
-        url: 'https://servy.ar',
+        title: 'Servy | Pedí un técnico por WhatsApp',
+        description:
+            'Plomería, electricidad, cerrajería, gas y aires acondicionados. Coordiná la visita por WhatsApp.',
+        url: 'https://servy.lat',
         siteName: 'Servy',
         locale: 'es_AR',
         type: 'website',

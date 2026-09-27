@@ -1,24 +1,14 @@
 import Link from 'next/link';
 import { Wrench, Zap, Key, ShieldCheck, Clock, Star, HeartHandshake, Flame, Wind } from 'lucide-react';
-
-/** E.164 sin + (wa.me). Env opcional en Railway: NEXT_PUBLIC_WA_NUMBER */
-const NEXT_PUBLIC_WA_NUMBER = (
-    process.env.NEXT_PUBLIC_WA_NUMBER || '16206474920'
-).replace(/\D/g, '');
-const WA_LINK = `https://wa.me/${NEXT_PUBLIC_WA_NUMBER}?text=Hola,%20necesito%20ayuda`;
+import { SiteHeader } from './components/SiteHeader';
+import { WhatsAppFloat } from './components/WhatsAppFloat';
+import { WA_LINK } from '@/lib/whatsapp';
 
 export default function Home() {
     return (
         <main className="flex min-h-screen flex-col items-center overflow-hidden">
-            {/* Navbar Minimalista */}
-            <header className="w-full h-20 flex items-center justify-between px-6 md:px-12 bg-white/80 backdrop-blur fixed top-0 z-50 border-b border-slate-100">
-                <div className="text-2xl font-bold text-[#0D4638] tracking-tighter">servy.</div>
-                <nav className="gap-6 hidden md:flex font-medium text-[#0D4638]/80 text-sm">
-                    <a href="#como-funciona" className="hover:text-[#A7E23C] transition">Cómo Funciona</a>
-                    <a href="#categorias" className="hover:text-[#A7E23C] transition">Servicios</a>
-                    <Link href="/tecnicos" className="hover:text-[#A7E23C] transition">Soy técnico</Link>
-                </nav>
-            </header>
+            <SiteHeader />
+            <WhatsAppFloat />
 
             {/* Hero Section */}
             <section className="w-full pt-32 pb-20 px-6 md:px-12 bg-gradient-to-br from-[#F2F9EF] via-white to-[#C6F6DB]/30 mt-10">
@@ -26,7 +16,7 @@ export default function Home() {
                     {/* Texto */}
                     <div className="flex-1 max-w-md flex flex-col items-start text-left">
                         <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-[#0B3A31] max-w-xl animate-slide-up">
-                            Arreglá tu hogar en minutos.{' '}
+                            Pedí un técnico.{' '}
                             <span className="text-[#A7E23C]">Por WhatsApp.</span>
                         </h1>
                         <p className="mt-6 text-lg md:text-xl text-[#0D4638]/80 max-w-lg animate-fade-in delay-150">
@@ -170,7 +160,7 @@ export default function Home() {
                         </div>
                         <h3 className="text-xl font-bold mb-3 text-[#0B3A31]">Confirmamos y pagás la visita</h3>
                         <p className="text-[#0D4638]/80">
-                            Asignamos un técnico verificado y te avisamos cuando confirma el turno. Pagás la visita con Mercado Pago — si después hacés el arreglo, se descuenta del total.
+                            Pagás la visita con Mercado Pago — el dinero queda retenido hasta confirmar el servicio. En breve te confirmamos qué técnico verificado te va a atender. Si después hacés el arreglo, la visita se descuenta del total.
                         </p>
                     </div>
 
@@ -268,9 +258,9 @@ export default function Home() {
                     <div className="flex gap-6 p-6">
                         <Star className="text-yellow-400 shrink-0" size={40} />
                         <div>
-                            <h3 className="font-bold text-xl mb-2 text-[#0B3A31]">Calificaciones de verdad</h3>
+                            <h3 className="font-bold text-xl mb-2 text-[#0B3A31]">Calificaciones reales, con el tiempo</h3>
                             <p className="text-[#0D4638]/80">
-                                Cada trabajo se califica. El rating que ves lo pusieron personas como vos que ya lo contrataron, no lo inventamos nosotros.
+                                A medida que los técnicos completan trabajos, vas a ver sus calificaciones reales. No inventamos ratings.
                             </p>
                         </div>
                     </div>
@@ -295,24 +285,6 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* Early adopters */}
-            <section className="w-full py-24 px-6 md:px-12 bg-[#F2F9EF]/50 flex flex-col items-center text-center">
-                <h2 className="text-3xl md:text-5xl font-bold text-[#0B3A31] text-center mb-6">
-                    Estamos empezando en Pilar, Buenos Aires
-                </h2>
-                <p className="text-[#0D4638]/80 text-center text-lg mb-10 max-w-2xl">
-                    Sé de los primeros en probar Servy y conseguí precio preferencial en tu primera visita.
-                </p>
-                <a
-                    href={WA_LINK}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-[#A7E23C] text-[#0D4638] px-8 py-4 rounded-full font-bold shadow-xl shadow-[#A7E23C]/20 hover:shadow-2xl hover:shadow-[#A7E23C]/20 hover:bg-[#A7E23C]/90 hover:-translate-y-1 transition-all duration-300"
-                >
-                    Hablar con Servy
-                </a>
-            </section>
-
             {/* Dudas / FAQ */}
             <section id="dudas" className="w-full py-24 px-6 md:px-12 bg-white flex flex-col items-center">
                 <h2 className="text-3xl md:text-5xl font-bold text-[#0B3A31] text-center mb-16">
@@ -333,10 +305,10 @@ export default function Home() {
                     {/* Pregunta 2 */}
                     <div className="bg-[#F2F9EF]/50 p-8 rounded-2xl border border-slate-100">
                         <h3 className="font-bold text-xl mb-3 text-[#0B3A31]">
-                            ¿Puedo ver las reviews antes de contratar?
+                            ¿Los técnicos tienen calificaciones?
                         </h3>
                         <p className="text-[#0D4638]/80 leading-relaxed">
-                            Sí. Te mostramos el perfil del técnico, sus calificaciones y reviews de otros clientes antes de que confirmes. Así sabés con quién estás contratando.
+                            Cada trabajo se califica. A medida que los técnicos completan visitas, esas notas se van a ir mostrando. Al arrancar puede que un técnico todavía no tenga reviews, y está bien: no inventamos calificaciones.
                         </p>
                     </div>
 
@@ -372,6 +344,24 @@ export default function Home() {
                 </div>
             </section>
 
+            {/* Early adopters */}
+            <section className="w-full py-24 px-6 md:px-12 bg-[#F2F9EF]/50 flex flex-col items-center text-center">
+                <h2 className="text-3xl md:text-5xl font-bold text-[#0B3A31] text-center mb-6">
+                    Estamos recién empezando
+                </h2>
+                <p className="text-[#0D4638]/80 text-center text-lg mb-10 max-w-2xl">
+                    Sé de los primeros en probar Servy.
+                </p>
+                <a
+                    href={WA_LINK}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-[#A7E23C] text-[#0D4638] px-8 py-4 rounded-full font-bold shadow-xl shadow-[#A7E23C]/20 hover:shadow-2xl hover:shadow-[#A7E23C]/20 hover:bg-[#A7E23C]/90 hover:-translate-y-1 transition-all duration-300"
+                >
+                    Hablar con Servy
+                </a>
+            </section>
+
             {/* Para profesionales */}
             <section className="w-full py-24 px-6 md:px-12 bg-[#0D4638] text-white flex flex-col items-center text-center relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-[#A7E23C]/20 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2"></div>
@@ -394,7 +384,7 @@ export default function Home() {
                         <div className="md:col-span-1">
                             <div className="text-2xl font-bold text-[#0D4638] tracking-tighter mb-4">servy.</div>
                             <p className="text-[#0D4638]/80 text-sm">
-                                Arreglá tu hogar en minutos. Todo por WhatsApp.
+                                Pedí un técnico por WhatsApp.
                             </p>
                         </div>
 

@@ -3,19 +3,19 @@ import { MetadataRoute } from 'next';
 export default function sitemap(): MetadataRoute.Sitemap {
     return [
         {
-            url: 'https://servy.ar',
+            url: 'https://servy.lat',
             lastModified: new Date(),
             changeFrequency: 'weekly',
             priority: 1,
         },
         {
-            url: 'https://servy.ar/profesionales',
+            url: 'https://servy.lat/profesionales',
             lastModified: new Date(),
             changeFrequency: 'monthly',
             priority: 0.8,
         },
         {
-            url: 'https://servy.ar/tecnicos',
+            url: 'https://servy.lat/tecnicos',
             lastModified: new Date(),
             changeFrequency: 'monthly',
             priority: 0.85,
