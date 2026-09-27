@@ -10,6 +10,7 @@ import { mediationDirectionRedisKey, normalizeTwilioWhatsAppFrom, userRelayPause
 import { env } from '../utils/env';
 import { createProfessionalFromWhatsAppWizard } from './professional-registration.internal';
 import { VisitFlowService } from './visit-flow.service';
+import { formatClientChosenSchedule } from './manual-assignment.service';
 import {
     calculateRepairPricing,
     formatRepairPaymentBreakdown,
@@ -330,6 +331,16 @@ export class ConversationService {
             }
         }
 
+        // Visita pagada sin técnico: ANTES de tryForward / userRelayPause.
+        // Solo IDLE/COMPLETED (mismo alcance que el fix anterior); el resto de estados no se toca.
+        if (
+            user &&
+            (session.state === 'IDLE' || session.state === 'COMPLETED') &&
+            (await this.replyIfAwaitingTechnicianAssignment(phone))
+        ) {
+            return;
+        }
+
         if (messageType === 'text' && user) {
             const forwarded = await ConversationService.tryForwardUserMessageToProfessional(phone, content.trim(), session);
             if (forwarded) return;
@@ -561,6 +572,9 @@ export class ConversationService {
             return true;
         }
         if (t === 'cancelar') {
+            if (await this.replyIfAwaitingTechnicianAssignment(phone)) {
+                return true;
+            }
             await this.clearSession(phone);
             await WhatsAppService.sendTextMessage(
                 phone,
@@ -1059,6 +1073,52 @@ export class ConversationService {
                 await this.clearSession(phone);
                 await WhatsAppService.sendTextMessage(phone, 'Algo salió mal con el registro. Escribí de nuevo para empezar.');
         }
+    }
+
+    /**
+     * Visita pagada, Job creado, todavía sin técnico (MVP /unassigned).
+     * Independiente de userRelayPause: el pause solo corta el relay cuando ya hay técnico.
+     */
+    static async replyIfAwaitingTechnicianAssignment(phone: string): Promise<boolean> {
+        const job = await prisma.job.findFirst({
+            where: {
+                status: { in: ['confirmed', 'in_progress'] },
+                quotation: {
+                    job_offer: {
+                        professional_id: null,
+                        service_request: { user_phone: phone },
+                    },
+                },
+            },
+            include: {
+                quotation: {
+                    include: {
+                        job_offer: { include: { service_request: true } },
+                    },
+                },
+            },
+            orderBy: { id: 'desc' },
+        });
+        if (!job) return false;
+
+        // Pause solo aplica al relay con técnico ya asignado; no debe quedar pegado acá.
+        try {
+            await redis.del(userRelayPauseRedisKey(phone));
+        } catch {
+            /* ignore */
+        }
+
+        const sr = job.quotation.job_offer.service_request;
+        const when = formatClientChosenSchedule({
+            scheduled_slot: sr.scheduled_slot,
+            scheduled_date: sr.scheduled_date,
+            offerSchedule: job.quotation.job_offer.schedule,
+        });
+        await WhatsAppService.sendTextMessage(
+            phone,
+            `Ya tenemos tu pedido en curso.\n\n📅 ${when}\n\nEstamos coordinando tu técnico verificado, en breve te compartimos sus datos. Si tenés una consulta puntual, escribí *ayuda*.`
+        );
+        return true;
     }
 
     private static async tryForwardUserMessageToProfessional(

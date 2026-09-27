@@ -418,6 +418,12 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
 
         // Comando global cancelar para ambos flujos
         if (content.toLowerCase().trim() === 'cancelar') {
+            // Visita pagada sin técnico: no pausar relay ni borrar la sesión del pedido en curso.
+            const awaitingAssignment = await ConversationService.replyIfAwaitingTechnicianAssignment(phone);
+            if (awaitingAssignment) {
+                return;
+            }
+
             // Limpiar sesión de usuario
             try {
                 await redis.del(`session:${phone}`);
@@ -437,11 +443,25 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
             } catch {
                 /* ignore */
             }
-            // Con job activo, sin esto cada mensaje se reenvía al técnico (tryForward) y el bot no te responde.
-            try {
-                await redis.set(userRelayPauseRedisKey(phone), '1', 'EX', 7 * 24 * 60 * 60);
-            } catch {
-                /* ignore */
+            // Pause relay solo si ya hay técnico asignado en un Job activo.
+            const assignedJob = await prisma.job.findFirst({
+                where: {
+                    status: { in: ['confirmed', 'in_progress'] },
+                    quotation: {
+                        job_offer: {
+                            professional_id: { not: null },
+                            service_request: { user_phone: phone },
+                        },
+                    },
+                },
+                select: { id: true },
+            });
+            if (assignedJob) {
+                try {
+                    await redis.set(userRelayPauseRedisKey(phone), '1', 'EX', 7 * 24 * 60 * 60);
+                } catch {
+                    /* ignore */
+                }
             }
             await WhatsAppService.sendTextMessage(phone, 'Listo, sesión cancelada. Escribí cuando quieras empezar de nuevo.');
             return;
