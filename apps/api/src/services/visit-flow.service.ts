@@ -11,8 +11,9 @@ import {
 } from './repair-pricing';
 import {
     formatArs,
+    isLocksmithCategory,
     priorityLabel,
-    SPEED_SELECTION_PROMPT,
+    speedSelectionPrompt,
     visitFeeForPriority,
     type ServicePriority,
 } from './visit-pricing';
@@ -94,15 +95,20 @@ export class VisitFlowService {
             }
         }
 
-        let prompt = SPEED_SELECTION_PROMPT;
+        const category = (sessionData.category as string) || '';
+        let prompt = speedSelectionPrompt(category);
         if (!hasUrgent) {
             prompt =
                 `Por ahora solo hay *programado* disponible en tu zona.\n\n` +
                 `*Programado* — $${formatArs(env.VISIT_FEE_SCHEDULED)} (hasta 72 hs)\n\nEscribí *1* o *programado* para continuar.`;
         } else if (!hasScheduled) {
+            const urgentName = isLocksmithCategory(category) ? 'emergencia' : 'urgente';
+            const urgentLine = isLocksmithCategory(category)
+                ? `*Emergencia* — vamos lo antes posible, $${formatArs(env.VISIT_FEE_URGENT)}`
+                : `*Urgente* — hoy, coordinamos el horario más rápido posible, $${formatArs(env.VISIT_FEE_URGENT)}`;
             prompt =
-                `Por ahora solo hay *urgente* disponible en tu zona.\n\n` +
-                `*Urgente* — $${formatArs(env.VISIT_FEE_URGENT)} (hoy, en menos de 24 hs)\n\nEscribí *1* o *urgente* para continuar.`;
+                `Por ahora solo hay *${urgentName}* disponible en tu zona.\n\n` +
+                `${urgentLine}\n\nEscribí *1* o *${urgentName}* para continuar.`;
         }
 
         await saveUserSession(phone, 'AWAITING_SPEED_SELECTION', {
@@ -118,11 +124,18 @@ export class VisitFlowService {
         const requestId = session.data.requestId as string;
         const hasUrgent = Boolean(session.data.hasUrgent);
         const hasScheduled = Boolean(session.data.hasScheduled);
+        const category = (session.data.category as string) || '';
+        const locksmith = isLocksmithCategory(category);
         const raw = content.trim();
         const lc = raw.toLowerCase();
 
         let priority: ServicePriority | null = null;
-        if (raw === '1' || lc === 'urgente' || (hasUrgent && !hasScheduled && (lc === 'si' || lc === 'sí'))) {
+        if (
+            raw === '1' ||
+            lc === 'urgente' ||
+            lc === 'emergencia' ||
+            (hasUrgent && !hasScheduled && (lc === 'si' || lc === 'sí'))
+        ) {
             if (hasUrgent) priority = 'urgent';
         } else if (raw === '2' || lc === 'programado' || (hasScheduled && !hasUrgent && (lc === 'si' || lc === 'sí'))) {
             if (hasScheduled) priority = 'scheduled';
@@ -132,7 +145,9 @@ export class VisitFlowService {
             await WhatsAppService.sendTextMessage(
                 phone,
                 hasUrgent && hasScheduled
-                    ? 'Escribí *1* para urgente o *2* para programado.'
+                    ? locksmith
+                        ? 'Escribí *1* para emergencia o *2* para programado.'
+                        : 'Escribí *1* para urgente o *2* para programado.'
                     : 'Escribí *1* para continuar con la opción disponible.'
             );
             return;
@@ -180,11 +195,13 @@ export class VisitFlowService {
                 scheduleOptionIds.push('sch_asap');
                 scheduleLabels.push('Lo antes posible');
                 const lines = scheduleOptionIds.map((_, i) => `${i + 1}. ${scheduleLabels[i]}`).join('\n');
-                scheduleMsg = `⚡ *Urgente* — $${formatArs(fee)}\n\n¿En qué horario preferís que vaya hoy?\n\n${lines}`;
+                const urgentTitle = locksmith ? 'Emergencia' : 'Urgente';
+                scheduleMsg = `⚡ *${urgentTitle}* — $${formatArs(fee)}\n\n¿En qué horario preferís que vaya hoy?\n\n${lines}`;
             } else {
                 scheduleOptionIds = ['sch_tomorrow_morning', 'sch_tomorrow_mid', 'sch_tomorrow_afternoon'];
+                const urgentTitle = locksmith ? 'Emergencia' : 'Urgente';
                 scheduleMsg =
-                    `⚡ *Urgente* — $${formatArs(fee)}\n\n` +
+                    `⚡ *${urgentTitle}* — $${formatArs(fee)}\n\n` +
                     'Ya es tarde para coordinar para hoy.\n\n¿A qué horario preferís mañana?\n\n1. Mañana temprano (8 a 10hs)\n2. Mañana a la mañana (10 a 12hs)\n3. Mañana a la tarde (14 a 18hs)';
             }
 
@@ -304,9 +321,10 @@ export class VisitFlowService {
         await saveUserSession(phone, 'VISIT_PAYMENT_PENDING', sessionData);
 
         if (priority === 'urgent') {
+            const title = priorityLabel('urgent', sessionData.category as string);
             await WhatsAppService.sendTextMessage(
                 phone,
-                '✅ *Turno confirmado — Urgente*\n\nTe mandamos el link para pagar la visita. En cuanto se acredite el pago, en breve te confirmamos los datos del técnico que te va a atender hoy.'
+                `✅ *Turno confirmado — ${title}*\n\nTe mandamos el link para pagar la visita. En cuanto se acredite el pago, en breve te confirmamos los datos del técnico que te va a atender hoy.`
             );
         } else {
             await WhatsAppService.sendTextMessage(

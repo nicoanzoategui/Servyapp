@@ -164,9 +164,14 @@ function problemAskMessage(name?: string | null): string {
     const intro = name?.trim() ? `*${name.trim()}*, contame ¿qué necesitás?` : 'Contame ¿qué necesitás?';
     return (
         `${intro}\n\n` +
-        'Cuanto más detalle me des, mejor: el técnico va a saber qué herramientas y repuestos llevar antes de ir.\n\n' +
-        '_Por ejemplo: qué es exactamente lo que pasa, hace cuánto, si empeoró, qué probaste._\n\n' +
-        'También podés mandarme un *audio* contándomelo si te resulta más fácil.'
+        'Trabajamos con:\n' +
+        '🔧 Plomería — canillas, caños, pérdidas de agua\n' +
+        '⚡ Electricidad — cortocircuitos, tableros, instalaciones\n' +
+        '🔥 Gas — calefones, cocinas, pérdidas\n' +
+        '🔑 Cerrajería — puertas trabadas, cambio de cerradura\n' +
+        '❄️ Aires acondicionados — instalación, reparación, limpieza\n\n' +
+        'Describime el problema con el mayor detalle posible — eso ayuda al técnico a saber qué herramientas y repuestos llevar antes de ir.\n\n' +
+        'También podés mandarme un audio si te resulta más fácil.'
     );
 }
 
@@ -361,9 +366,7 @@ export class ConversationService {
                     'hey',
                 ];
                 if (greetings.includes(content.toLowerCase().trim())) {
-                    const nm = user.name?.trim() || '';
-                    const greetLine = nm ? `Hola *${nm}* 👋\n\n` : `Hola 👋\n\n`;
-                    await WhatsAppService.sendTextMessage(phone, `${greetLine}${problemAskMessage(null)}`);
+                    await WhatsAppService.sendTextMessage(phone, problemAskMessage(user.name));
                     return;
                 }
                 await this.advanceAfterProblemDescription(phone, session, content);
@@ -901,7 +904,7 @@ export class ConversationService {
             await this.saveSession(phone, 'AWAITING_PROBLEM_DESCRIPTION', {});
             await WhatsAppService.sendTextMessage(
                 phone,
-                `*¡Listo ${userName}!* Ya tenés tu perfil. 🎉\n\nContame qué necesitás — plomería, electricidad, gas, cerrajería, aires acondicionados.\n\n_Cuanto más detalle des, mejor puede cotizar el técnico._`
+                `*¡Listo ${userName}!* Ya tenés tu perfil. 🎉\n\n${problemAskMessage(userName)}`
             );
             return;
         }
