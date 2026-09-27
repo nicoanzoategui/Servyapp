@@ -32,7 +32,7 @@ function isImageContentType(contentType: string): boolean {
     return contentType.startsWith('image/');
 }
 
-function formatClientChosenSchedule(args: {
+export function formatClientChosenSchedule(args: {
     scheduled_slot: string | null;
     scheduled_date: Date | null;
     offerSchedule: string | null;
@@ -84,7 +84,7 @@ async function notifyClientTechnicianAssigned(args: {
             imageDocs.push({ url, label });
             linkLines.push(`• ${label}: adjunto`);
         } else {
-            linkLines.push(`• ${label}: ${url}`);
+            linkLines.push(`• *${label}*: Ver documento 👉 ${url}`);
         }
     }
 

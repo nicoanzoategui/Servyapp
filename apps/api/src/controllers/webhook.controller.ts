@@ -12,6 +12,7 @@ import { processQualityUserReply } from '../agents/quality-agent';
 import { tryExperimentWaitlist } from '../agents/experiments-agent';
 import { verifyMercadoPagoWebhookSignature } from '../lib/mp-webhook-signature';
 import { verifyTwilioWebhookSignature } from '../lib/twilio-webhook-signature';
+import { formatClientChosenSchedule } from '../services/manual-assignment.service';
 import { twilioWebhookAls } from '../lib/twilio-request-context';
 import {
     maskPhoneDigitsTail,
@@ -262,9 +263,18 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
             const pro = job.quotation.job_offer.professional;
 
             if (!pro) {
+                const serviceRequest = await prisma.serviceRequest.findUnique({
+                    where: { id: job.quotation.job_offer.request_id },
+                    select: { scheduled_slot: true, scheduled_date: true },
+                });
+                const when = formatClientChosenSchedule({
+                    scheduled_slot: serviceRequest?.scheduled_slot ?? null,
+                    scheduled_date: serviceRequest?.scheduled_date ?? null,
+                    offerSchedule: job.quotation.job_offer.schedule ?? null,
+                });
                 await WhatsAppService.sendTextMessage(
                     userPhone,
-                    '✅ *¡Pago confirmado!*\n\nYa estamos coordinando tu técnico. En breve te mandamos sus datos y documentación.'
+                    `💳 *¡Pago confirmado!*\n\n━━━━━━━━━━━━━━━\n📅 ${when}\n━━━━━━━━━━━━━━━\n\nYa estamos coordinando tu técnico verificado. En breve te compartimos sus datos y documentación.`
                 );
             } else {
                 const serviceRequest = await prisma.serviceRequest.findUnique({
