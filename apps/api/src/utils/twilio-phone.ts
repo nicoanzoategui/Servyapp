@@ -12,6 +12,29 @@ export function maskPhoneDigitsTail(digitsOrMixed: string): string {
     return d.length >= 4 ? `***${d.slice(-4)}` : '***';
 }
 
+/**
+ * Teléfono para marcar (WhatsApp / llamada).
+ * AR móvil 549… → +54 9 11 XXXX XXXX (u otro código de área de 2 dígitos).
+ */
+export function formatPhoneForDisplay(raw: string | null | undefined): string {
+    const d = String(raw || '').replace(/\D/g, '');
+    if (!d) return '—';
+    if (d.startsWith('549') && d.length >= 12) {
+        const local = d.slice(3);
+        if (local.length >= 10) {
+            const area = local.slice(0, 2);
+            const rest = local.slice(2);
+            const a = rest.slice(0, 4);
+            const b = rest.slice(4, 8);
+            const extra = rest.slice(8);
+            return `+54 9 ${area} ${a} ${b}${extra}`;
+        }
+        return `+54 9 ${local}`;
+    }
+    if (d.startsWith('54')) return `+${d.slice(0, 2)} ${d.slice(2)}`;
+    return `+${d}`;
+}
+
 /** Clave Redis para mediación “esperando referencia de dirección” (mismo criterio que el webhook). */
 export function mediationDirectionRedisKey(phoneRaw: string): string {
     const d = normalizeTwilioWhatsAppFrom(phoneRaw) || phoneRaw.replace(/\D/g, '');

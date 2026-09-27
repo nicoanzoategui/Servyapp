@@ -4,6 +4,7 @@ import { StorageService } from './storage.service';
 import { ProfessionalMatchingService } from './matching.service';
 import { categoryMatches } from './service-categories';
 import { DOCUMENT_KIND_LABELS, type ProfessionalDocumentKindId } from './professional-documents.service';
+import { formatPhoneForDisplay } from '../utils/twilio-phone';
 
 const DOC_SHARE_TTL_SEC = 60 * 60 * 24 * 7;
 const SHARE_KIND_ORDER: ProfessionalDocumentKindId[] = [
@@ -105,7 +106,12 @@ async function notifyClientTechnicianAssigned(args: {
 
 async function notifyTechnicianAssigned(args: {
     professional: Professional;
-    request: { address: string | null; description: string | null; scheduled_slot: string | null };
+    request: {
+        address: string | null;
+        description: string | null;
+        scheduled_slot: string | null;
+        user_phone: string;
+    };
     schedule: string | null;
     jobId: string | null;
 }): Promise<void> {
@@ -113,11 +119,12 @@ async function notifyTechnicianAssigned(args: {
     const franja = request.scheduled_slot || schedule || 'a coordinar';
     const addr = request.address || 'Ver portal';
     const desc = request.description?.slice(0, 120) || 'Ver portal';
+    const clientPhone = formatPhoneForDisplay(request.user_phone);
     const portal = jobId ? `\n🔗 _portal.servy.lat/jobs/${jobId}_` : '';
 
     await WhatsAppService.sendTextMessage(
         professional.phone,
-        `💼 *Te asignaron una visita*\n\nEl cliente ya pagó. Coordiná el horario exacto con él.\n\n━━━━━━━━━━━━━━━\n📍 ${addr}\n📋 ${desc}\n📅 ${franja}\n━━━━━━━━━━━━━━━${portal}\n\n*Comandos:* _estoy yendo_ · _llego en X minutos_ · _no encuentro la dirección_`
+        `💼 *Te asignaron una visita*\n\nEl cliente ya pagó.\n\n━━━━━━━━━━━━━━━\n📍 ${addr}\n📋 ${desc}\n📅 ${franja}\n📞 ${clientPhone}\n━━━━━━━━━━━━━━━${portal}\n\nPara avisar que estás yendo o llegando, usá los comandos acá abajo — se lo avisamos al cliente automáticamente. Si necesitás algo urgente, también podés llamarlo directo al número de arriba.\n\n*Comandos:* _estoy yendo_ · _llego en X minutos_ · _no encuentro la dirección_`
     );
 }
 
