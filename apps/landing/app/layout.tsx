@@ -33,25 +33,6 @@ export default function RootLayout({
         <html lang="es" className={poppins.variable}>
             <body className="antialiased">
                 {children}
-                {/* Google Analytics 4 */}
-                <Script
-                    strategy="afterInteractive"
-                    src={`https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX`}
-                />
-                <Script
-                    id="google-analytics"
-                    strategy="afterInteractive"
-                    dangerouslySetInnerHTML={{
-                        __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'G-XXXXXXXXXX', {
-                page_path: window.location.pathname,
-              });
-            `,
-                    }}
-                />
                 {/* UXR Survey SDK */}
                 <Script
                     id="uxr-survey-sdk"

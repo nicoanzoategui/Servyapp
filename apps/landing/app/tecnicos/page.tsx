@@ -220,85 +220,19 @@ export default function TecnicosPage() {
                 </div>
             </section>
 
-            {/* Testimonios */}
-            <section className="w-full py-24 px-6 md:px-12 bg-slate-50">
+            <section className="w-full py-24 px-6 md:px-12 bg-slate-50 flex flex-col items-center text-center">
                 <h2 className="text-3xl md:text-5xl font-bold text-slate-900 text-center mb-4">
-                    Lo que dicen los técnicos que ya están en Servy
+                    Estamos armando la red de técnicos en Pilar
                 </h2>
-                <p className="text-slate-600 text-center text-lg mb-16 max-w-2xl mx-auto">
-                    Más de 150 profesionales trabajando con Servy
+                <p className="text-slate-600 text-center text-lg mb-10 max-w-2xl">
+                    Sumate ahora y sé de los primeros.
                 </p>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                    {/* Testimonio 1 */}
-                    <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-                        <div className="flex items-center gap-1 mb-4">
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                        </div>
-                        <p className="text-slate-700 mb-6 leading-relaxed">
-                            &quot;Antes perdía 2-3 horas por día en presupuestos que no cerraban. Con Servy, si me llega el pedido es porque el cliente ya está listo para contratar.&quot;
-                        </p>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
-                                J
-                            </div>
-                            <div>
-                                <p className="font-bold text-sm">Juan Pérez</p>
-                                <p className="text-slate-500 text-xs">Plomero · Palermo</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Testimonio 2 */}
-                    <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-                        <div className="flex items-center gap-1 mb-4">
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                        </div>
-                        <p className="text-slate-700 mb-6 leading-relaxed">
-                            &quot;Lo mejor es que cobro antes de salir. Ya no me como más el &apos;ahora no tengo efectivo&apos; o &apos;te deposito mañana&apos;. Es un alivio.&quot;
-                        </p>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
-                                M
-                            </div>
-                            <div>
-                                <p className="font-bold text-sm">María González</p>
-                                <p className="text-slate-500 text-xs">Electricista · Caballito</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Testimonio 3 */}
-                    <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-                        <div className="flex items-center gap-1 mb-4">
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-yellow-400 text-yellow-400" size={18} />
-                            <Star className="fill-slate-300 text-slate-300" size={18} />
-                        </div>
-                        <p className="text-slate-700 mb-6 leading-relaxed">
-                            &quot;En 2 meses conseguí más clientes fijos que en todo el año pasado publicando en grupos de Facebook. Y sin competir solo por precio.&quot;
-                        </p>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
-                                C
-                            </div>
-                            <div>
-                                <p className="font-bold text-sm">Carlos Méndez</p>
-                                <p className="text-slate-500 text-xs">Gasista · Belgrano</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <Link
+                    href="/profesionales"
+                    className="bg-blue-600 text-white px-8 py-4 rounded-full font-bold shadow-xl shadow-blue-500/30 hover:bg-blue-500 hover:-translate-y-1 transition-all duration-300"
+                >
+                    Quiero sumarme
+                </Link>
             </section>
 
             <section id="beneficios" className="w-full py-24 px-6 md:px-12 bg-slate-50 flex flex-col items-center">

@@ -366,7 +366,7 @@ export default function Home() {
                             ¿Cuánto tarda en llegar el técnico?
                         </h3>
                         <p className="text-[#0D4638]/80 leading-relaxed">
-                            Si elegís &quot;urgente&quot;, llega dentro de las 24 horas. Si elegís &quot;programado&quot;, podés agendarlo para el día que mejor te venga y sale más económico. Recordá que si hacés el arreglo, lo que pagaste de visita se descuenta del presupuesto.
+                            Si elegís urgente, coordinamos el horario más rápido posible — no es una garantía de mismo día. Si elegís programado, podés elegir cualquier día dentro de los próximos 5 días. Recordá que si hacés el arreglo, lo que pagaste de visita se descuenta del presupuesto.
                         </p>
                     </div>
                 </div>
