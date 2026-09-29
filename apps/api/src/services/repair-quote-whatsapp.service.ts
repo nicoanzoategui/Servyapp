@@ -11,6 +11,7 @@ export type EligibleRepairJob = {
     professionalId: string;
     professionalPhone: string;
     professionalName: string;
+    arrivalConfirmedAt: Date | null;
 };
 
 export function formatRepairAmountConfirmForTech(techAmount: number): string {
@@ -80,6 +81,7 @@ export async function findActiveRepairJobForUser(userPhone: string): Promise<{
             professionalId: proId,
             professionalPhone: proPhone,
             professionalName: offer.professional?.name?.trim() || 'el técnico',
+            arrivalConfirmedAt: job.arrival_confirmed_at,
         },
     };
 }

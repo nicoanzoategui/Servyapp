@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Servy — marca en 1 página</title>
+  <style>
+    @page { size: A4; margin: 12mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Poppins", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      color: #0B3A31;
+      font-size: 9.5pt;
+      line-height: 1.35;
+    }
+    h1 { font-size: 18pt; margin: 0 0 2mm; letter-spacing: -0.04em; }
+    h2 { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.08em; color: #0D4638; margin: 4mm 0 1.5mm; border-bottom: 1px solid #C6F6DB; padding-bottom: 1mm; }
+    p, li { margin: 0 0 1.5mm; }
+    .wordmark { font-weight: 700; letter-spacing: -0.06em; font-size: 22pt; color: #0D4638; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm 8mm; }
+    .swatches { display: flex; gap: 3mm; flex-wrap: wrap; }
+    .sw { width: 28mm; }
+    .chip { height: 10mm; border-radius: 2mm; }
+    .hex { font-size: 8pt; font-family: ui-monospace, monospace; margin-top: 1mm; }
+    .cta {
+      display: inline-block;
+      background: #A7E23C;
+      color: #0D4638;
+      font-weight: 700;
+      padding: 2mm 5mm;
+      border-radius: 99px;
+      font-size: 9pt;
+    }
+    .mark {
+      width: 18mm; height: 18mm; border-radius: 4mm;
+      display: flex; align-items: center; justify-content: center;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 14pt; font-weight: 700;
+    }
+    .row { display: flex; gap: 4mm; align-items: center; }
+    ul { padding-left: 4mm; margin: 0; }
+    .muted { color: #0D4638; opacity: 0.75; }
+    footer { margin-top: 3mm; font-size: 8pt; color: #0D4638; opacity: 0.6; }
+  </style>
+</head>
+<body>
+  <div class="wordmark">servy.</div>
+  <p class="muted">Manual de 1 página · redes e IA · servy.lat · sep 2026</p>
+  <p><strong>Pedí un técnico. Por WhatsApp.</strong> Técnicos verificados, visita con precio claro, plata retenida hasta que confirmás. CTA: <span class="cta">Hablar con Servy</span></p>
+
+  <div class="grid">
+    <div>
+      <h2>Logo</h2>
+      <div class="row">
+        <div class="mark" style="background:#fff;color:#0D4638;border:1px solid #C6F6DB;">S.</div>
+        <div class="mark" style="background:#0D4638;color:#A7E23C;">S.</div>
+        <div>
+          <p><strong>servy.</strong> minúsculas + punto.</p>
+          <p>Isotipo: <strong>S.</strong> serif. Verde sobre blanco o lima sobre #0D4638.</p>
+          <p>No: SERVY, casa, llave, globo de WhatsApp pegado al logo, 3D, neón.</p>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h2>Tipo</h2>
+      <p><strong>Poppins</strong> 700 títulos y botones · 400 cuerpo.</p>
+      <p>Fallback: Inter o Nunito Sans. Nunca Times ni script.</p>
+      <p>En IA: poco texto en la imagen; tipografía real después en Canva/Figma.</p>
+    </div>
+  </div>
+
+  <h2>Color</h2>
+  <div class="swatches">
+    <div class="sw"><div class="chip" style="background:#0D4638"></div><div class="hex">#0D4638 bosque</div></div>
+    <div class="sw"><div class="chip" style="background:#0B3A31"></div><div class="hex">#0B3A31 títulos</div></div>
+    <div class="sw"><div class="chip" style="background:#A7E23C"></div><div class="hex">#A7E23C lima CTA</div></div>
+    <div class="sw"><div class="chip" style="background:#F2F9EF;border:1px solid #C6F6DB"></div><div class="hex">#F2F9EF fondo</div></div>
+    <div class="sw"><div class="chip" style="background:#C6F6DB"></div><div class="hex">#C6F6DB menta</div></div>
+    <div class="sw"><div class="chip" style="background:#fff;border:1px solid #ddd"></div><div class="hex">#FFFFFF cards</div></div>
+  </div>
+  <p><strong>Lima nunca es texto sobre blanco.</strong> Lima = botón o acento sobre bosque. Texto del botón: #0D4638.</p>
+
+  <div class="grid">
+    <div>
+      <h2>Voz</h2>
+      <ul>
+        <li>Vos, frases cortas, rioplatense.</li>
+        <li>Precios: $55.000 / $39.000 (punto de miles).</li>
+        <li>No: mismo día, “los mejores”, ratings inventados, “bajate la app”.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Redes</h2>
+      <ul>
+        <li>Avatar 1080×1080 · Portada FB 1640×624</li>
+        <li>Feed 1080×1080 · Historia 1080×1920</li>
+        <li>Portada: nada crítico abajo a la izquierda.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>IA — flujo</h2>
+  <p>1) Pegá el bloque SISTEMA de <strong>docs/manual-de-marca-prompts.txt</strong>. 2) Generá fondo/escena con poco texto. 3) Overlay Poppins + logo PNG. 4) Checklist: lima sobre verde, sin overpromise, producto = WhatsApp.</p>
+
+  <footer>Detalle completo: docs/manual-de-marca.md · Prompts: docs/manual-de-marca-prompts.txt · PNG: apps/landing/public/servy-*.png</footer>
+</body>
+</html>

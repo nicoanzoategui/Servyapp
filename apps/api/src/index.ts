@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.routes';
 import authProfessionalRoutes from './routes/auth.professional.routes';
 import webhookRoutes from './routes/webhook.routes';
 import paymentReleaseRoutes from './routes/payment-release.routes';
+import publicRoutes from './routes/public.routes';
 import leadsRoutes from './routes/leads.routes';
 import professionalRoutes from './routes/professional.routes';
 import adminRoutes from './routes/admin.routes';
@@ -93,6 +94,8 @@ app.use('/webhook', webhookRoutes);
 app.use(paymentReleaseRoutes);
 
 app.use(express.json({ limit: '15mb' }));
+
+app.use('/public', publicRoutes);
 
 /** Rutas públicas del portal (register / forgot / set password) antes del router /auth genérico. */
 app.use('/auth/professional', authProfessionalRoutes);

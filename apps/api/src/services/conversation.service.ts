@@ -751,6 +751,13 @@ export class ConversationService {
             );
             return;
         }
+        if (!found.job.arrivalConfirmedAt) {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'Todavía no confirmamos que el técnico llegó. Pedile que te muestre el QR para escanearlo, y después podés mandarme el presupuesto.'
+            );
+            return;
+        }
 
         await this.saveSession(phone, 'AWAITING_REPAIR_AMOUNT_FROM_CLIENT', {
             jobId: found.job.jobId,
@@ -783,6 +790,14 @@ export class ConversationService {
             await WhatsAppService.sendTextMessage(
                 phone,
                 'No pudimos cargar ese presupuesto. Si tu visita sigue en curso, escribí *presupuesto* de nuevo.'
+            );
+            return;
+        }
+        if (!job.arrivalConfirmedAt) {
+            await this.clearSession(phone);
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'Todavía no confirmamos que el técnico llegó. Pedile que te muestre el QR para escanearlo, y después podés mandarme el presupuesto.'
             );
             return;
         }

@@ -5,6 +5,7 @@ import { ProfessionalMatchingService } from './matching.service';
 import { categoryMatches } from './service-categories';
 import { DOCUMENT_KIND_LABELS, type ProfessionalDocumentKindId } from './professional-documents.service';
 import { formatPhoneForDisplay } from '../utils/twilio-phone';
+import { QRService } from './qr.service';
 
 const DOC_SHARE_TTL_SEC = 60 * 60 * 24 * 7;
 const SHARE_KIND_ORDER: ProfessionalDocumentKindId[] = [
@@ -96,7 +97,7 @@ async function notifyClientTechnicianAssigned(args: {
 
     await WhatsAppService.sendTextMessage(
         userPhone,
-        `✅ *¡Ya tenemos tu técnico asignado!*\n\n━━━━━━━━━━━━━━━\n👤 *${fullName}*\n🔧 ${cat}\n📅 ${when}\n━━━━━━━━━━━━━━━\n${docsBlock}\nUn rato antes de la visita te confirmamos que el técnico está en camino.\n\n_Cuando te pasen el monto del arreglo, escribí *presupuesto*._`
+        `✅ *¡Ya tenemos tu técnico asignado!*\n\n━━━━━━━━━━━━━━━\n👤 *${fullName}*\n🔧 ${cat}\n📅 ${when}\n━━━━━━━━━━━━━━━\n${docsBlock}\nUn rato antes de la visita te confirmamos que el técnico está en camino.\n\n📲 Cuando el técnico llegue, va a mostrarte un código QR. Escaneálo para confirmar que llegó.\n\nSi por algún motivo no se presenta, te conseguimos otro técnico o te reembolsamos el pago de la visita.\n\n_Cuando te pasen el monto del arreglo, escribí *presupuesto*._`
     );
 
     for (const img of imageDocs) {
@@ -114,8 +115,9 @@ async function notifyTechnicianAssigned(args: {
     };
     schedule: string | null;
     jobId: string | null;
+    qrToken: string | null;
 }): Promise<void> {
-    const { professional, request, schedule, jobId } = args;
+    const { professional, request, schedule, jobId, qrToken } = args;
     const franja = request.scheduled_slot || schedule || 'a coordinar';
     const addr = request.address || 'Ver portal';
     const desc = request.description?.slice(0, 120) || 'Ver portal';
@@ -124,8 +126,17 @@ async function notifyTechnicianAssigned(args: {
 
     await WhatsAppService.sendTextMessage(
         professional.phone,
-        `💼 *Te asignaron una visita*\n\nEl cliente ya pagó.\n\n━━━━━━━━━━━━━━━\n📍 ${addr}\n📋 ${desc}\n📅 ${franja}\n📞 ${clientPhone}\n━━━━━━━━━━━━━━━${portal}\n\nPara avisar que estás yendo o llegando, usá los comandos acá abajo — se lo avisamos al cliente automáticamente. Si necesitás algo urgente, también podés llamarlo directo al número de arriba.\n\n*Comandos:* _estoy yendo_ · _llego en X minutos_ · _no encuentro la dirección_`
+        `💼 *Te asignaron una visita*\n\nEl cliente ya pagó.\n\n━━━━━━━━━━━━━━━\n📍 ${addr}\n📋 ${desc}\n📅 ${franja}\n📞 ${clientPhone}\n━━━━━━━━━━━━━━━${portal}\n\nPara avisar que estás yendo o llegando, usá los comandos acá abajo — se lo avisamos al cliente automáticamente. Si necesitás algo urgente, también podés llamarlo directo al número de arriba.\n\n*Comandos:* _estoy yendo_ · _llego en X minutos_ · _no encuentro la dirección_\n\n📲 Cuando llegues, mostrale este QR a tu cliente. Con esa confirmación queda registrada la visita y avanzamos con la transferencia de tu parte.`
     );
+
+    if (jobId && qrToken) {
+        try {
+            const qrUrl = await QRService.generateCheckinAndUpload(jobId, qrToken);
+            await WhatsAppService.sendImageMessage(professional.phone, qrUrl);
+        } catch (e) {
+            console.error('[assign] check-in QR failed', e);
+        }
+    }
 }
 
 export async function assignTechnicianToServiceRequest(
@@ -188,6 +199,7 @@ export async function assignTechnicianToServiceRequest(
 
     const visitJob = offer.quotations.find((q) => q.quotation_type === 'visit')?.job;
     const jobId = visitJob?.id ?? null;
+    const qrToken = visitJob?.qr_token ?? null;
 
     await notifyClientTechnicianAssigned({
         userPhone: request.user_phone,
@@ -202,6 +214,7 @@ export async function assignTechnicianToServiceRequest(
         request,
         schedule: offer.schedule,
         jobId,
+        qrToken,
     });
 
     const updated = await loadOffer(offer.id);

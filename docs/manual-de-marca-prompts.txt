@@ -1,0 +1,89 @@
+SERVY — PROMPTS DE MARCA PARA IA
+Pegá primero el bloque SISTEMA. Después sumá el prompt de la pieza.
+Fuente: docs/manual-de-marca.md · servy.lat · sep 2026
+
+============================================================
+SISTEMA (copiar siempre)
+============================================================
+
+Brand: Servy, WhatsApp-first home services in Argentina.
+Visual identity:
+- Primary dark forest green #0D4638
+- Headline green #0B3A31
+- Accent lime #A7E23C
+- Soft mint backgrounds #F2F9EF and #C6F6DB
+- White cards, lots of whitespace
+- Typography vibe: Poppins Bold, geometric sans, not serif (except the S. logo mark)
+- Logo mark: capital serif S followed by a period (S.) in #0D4638 on white, or lime S. on #0D4638
+- Wordmark: lowercase "servy." with a period
+- Buttons: pill-shaped, lime fill, dark green text
+- Mood: calm, trustworthy, local Argentina, not corporate SaaS, not luxury, not cartoon
+- Product is WhatsApp chat, NOT a native mobile app store listing
+Do not: neon, 3D chrome, fake 5-star widgets, stock "happy family on couch", same-day guarantee badges, WhatsApp glyph as the brand logo, blue tech gradients.
+If showing a phone: black iPhone, straight-on, WhatsApp conversation in Spanish (Argentina), contact name Servy.
+Spanish in-image text must have correct accents (técnico, baño, rompió, línea). Prefer little or no text in the image.
+
+============================================================
+NEGATIVE (Midjourney / similares)
+============================================================
+
+no App Store, no QR spam, no fake reviews, no 5 gold stars, no cartoon mascot, no neon lime on white text, no Comic Sans, no Times New Roman body, no English UI, no US suburb, no same-day badge, no Bitcoin, no robot
+
+============================================================
+1) POST CUADRADO 1080x1080
+============================================================
+
+Square 1080x1080 social post. Flat graphic, not a photo.
+Background #F2F9EF. Centered dark green #0D4638 lowercase wordmark "servy."
+Below, one short Spanish line in Poppins-like bold: "Plomería por WhatsApp."
+Small lime #A7E23C pill button with dark green text "Hablar con Servy".
+No photos of people. No icons of houses. Generous padding.
+
+============================================================
+2) HISTORIA / REEL 1080x1920
+============================================================
+
+Vertical 9:16 story. Top two-thirds: dark forest green #0D4638 field.
+Large lime #A7E23C serif "S." mark, centered.
+Bottom third: mint #F2F9EF with Spanish headline "Pedí un técnico." in #0B3A31 bold.
+No extra logos. No stock photography.
+
+============================================================
+3) PRODUCTO: IPHONE + CHAT
+============================================================
+
+Product shot, 4:5 or 9:16. One black iPhone, front-facing, transparent or #F2F9EF background.
+WhatsApp chat: header teal #075E54, contact Servy, green avatar with letter S.
+Bubbles in Spanish: client says a household problem; Servy answers with urgente $55.000 or programado $39.000.
+Correct accents. No duplicate words. No Facebook UI. No App Store frame.
+
+============================================================
+4) PORTADA / BANNER (Facebook 1640x624)
+============================================================
+
+Landscape banner 1640x624 (Facebook cover crop). Background #0D4638.
+Left: large lime S. mark. Right: white "servy." and smaller "Pedí un técnico por WhatsApp."
+Keep all type in the horizontal center band. Empty bottom-left (profile photo overlap).
+Flat vector, no photos, no 3D.
+
+============================================================
+5) FOTO “REAL” (sin logo; lo pegás después)
+============================================================
+
+Photorealistic, Argentina home interior, natural daylight, not a luxury penthouse.
+A plumber or electrician at work, no faces toward camera (or faces slightly turned away).
+Color grade slightly pulled toward forest green, not teal-cyan TikTok.
+Do not add logos in the photo; we overlay servy. later in Figma.
+
+============================================================
+REGLAS RÁPIDAS
+============================================================
+
+- Wordmark: servy.  (minúsculas + punto)
+- Isotipo: S. serif
+- CTA: Hablar con Servy
+- Lima NUNCA como texto sobre blanco. Lima = botón o acento sobre #0D4638. Texto del botón: #0D4638
+- Tipografía: Poppins 700 títulos / 400 cuerpo. Fallback Inter.
+- Precios: $55.000 (punto de miles). No prometas mismo día.
+- Producto = WhatsApp, no una app nativa.
+- Generá sin texto (o poco). Tipografía real en Canva/Figma.

@@ -192,7 +192,9 @@ model Job {
   updated_at           DateTime  @updatedAt
   /// Cuando el cliente liberó el pago vía QR / link público.
   payment_released_at  DateTime?
-  /// Token del QR; Prisma lo genera en el client (@default cuid). NOT NULL en prod.
+  /// Cuando el cliente confirmó la llegada del técnico (QR de check-in).
+  arrival_confirmed_at DateTime?
+  /// Token público del QR de llegada (`/qr/checkin/:token`). No se usa en el QR de cierre.
   qr_token             String    @unique @default(cuid())
 
   quotation Quotation @relation(fields: [quotation_id], references: [id])
