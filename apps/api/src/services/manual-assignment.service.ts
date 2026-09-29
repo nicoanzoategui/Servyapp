@@ -6,6 +6,17 @@ import { categoryMatches } from './service-categories';
 import { DOCUMENT_KIND_LABELS, type ProfessionalDocumentKindId } from './professional-documents.service';
 import { formatPhoneForDisplay } from '../utils/twilio-phone';
 import { QRService } from './qr.service';
+import { formatArs, visitFeeForPriority, type ServicePriority } from './visit-pricing';
+
+function resolveVisitFeePaid(args: {
+    visit_fee: number | null;
+    priority: string | null;
+    visitQuotationTotal: number | null | undefined;
+}): number {
+    if (args.visit_fee != null && args.visit_fee > 0) return args.visit_fee;
+    if (args.visitQuotationTotal != null && args.visitQuotationTotal > 0) return args.visitQuotationTotal;
+    return visitFeeForPriority((args.priority as ServicePriority | null) ?? 'scheduled');
+}
 
 const DOC_SHARE_TTL_SEC = 60 * 60 * 24 * 7;
 const SHARE_KIND_ORDER: ProfessionalDocumentKindId[] = [
@@ -59,8 +70,10 @@ async function notifyClientTechnicianAssigned(args: {
     scheduled_slot: string | null;
     scheduled_date: Date | null;
     offerSchedule: string | null;
+    visitFeePaid: number;
 }): Promise<void> {
-    const { userPhone, professional, category } = args;
+    const { userPhone, professional, category, visitFeePaid } = args;
+    const visitFeeStr = formatArs(visitFeePaid);
     const fullName = ProfessionalMatchingService.formatProName(professional);
     const cat = category?.trim() || 'Servicio';
     const when = formatClientChosenSchedule({
@@ -97,7 +110,7 @@ async function notifyClientTechnicianAssigned(args: {
 
     await WhatsAppService.sendTextMessage(
         userPhone,
-        `✅ *¡Ya tenemos tu técnico asignado!*\n\n━━━━━━━━━━━━━━━\n👤 *${fullName}*\n🔧 ${cat}\n📅 ${when}\n━━━━━━━━━━━━━━━\n${docsBlock}\nUn rato antes de la visita te confirmamos que el técnico está en camino.\n\n📲 Cuando el técnico llegue, va a mostrarte un código QR. Escaneálo para confirmar que llegó.\n\nSi por algún motivo no se presenta, te conseguimos otro técnico o te reembolsamos el pago de la visita.`
+        `✅ *¡Ya tenemos tu técnico asignado!*\n\n━━━━━━━━━━━━━━━\n👤 *${fullName}*\n🔧 ${cat}\n📅 ${when}\n━━━━━━━━━━━━━━━\n${docsBlock}\nUn rato antes de la visita te confirmamos que el técnico está en camino.\n\n📲 Cuando el técnico llegue, va a mostrarte un código QR. Escaneálo para confirmar que llegó.\n\n💰 *Sobre el arreglo:* ya pagaste $${visitFeeStr} por la visita. Si el técnico te cotiza el arreglo, tiene que descontarte ese monto del precio final. Si no lo hace, avisanos escribiendo *ayuda*.\n\nSi por algún motivo no se presenta, te conseguimos otro técnico o te reembolsamos el pago de la visita.`
     );
 
     for (const img of imageDocs) {
@@ -116,8 +129,10 @@ async function notifyTechnicianAssigned(args: {
     schedule: string | null;
     jobId: string | null;
     qrToken: string | null;
+    visitFeePaid: number;
 }): Promise<void> {
-    const { professional, request, schedule, jobId, qrToken } = args;
+    const { professional, request, schedule, jobId, qrToken, visitFeePaid } = args;
+    const visitFeeStr = formatArs(visitFeePaid);
     const franja = request.scheduled_slot || schedule || 'a coordinar';
     const addr = request.address || 'Ver portal';
     const desc = request.description?.slice(0, 120) || 'Ver portal';
@@ -126,7 +141,7 @@ async function notifyTechnicianAssigned(args: {
 
     await WhatsAppService.sendTextMessage(
         professional.phone,
-        `💼 *Te asignaron una visita*\n\nEl cliente ya pagó.\n\n━━━━━━━━━━━━━━━\n📍 ${addr}\n📋 ${desc}\n📅 ${franja}\n📞 ${clientPhone}\n━━━━━━━━━━━━━━━${portal}\n\nPara avisar que estás yendo o llegando, usá los comandos acá abajo — se lo avisamos al cliente automáticamente. Si necesitás algo urgente, también podés llamarlo directo al número de arriba.\n\n*Comandos:* _estoy yendo_ · _llego en X minutos_ · _no encuentro la dirección_\n\n📲 Cuando llegues, mostrale este QR a tu cliente. Con esa confirmación queda registrada la visita y avanzamos con la transferencia de tu parte.`
+        `💼 *Te asignaron una visita*\n\nEl cliente ya pagó.\n\n━━━━━━━━━━━━━━━\n📍 ${addr}\n📋 ${desc}\n📅 ${franja}\n📞 ${clientPhone}\n━━━━━━━━━━━━━━━${portal}\n\n💰 *Sobre el cobro del arreglo:* el cliente ya pagó la visita ($${visitFeeStr}) directo a Servy. Si hacés el arreglo, cobrale solo la diferencia - descontá lo que ya pagó de visita del precio final que le cobres.\n\nPara avisar que estás yendo o llegando, usá los comandos acá abajo — se lo avisamos al cliente automáticamente. Si necesitás algo urgente, también podés llamarlo directo al número de arriba.\n\n*Comandos:* _estoy yendo_ · _llego en X minutos_ · _no encuentro la dirección_\n\n📲 Cuando llegues, mostrale este QR a tu cliente. Con esa confirmación queda registrada la visita y avanzamos con la transferencia de tu parte.`
     );
 
     if (jobId && qrToken) {
@@ -197,9 +212,15 @@ export async function assignTechnicianToServiceRequest(
         data: { status: 'technician_assigned' },
     });
 
-    const visitJob = offer.quotations.find((q) => q.quotation_type === 'visit')?.job;
+    const visitQuotation = offer.quotations.find((q) => q.quotation_type === 'visit');
+    const visitJob = visitQuotation?.job;
     const jobId = visitJob?.id ?? null;
     const qrToken = visitJob?.qr_token ?? null;
+    const visitFeePaid = resolveVisitFeePaid({
+        visit_fee: request.visit_fee,
+        priority: request.priority,
+        visitQuotationTotal: visitQuotation?.total_price,
+    });
 
     await notifyClientTechnicianAssigned({
         userPhone: request.user_phone,
@@ -208,6 +229,7 @@ export async function assignTechnicianToServiceRequest(
         scheduled_slot: request.scheduled_slot,
         scheduled_date: request.scheduled_date,
         offerSchedule: offer.schedule,
+        visitFeePaid,
     });
     await notifyTechnicianAssigned({
         professional,
@@ -215,6 +237,7 @@ export async function assignTechnicianToServiceRequest(
         schedule: offer.schedule,
         jobId,
         qrToken,
+        visitFeePaid,
     });
 
     const updated = await loadOffer(offer.id);
