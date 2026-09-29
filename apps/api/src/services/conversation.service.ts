@@ -340,6 +340,13 @@ export class ConversationService {
 
         // Presupuesto de arreglo: ANTES del relay y del chequeo "pedido en curso".
         if (messageType === 'text' && user && isRepairQuoteCommand(content)) {
+            if (!env.REPAIR_QUOTE_ENABLED) {
+                await WhatsAppService.sendTextMessage(
+                    phone,
+                    'Por ahora, coordiná el arreglo directamente con el técnico. Estamos afinando esa parte del servicio para vos.'
+                );
+                return;
+            }
             await this.handleRepairQuoteCommand(phone, session);
             return;
         }

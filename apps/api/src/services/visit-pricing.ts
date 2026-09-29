@@ -35,8 +35,7 @@ export function speedSelectionPrompt(category?: string | null): string {
     return (
         `¿Cómo lo necesitás?\n\n` +
         `1. *Urgente* — hoy, coordinamos el horario más rápido posible, $${urgentFee}\n` +
-        `2. *Programado* — hasta 72 hs, $${scheduledFee}\n\n` +
-        `_Si después hacés el arreglo, la visita se descuenta del total._`
+        `2. *Programado* — hasta 72 hs, $${scheduledFee}`
     );
 }
 

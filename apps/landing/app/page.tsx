@@ -22,10 +22,10 @@ export default function Home() {
                         <p className="mt-6 text-lg md:text-xl text-[#0D4638]/80 max-w-lg animate-fade-in delay-150">
                             Canilla que pierde, se fue la luz, te quedaste afuera?{' '}
                             <span className="font-semibold text-[#0D4638]">Mandá mensaje a Servy.</span>{' '}
-                            Elegí urgente o programado, pagás la visita y si hacés el arreglo, se descuenta del total.
+                            Elegí urgente o programado y pagás la visita. Un técnico verificado va a tu casa y el pago queda protegido.
                         </p>
                         <p className="mt-4 text-lg md:text-xl text-[#0D4638]/80 max-w-lg animate-fade-in delay-200">
-                            <span className="font-semibold text-[#0D4638]">Visita urgente $55.000 · Programada $39.000 · Se descuenta del arreglo.</span>
+                            <span className="font-semibold text-[#0D4638]">Visita urgente $55.000 · Programada $39.000. El pago queda protegido hasta confirmar la visita.</span>
                         </p>
                         <div className="mt-10 animate-slide-up delay-300">
                             <a
@@ -74,7 +74,7 @@ export default function Home() {
                         </div>
                         <h3 className="text-xl font-bold mb-3 text-[#0B3A31]">Confirmamos y pagás la visita</h3>
                         <p className="text-[#0D4638]/80">
-                            Pagás la visita con Mercado Pago — el dinero queda retenido hasta confirmar el servicio. En breve te confirmamos qué técnico verificado te va a atender. Si después hacés el arreglo, la visita se descuenta del total.
+                            Pagás la visita con Mercado Pago — el dinero queda retenido hasta confirmar el servicio. En breve te confirmamos qué técnico verificado te va a atender.
                         </p>
                     </div>
 
@@ -83,9 +83,9 @@ export default function Home() {
                         <div className="w-16 h-16 rounded-2xl bg-[#C6F6DB]/30 text-[#0D4638] flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
                             <span className="text-2xl font-black">3</span>
                         </div>
-                        <h3 className="text-xl font-bold mb-3 text-[#0B3A31]">Arreglo in situ y QR</h3>
+                        <h3 className="text-xl font-bold mb-3 text-[#0B3A31]">Visita con técnico verificado</h3>
                         <p className="text-[#0D4638]/80">
-                            El técnico diagnostica y te manda el presupuesto del arreglo. Se descuenta lo que ya pagaste de visita. Si aceptás, pagás la diferencia y al terminar escaneás el QR para liberar el pago.
+                            El técnico llega, diagnostica y coordinás el arreglo con él. El pago de la visita queda protegido hasta que confirmes su llegada con el QR.
                         </p>
                     </div>
                 </div>
@@ -252,7 +252,7 @@ export default function Home() {
                             ¿Cuánto tarda en llegar el técnico?
                         </h3>
                         <p className="text-[#0D4638]/80 leading-relaxed">
-                            Si elegís urgente, coordinamos el horario más rápido posible — no es una garantía de mismo día. Si elegís programado, podés elegir cualquier día dentro de los próximos 5 días. Recordá que si hacés el arreglo, lo que pagaste de visita se descuenta del presupuesto.
+                            Si elegís urgente, coordinamos el horario más rápido posible — no es una garantía de mismo día. Si elegís programado, podés elegir cualquier día dentro de los próximos 5 días.
                         </p>
                     </div>
                 </div>

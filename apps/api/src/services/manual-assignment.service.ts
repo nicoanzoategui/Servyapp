@@ -97,7 +97,7 @@ async function notifyClientTechnicianAssigned(args: {
 
     await WhatsAppService.sendTextMessage(
         userPhone,
-        `✅ *¡Ya tenemos tu técnico asignado!*\n\n━━━━━━━━━━━━━━━\n👤 *${fullName}*\n🔧 ${cat}\n📅 ${when}\n━━━━━━━━━━━━━━━\n${docsBlock}\nUn rato antes de la visita te confirmamos que el técnico está en camino.\n\n📲 Cuando el técnico llegue, va a mostrarte un código QR. Escaneálo para confirmar que llegó.\n\nSi por algún motivo no se presenta, te conseguimos otro técnico o te reembolsamos el pago de la visita.\n\n_Cuando te pasen el monto del arreglo, escribí *presupuesto*._`
+        `✅ *¡Ya tenemos tu técnico asignado!*\n\n━━━━━━━━━━━━━━━\n👤 *${fullName}*\n🔧 ${cat}\n📅 ${when}\n━━━━━━━━━━━━━━━\n${docsBlock}\nUn rato antes de la visita te confirmamos que el técnico está en camino.\n\n📲 Cuando el técnico llegue, va a mostrarte un código QR. Escaneálo para confirmar que llegó.\n\nSi por algún motivo no se presenta, te conseguimos otro técnico o te reembolsamos el pago de la visita.`
     );
 
     for (const img of imageDocs) {

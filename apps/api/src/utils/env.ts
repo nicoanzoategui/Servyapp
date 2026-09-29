@@ -144,6 +144,15 @@ const envSchema = z.object({
         .string()
         .optional()
         .transform((v) => v !== 'false' && v !== '0'),
+    /**
+     * false (default) = cotización de arreglo por WhatsApp pausada (comando presupuesto).
+     * REPAIR_QUOTE_ENABLED=true reactiva el flujo (monto, confirmación del técnico, desglose).
+     * No borrar el código: AWAITING_REPAIR_* y repair-pricing.ts.
+     */
+    REPAIR_QUOTE_ENABLED: z
+        .string()
+        .optional()
+        .transform((v) => v === 'true' || v === '1'),
 })
 
 const _env = envSchema.safeParse(process.env);

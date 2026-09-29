@@ -302,7 +302,7 @@ export const handleMPWebhook = async (req: Request, res: Response) => {
 
                 await WhatsAppService.sendTextMessage(
                     userPhone,
-                    `✅ *¡Visita pagada!*\n\nTu técnico está confirmado 🎉\n\n━━━━━━━━━━━━━━━\n*DATOS DEL TÉCNICO*\n━━━━━━━━━━━━━━━\n👤 ${proFullName}\n📞 ${proPhoneFormatted}${pro.dni ? `\n🆔 DNI: ${pro.dni}` : ''}${proBio}${proSkills}${proCategories}\n━━━━━━━━━━━━━━━\n📅 ${fecha} · ${franja}\n📍 ${addr}\n━━━━━━━━━━━━━━━\n\n_El arreglo se cotiza in situ. Cuando te pasen el monto, escribí *presupuesto*._`
+                    `✅ *¡Visita pagada!*\n\nTu técnico está confirmado 🎉\n\n━━━━━━━━━━━━━━━\n*DATOS DEL TÉCNICO*\n━━━━━━━━━━━━━━━\n👤 ${proFullName}\n📞 ${proPhoneFormatted}${pro.dni ? `\n🆔 DNI: ${pro.dni}` : ''}${proBio}${proSkills}${proCategories}\n━━━━━━━━━━━━━━━\n📅 ${fecha} · ${franja}\n📍 ${addr}\n━━━━━━━━━━━━━━━`
                 );
 
                 const totalStr = job.quotation.total_price.toLocaleString('es-AR');
