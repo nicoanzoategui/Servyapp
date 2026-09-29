@@ -41,99 +41,13 @@ export default function Home() {
 
                     {/* iPhone Mockup */}
                     <div className="shrink-0 hidden md:flex justify-center items-center">
-                        <div className="relative w-[272px]">
-                            {/* Cuerpo iPhone */}
-                            <div
-                                className="bg-[#1a1a1a] rounded-[44px] p-[14px] shadow-2xl"
-                                style={{ boxShadow: '0 0 0 2px #3a3a3a, 0 30px 80px rgba(0,0,0,0.35)' }}
-                            >
-                                {/* Botones laterales izquierda */}
-                                <div className="absolute left-[-3px] top-[80px] w-[3px] h-[28px] bg-[#2a2a2a] rounded-l-sm"></div>
-                                <div className="absolute left-[-3px] top-[118px] w-[3px] h-[44px] bg-[#2a2a2a] rounded-l-sm"></div>
-                                <div className="absolute left-[-3px] top-[172px] w-[3px] h-[44px] bg-[#2a2a2a] rounded-l-sm"></div>
-                                {/* Botón derecha */}
-                                <div className="absolute right-[-3px] top-[130px] w-[3px] h-[64px] bg-[#2a2a2a] rounded-r-sm"></div>
-
-                                {/* Pantalla */}
-                                <div className="bg-white rounded-[32px] overflow-hidden">
-                                    {/* Status bar */}
-                                    <div className="bg-[#075E54] px-5 pt-2 pb-0 flex justify-between items-start">
-                                        <span className="text-white text-[11px] font-bold pt-1">9:41</span>
-                                        <div className="w-[80px] h-[20px] bg-[#1a1a1a] rounded-b-[12px]"></div>
-                                        <div className="flex gap-1 items-center pt-1">
-                                            <div className="flex gap-[1px] items-end">
-                                                <div className="w-[3px] h-[5px] bg-white rounded-sm"></div>
-                                                <div className="w-[3px] h-[8px] bg-white rounded-sm"></div>
-                                                <div className="w-[3px] h-[11px] bg-white rounded-sm"></div>
-                                                <div className="w-[3px] h-[14px] bg-white rounded-sm"></div>
-                                            </div>
-                                            <div className="w-[14px] h-[8px] border-[1.5px] border-white rounded-sm relative ml-1">
-                                                <div className="absolute right-[-4px] top-1/2 -translate-y-1/2 w-[2px] h-[5px] bg-white rounded-r-sm"></div>
-                                                <div className="w-[9px] h-[4px] bg-white rounded-sm m-[1px]"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* WhatsApp header */}
-                                    <div className="bg-[#075E54] px-3 pb-3 flex items-center gap-2">
-                                        <span className="text-white text-lg">←</span>
-                                        <div className="w-8 h-8 rounded-full bg-[#25D366] flex items-center justify-center font-black text-xs text-white shrink-0">
-                                            S
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-white font-bold text-[13px] m-0">Servy</p>
-                                            <p className="text-green-200 text-[11px] m-0">en línea</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Chat body */}
-                                    <div className="bg-[#ECE5DD] px-3 py-3 flex flex-col gap-3 min-h-[360px]">
-                                        {/* Mensaje usuario */}
-                                        <div className="self-end bg-[#DCF8C6] rounded-2xl rounded-tr-sm px-3 py-2 max-w-[85%] shadow-sm">
-                                            <p className="text-slate-800 text-[13px] m-0">Se me rompió la canilla del baño</p>
-                                            <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:24 ✓✓</p>
-                                        </div>
-
-                                        {/* Respuesta Servy */}
-                                        <div className="self-start bg-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
-                                            <p className="text-slate-800 text-[13px] m-0 mb-1">¿Urgente $55.000 o Programado $39.000?</p>
-                                            <p className="text-slate-600 text-[12px] m-0">1 Urgente — coordinamos lo antes posible</p>
-                                            <p className="text-slate-600 text-[12px] m-0">2 Programado — hasta 5 días</p>
-                                            <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:24</p>
-                                        </div>
-
-                                        {/* Respuesta usuario */}
-                                        <div className="self-end bg-[#DCF8C6] rounded-2xl rounded-tr-sm px-3 py-2 max-w-[85%] shadow-sm">
-                                            <p className="text-slate-800 text-[13px] m-0">1</p>
-                                            <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:25 ✓✓</p>
-                                        </div>
-
-                                        {/* Respuesta Servy */}
-                                        <div className="self-start bg-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
-                                            <p className="text-slate-800 text-[13px] m-0">
-                                                Listo. Confirmamos con tu técnico y te mandamos el link de pago de la visita.
-                                            </p>
-                                            <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:25</p>
-                                        </div>
-
-                                        {/* Respuesta Servy */}
-                                        <div className="self-start bg-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-[90%] shadow-sm">
-                                            <p className="text-slate-800 text-[13px] m-0">
-                                                Si hacés el arreglo, la visita se descuenta del total 👍
-                                            </p>
-                                            <p className="text-slate-400 text-[10px] text-right mt-1 m-0">10:25</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Input bar */}
-                                    <div className="bg-[#F0F0F0] px-3 py-2 flex items-center gap-2 border-t border-slate-200">
-                                        <div className="flex-1 bg-white rounded-full px-4 py-2 text-slate-400 text-xs">
-                                            Escribí un mensaje...
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <img
+                            src="/servy-app-iphone.png"
+                            alt="Chat de WhatsApp con Servy: el cliente cuenta el problema, elige visita urgente o programada y recibe el link de pago"
+                            width={512}
+                            height={1009}
+                            className="w-[272px] h-auto drop-shadow-2xl"
+                        />
                     </div>
                 </div>
             </section>
