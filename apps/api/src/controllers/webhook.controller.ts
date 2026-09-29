@@ -13,6 +13,7 @@ import { tryExperimentWaitlist } from '../agents/experiments-agent';
 import { verifyMercadoPagoWebhookSignature } from '../lib/mp-webhook-signature';
 import { verifyTwilioWebhookSignature } from '../lib/twilio-webhook-signature';
 import { formatClientChosenSchedule } from '../services/manual-assignment.service';
+import { isUserCancelCommand } from '../services/visit-cancel.service';
 import { twilioWebhookAls } from '../lib/twilio-request-context';
 import {
     maskPhoneDigitsTail,
@@ -417,7 +418,11 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
         });
 
         // Comando global cancelar para ambos flujos
-        if (content.toLowerCase().trim() === 'cancelar') {
+        if (isUserCancelCommand(content)) {
+            const refundCancel = await ConversationService.promptPostPayVisitCancelIfEligible(phone);
+            if (refundCancel) {
+                return;
+            }
             // Visita pagada sin técnico: no pausar relay ni borrar la sesión del pedido en curso.
             const awaitingAssignment = await ConversationService.replyIfAwaitingTechnicianAssignment(phone);
             if (awaitingAssignment) {

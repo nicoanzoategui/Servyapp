@@ -260,7 +260,12 @@ export const getJobDetail = async (req: Request, res: Response) => {
         const job = await prisma.job.findUnique({
             where: { id: req.params.id },
             include: {
-                quotation: { include: { job_offer: { include: { service_request: true, professional: true } } } }
+                quotation: {
+                    include: {
+                        payment: true,
+                        job_offer: { include: { service_request: true, professional: true } },
+                    },
+                },
             }
         });
         if (job?.quotation.job_offer.service_request) {

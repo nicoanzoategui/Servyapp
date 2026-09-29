@@ -107,7 +107,7 @@ export const confirmCheckin = async (req: Request, res: Response) => {
             if (userPhone) {
                 await WhatsAppService.sendTextMessage(
                     userPhone,
-                    `✅ Confirmaste la llegada de *${professionalName}*. ¡Que tengan un buen trabajo!`
+                    `✅ Confirmaste la llegada de *${professionalName}*. ¡Que tengan un buen trabajo!\n\nGracias por confiar en Servy 🙏`
                 );
             }
         }

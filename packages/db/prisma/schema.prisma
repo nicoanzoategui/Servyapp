@@ -106,7 +106,7 @@ model ServiceRequest {
   address     String?
   latitude    Float?
   longitude   Float?
-  status      String   @default("pending")
+  status      String   @default("pending") // pending, visit_paid, technician_assigned, cancelled, cancelled_by_user
   created_at  DateTime @default(now())
   scheduled_slot   String?
   scheduled_date   DateTime?
@@ -170,7 +170,7 @@ model Payment {
   amount           Float
   /// visit | repair
   payment_type     String    @default("visit")
-  status           String    @default("pending")
+  status           String    @default("pending") // pending, approved, refunded, refund_pending
   paid_at          DateTime?
 
   quotation        Quotation @relation(fields: [quotation_id], references: [id])

@@ -23,6 +23,12 @@ import {
     parseRepairAmount,
     type EligibleRepairJob,
 } from './repair-quote-whatsapp.service';
+import {
+    executePostPayVisitCancel,
+    findPostPayCancellableVisit,
+    isUserCancelCommand,
+    isVisitCancelConfirmChoice,
+} from './visit-cancel.service';
 
 const SESSION_TTL = 60 * 60 * 24;
 const REDIS_OP_TIMEOUT_MS = 500;
@@ -77,6 +83,34 @@ function fuzzyPhrase(text: string, phrase: string): boolean {
 
 function normalizeTextForCommands(s: string): string {
     return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+const HUMAN_SUPPORT_PHRASES = [
+    'hablar con alguien',
+    'hablar con servy',
+    'hablar con una persona',
+    'quiero un humano',
+    'quiero hablar con un humano',
+    'atencion al cliente',
+    'necesito ayuda urgente',
+    'soporte humano',
+    'operador',
+];
+
+function isHumanSupportIntent(text: string): boolean {
+    const n = normalizeTextForCommands(text);
+    return HUMAN_SUPPORT_PHRASES.some((p) => n.includes(p));
+}
+
+function isHelpIntent(text: string): boolean {
+    const trimmed = text.trim();
+    if (trimmed === '?') return true;
+    return normalizeTextForCommands(trimmed).includes('ayuda');
+}
+
+function isStatusIntent(text: string): boolean {
+    const n = normalizeTextForCommands(text);
+    return n.includes('estado') || n.includes('mi turno');
 }
 
 function matchProfessionalCommandKey(normalized: string): 'en_camino' | 'imprevisto' | 'direccion' | null {
@@ -367,6 +401,10 @@ export class ConversationService {
         }
 
         switch (session.state) {
+            case 'AWAITING_VISIT_CANCEL_CONFIRM':
+                await this.handleVisitCancelConfirm(phone, content, session);
+                break;
+
             case 'IDLE': {
                 await redis.del(userRelayPauseRedisKey(phone));
                 await this.saveSession(phone, 'AWAITING_PROBLEM_DESCRIPTION', {});
@@ -586,15 +624,21 @@ export class ConversationService {
     }
 
     private static async handleGlobalIntents(phone: string, text: string, user: { name: string | null }): Promise<boolean> {
-        const t = text.toLowerCase();
-        if (t === 'ayuda' || t === '?') {
+        if (isHumanSupportIntent(text)) {
             await WhatsAppService.sendTextMessage(
                 phone,
-                '*Servy* — técnicos verificados para tu hogar 🏠\n\nServicios disponibles:\n🔧 Plomería\n⚡ Electricidad\n🔑 Cerrajería\n🔥 Gas\n❄️ Aires acondicionados\n\n━━━━━━━━━━━━━━━\n*Comandos*\n━━━━━━━━━━━━━━━\n_estado_ → ver tu pedido actual\n_presupuesto_ → cargar el monto del arreglo\n_cancelar_ → cancelar pedido en curso\n_cambiar dirección_ → actualizar tu domicilio'
+                '📞 Si preferís hablar con una persona de Servy, escribinos a:\n+54 11 5607-4152\n\nTe va a atender alguien del equipo en breve.'
             );
             return true;
         }
-        if (t === 'estado' || t === 'mi turno') {
+        if (isHelpIntent(text)) {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                '*Servy* — técnicos verificados para tu hogar 🏠\n\nServicios disponibles:\n🔧 Plomería\n⚡ Electricidad\n🔑 Cerrajería\n🔥 Gas\n❄️ Aires acondicionados\n\n━━━━━━━━━━━━━━━\n*Comandos*\n━━━━━━━━━━━━━━━\n_estado_ → ver tu pedido actual\n_presupuesto_ → cargar el monto del arreglo\n_cancelar_ → cancelar pedido en curso\n_cambiar dirección_ → actualizar tu domicilio\n\nSi preferís hablar con una persona:\n+54 11 5607-4152'
+            );
+            return true;
+        }
+        if (isStatusIntent(text)) {
             const session = await this.getSession(phone);
             await WhatsAppService.sendTextMessage(
                 phone,
@@ -602,7 +646,10 @@ export class ConversationService {
             );
             return true;
         }
-        if (t === 'cancelar') {
+        if (isUserCancelCommand(text)) {
+            if (await this.promptPostPayVisitCancelIfEligible(phone)) {
+                return true;
+            }
             if (await this.replyIfAwaitingTechnicianAssignment(phone)) {
                 return true;
             }
@@ -614,6 +661,82 @@ export class ConversationService {
             return true;
         }
         return false;
+    }
+
+    /** Visita pagada, sin check-in: pide confirmación de cancelación con reembolso. */
+    static async promptPostPayVisitCancelIfEligible(phone: string): Promise<boolean> {
+        const visit = await findPostPayCancellableVisit(phone);
+        if (!visit) return false;
+
+        const current = await this.getSession(phone);
+        const resumeState =
+            current.state === 'AWAITING_VISIT_CANCEL_CONFIRM'
+                ? String(current.data.resumeState || 'IDLE')
+                : current.state;
+        const resumeData =
+            current.state === 'AWAITING_VISIT_CANCEL_CONFIRM'
+                ? ((current.data.resumeData as Record<string, unknown>) || {})
+                : current.data;
+
+        await this.saveSession(phone, 'AWAITING_VISIT_CANCEL_CONFIRM', {
+            jobId: visit.jobId,
+            resumeState,
+            resumeData,
+        });
+        await WhatsAppService.sendTextMessage(
+            phone,
+            `¿Confirmás que querés cancelar tu visita programada para ${visit.whenLabel}? Se te devuelve el pago completo de la visita.\n\n1. Sí, cancelar\n2. No, mantener mi turno`
+        );
+        return true;
+    }
+
+    private static async handleVisitCancelConfirm(
+        phone: string,
+        content: string,
+        session: { state: string; data: Record<string, unknown> }
+    ) {
+        const resumeState = String(session.data.resumeState || 'IDLE');
+        const resumeData = (session.data.resumeData as Record<string, unknown>) || {};
+
+        if (!isVisitCancelConfirmChoice(content)) {
+            await this.saveSession(phone, resumeState, resumeData);
+            return;
+        }
+
+        const visit = await findPostPayCancellableVisit(phone);
+        if (!visit || visit.jobId !== session.data.jobId) {
+            await this.saveSession(phone, resumeState, resumeData);
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'Listo, cancelamos el pedido. 👍\n\nEscribí cuando quieras empezar uno nuevo.'
+            );
+            return;
+        }
+
+        const result = await executePostPayVisitCancel(visit);
+        if (result.ok === false && result.reason === 'arrival_confirmed') {
+            await this.saveSession(phone, resumeState, resumeData);
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'Listo, cancelamos el pedido. 👍\n\nEscribí cuando quieras empezar uno nuevo.'
+            );
+            return;
+        }
+        if (!result.ok) {
+            await this.saveSession(phone, resumeState, resumeData);
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'No pudimos cancelar esa visita. Escribí *ayuda* si necesitás que lo revisemos.'
+            );
+            return;
+        }
+
+        await this.clearSession(phone);
+        await this.saveSession(phone, 'IDLE', {});
+        await WhatsAppService.sendTextMessage(
+            phone,
+            'Listo, cancelamos tu visita. En breve procesamos la devolución de tu pago. Gracias por avisarnos.'
+        );
     }
 
     private static async handleAcceptQuotation(phone: string, data: Record<string, unknown>, user: { name: string | null } | null) {

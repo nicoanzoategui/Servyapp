@@ -13,6 +13,7 @@ type JobDetail = {
     status: string;
     scheduled_at?: string | null;
     quotation?: {
+        payment?: { status?: string; amount?: number } | null;
         job_offer?: {
             professional?: { name?: string; last_name?: string; phone?: string } | null;
             service_request?: {
@@ -94,7 +95,14 @@ export default function AdminJobDetailPage() {
                     </div>
                     <div>
                         <dt className="text-slate-500">Estado</dt>
-                        <dd className="text-slate-900">{data.status}</dd>
+                        <dd className="text-slate-900">
+                            {data.status}
+                            {data.quotation?.payment?.status === 'refund_pending' ? (
+                                <span className="ml-2 text-xs font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
+                                    Reembolso pendiente
+                                </span>
+                            ) : null}
+                        </dd>
                     </div>
                     <div>
                         <dt className="text-slate-500">Categoría</dt>

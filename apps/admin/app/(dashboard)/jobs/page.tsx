@@ -55,6 +55,10 @@ const JOB_STATUS_LABELS: Record<string, string> = {
     cancelled: 'Cancelado',
 };
 
+function paymentNeedsManualRefund(job: AdminJob): boolean {
+    return quotationsOf(job).some((q) => q.payment?.status === 'refund_pending');
+}
+
 function money(n: number | null | undefined): string {
     return moneyArs(n);
 }
@@ -175,7 +179,14 @@ export default function AdminJobsPage() {
                                         <div>Arreglo: {repair ? money(repairPaid ?? repair.total_price) : '—'}</div>
                                         <div className="font-semibold">Pagado: {money(totalPaid(j))}</div>
                                     </td>
-                                    <td className="p-3">{jobStatusLabel(j.status)}</td>
+                                    <td className="p-3">
+                                        <div>{jobStatusLabel(j.status)}</div>
+                                        {paymentNeedsManualRefund(j) ? (
+                                            <span className="mt-1 inline-block text-xs font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
+                                                Reembolso pendiente
+                                            </span>
+                                        ) : null}
+                                    </td>
                                     <td className="p-3 text-slate-600 whitespace-nowrap">{formatJobDate(j)}</td>
                                 </tr>
                             );
