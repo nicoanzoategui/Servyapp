@@ -884,7 +884,7 @@ export class ConversationService {
         if (!found.job.arrivalConfirmedAt) {
             await WhatsAppService.sendTextMessage(
                 phone,
-                'Todavía no confirmamos que el técnico llegó. Pedile que te muestre el QR para escanearlo, y después podés mandarme el presupuesto.'
+                'Todavía no confirmamos que el técnico llegó. Mostrale el QR que te mandamos para que lo escanee, y después podés mandarme el presupuesto.'
             );
             return;
         }
@@ -927,7 +927,7 @@ export class ConversationService {
             await this.clearSession(phone);
             await WhatsAppService.sendTextMessage(
                 phone,
-                'Todavía no confirmamos que el técnico llegó. Pedile que te muestre el QR para escanearlo, y después podés mandarme el presupuesto.'
+                'Todavía no confirmamos que el técnico llegó. Mostrale el QR que te mandamos para que lo escanee, y después podés mandarme el presupuesto.'
             );
             return;
         }

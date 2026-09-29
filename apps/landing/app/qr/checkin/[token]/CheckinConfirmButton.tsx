@@ -4,11 +4,10 @@ import { useState } from 'react';
 
 type Props = {
     token: string;
-    professionalName: string;
     apiBase: string;
 };
 
-export function CheckinConfirmButton({ token, professionalName, apiBase }: Props) {
+export function CheckinConfirmButton({ token, apiBase }: Props) {
     const [loading, setLoading] = useState(false);
     const [done, setDone] = useState(false);
     const [error, setError] = useState('');
@@ -37,8 +36,7 @@ export function CheckinConfirmButton({ token, professionalName, apiBase }: Props
     if (done) {
         return (
             <p className="text-[#0D4638] text-center leading-relaxed">
-                Confirmaste la llegada de <span className="font-semibold">{professionalName}</span>. ¡Que tengan un buen
-                trabajo!
+                Confirmaste tu llegada. Avanzá con la visita.
             </p>
         );
     }

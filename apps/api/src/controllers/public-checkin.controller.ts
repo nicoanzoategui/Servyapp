@@ -30,7 +30,7 @@ async function loadCheckinJob(token: string) {
                     job_offer: {
                         include: {
                             professional: { select: { name: true, last_name: true, phone: true } },
-                            service_request: { select: { user_phone: true, category: true } },
+                            service_request: { select: { user_phone: true, category: true, address: true } },
                         },
                     },
                 },
@@ -44,6 +44,7 @@ function publicPayload(job: NonNullable<Awaited<ReturnType<typeof loadCheckinJob
     const professionalName = ProfessionalMatchingService.formatProName(offer.professional);
     return {
         professionalName,
+        address: offer.service_request.address || null,
         category: offer.service_request.category || 'Servicio',
         alreadyConfirmed: Boolean(job.arrival_confirmed_at),
         confirmedAt: job.arrival_confirmed_at ? job.arrival_confirmed_at.toISOString() : null,
@@ -101,13 +102,13 @@ export const confirmCheckin = async (req: Request, res: Response) => {
             if (proPhone) {
                 await WhatsAppService.sendTextMessage(
                     proPhone,
-                    '✅ El cliente confirmó tu llegada. Ya podés avanzar con la visita.'
+                    '✅ Confirmaste tu llegada. Avanzá con la visita.'
                 );
             }
             if (userPhone) {
                 await WhatsAppService.sendTextMessage(
                     userPhone,
-                    `✅ Confirmaste la llegada de *${professionalName}*. ¡Que tengan un buen trabajo!\n\nGracias por confiar en Servy 🙏`
+                    `✅ Tu técnico *${professionalName}* llegó y confirmó la visita.\n\nGracias por confiar en Servy 🙏`
                 );
             }
         }

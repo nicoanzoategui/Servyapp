@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 
 type CheckinData = {
     professionalName: string;
+    address: string | null;
     category: string;
     alreadyConfirmed: boolean;
     confirmedAtLabel: string | null;
@@ -64,16 +65,20 @@ export default async function CheckinPage({ params }: { params: { token: string 
                         <p className="text-sm font-semibold text-[#0D4638]/60 uppercase tracking-wide mb-2">
                             {data.category}
                         </p>
-                        <h1 className="text-2xl font-bold text-[#0B3A31] mb-4">¿Llegó el técnico?</h1>
-                        <p className="text-[#0D4638]/80 leading-relaxed mb-8">
-                            ¿Confirmás que <span className="font-semibold text-[#0D4638]">{data.professionalName}</span>{' '}
-                            llegó a tu domicilio?
-                        </p>
-                        <CheckinConfirmButton
-                            token={token}
-                            professionalName={data.professionalName}
-                            apiBase={apiBase}
-                        />
+                        <h1 className="text-2xl font-bold text-[#0B3A31] mb-4">
+                            Confirmá que llegaste a la dirección del cliente
+                        </h1>
+                        {data.address ? (
+                            <p className="text-[#0D4638]/80 leading-relaxed mb-8">
+                                Dirección:{' '}
+                                <span className="font-semibold text-[#0D4638]">{data.address}</span>
+                            </p>
+                        ) : (
+                            <p className="text-[#0D4638]/80 leading-relaxed mb-8">
+                                Confirmá que estás en el domicilio del cliente.
+                            </p>
+                        )}
+                        <CheckinConfirmButton token={token} apiBase={apiBase} />
                     </>
                 )}
             </div>
