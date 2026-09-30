@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<style>
+@font-face { font-family:'Poppins'; src:url(__FONT_REGULAR__) format('truetype'); font-weight:400; font-style:normal; }
+@font-face { font-family:'Poppins'; src:url(__FONT_BOLD__) format('truetype'); font-weight:700; font-style:normal; }
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:1920px; height:1080px; overflow:hidden; background:#0D4638; }
+body { font-family:'Poppins', system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
+
+/* ---------- fondos ---------- */
+.bg { position:absolute; inset:0; overflow:hidden; }
+#bgdark { background:#0D4638; }
+#bglight { background:#F2F9EF; opacity:0; }
+.blob { position:absolute; border-radius:999px; }
+#bd1 { width:900px; height:900px; background:#0B3A31; left:-260px; top:-300px; }
+#bd2 { width:520px; height:520px; background:#A7E23C; opacity:.10; right:-140px; bottom:-180px; }
+#bl1 { width:860px; height:860px; background:#C6F6DB; opacity:.42; left:-280px; bottom:-320px; }
+#bl2 { width:420px; height:420px; background:#A7E23C; opacity:.12; right:180px; top:-150px; }
+
+/* ---------- texto ---------- */
+.col { position:absolute; left:130px; width:860px; top:0; height:1080px;
+       display:flex; flex-direction:column; justify-content:center; opacity:0; }
+.ghost { position:absolute; left:-14px; top:150px; font-size:300px; font-weight:700;
+         letter-spacing:-0.06em; line-height:1; }
+.gd { color:rgba(255,255,255,.07); }
+.gl { color:rgba(13,70,56,.07); }
+.steppill { align-self:flex-start; background:#A7E23C; color:#0D4638; font-weight:700;
+            font-size:28px; letter-spacing:.14em; border-radius:999px; padding:14px 34px; opacity:0; }
+.h2 { font-size:96px; font-weight:700; letter-spacing:-0.035em; line-height:1.04;
+      margin-top:36px; clip-path:inset(0 100% 0 0); }
+.hd { color:#FFFFFF; }
+.hl { color:#0B3A31; }
+.p  { font-size:40px; font-weight:400; line-height:1.42; margin-top:34px; max-width:590px; opacity:0; }
+.pd { color:rgba(198,246,219,.88); }
+.pl { color:rgba(13,70,56,.78); }
+
+/* ---------- S1 / S6 centrados ---------- */
+.full { position:absolute; inset:0; display:flex; flex-direction:column;
+        align-items:center; justify-content:center; opacity:0; }
+.wm { font-weight:700; letter-spacing:-0.06em; color:#FFFFFF; }
+#s1wm { font-size:170px; clip-path:inset(0 100% 0 0); }
+#s1line { width:0; height:8px; background:#A7E23C; margin-top:26px; border-radius:4px; }
+#s1sub { font-size:52px; font-weight:400; color:rgba(198,246,219,.9); margin-top:42px; opacity:0; }
+
+#s6wm { font-size:130px; opacity:0; }
+#s6h { font-size:88px; font-weight:700; letter-spacing:-0.03em; color:#FFFFFF;
+       margin-top:44px; text-align:center; line-height:1.08; opacity:0; }
+#s6p { font-size:38px; color:rgba(198,246,219,.8); margin-top:36px; opacity:0; white-space:nowrap; }
+#s6cta { display:flex; align-items:center; justify-content:center; background:#A7E23C;
+         color:#0D4638; font-weight:700; font-size:46px; border-radius:999px;
+         width:520px; height:122px; margin-top:56px; opacity:0; }
+#s6u { font-size:36px; font-weight:700; color:rgba(198,246,219,.65); margin-top:34px; opacity:0; }
+
+/* ---------- S2 kinetic (composición centrada) ---------- */
+#s2 { left:0; width:1920px; align-items:center; }
+#s2h { text-align:center; font-size:112px; }
+#s2rot { position:relative; height:120px; margin-top:34px; width:1100px; }
+.rotw { position:absolute; left:0; top:0; width:100%; text-align:center; font-size:66px;
+        font-weight:700; color:#A7E23C; letter-spacing:-0.02em; opacity:0; }
+#s2p { text-align:center; max-width:1100px; }
+
+/* ---------- iPhone ---------- */
+#device { position:absolute; left:1330px; top:96px; width:440px; height:892px;
+          opacity:0; transform-origin:50% 60%; }
+#body3d { width:100%; height:100%; background:#101214; border-radius:62px; padding:13px;
+          box-shadow:0 60px 120px rgba(11,58,49,.30); }
+#screen { position:relative; width:100%; height:100%; border-radius:50px; overflow:hidden;
+          background:#ECE5DD; display:flex; flex-direction:column; }
+#island { position:absolute; left:50%; top:14px; width:118px; height:34px; margin-left:-59px;
+          background:#101214; border-radius:999px; z-index:5; }
+#status { height:58px; flex:none; background:#075E54; display:flex; align-items:center;
+          justify-content:space-between; padding:0 34px; color:#fff; font-size:22px; font-weight:700; }
+#sbars { display:flex; align-items:flex-end; gap:4px; }
+#sbars i { display:block; width:5px; background:#fff; border-radius:1px; }
+#battery { width:34px; height:17px; border:2px solid #fff; border-radius:5px; padding:2px; }
+#battery span { display:block; height:100%; width:78%; background:#fff; border-radius:2px; }
+#wahead { height:92px; flex:none; background:#075E54; display:flex; align-items:center;
+          gap:18px; padding:0 26px; }
+#waav { width:58px; height:58px; border-radius:999px; background:#25D366; color:#fff;
+        font-weight:700; font-size:30px; display:flex; align-items:center; justify-content:center; }
+#wan { color:#fff; font-weight:700; font-size:30px; line-height:1.1; }
+#was { color:rgba(255,255,255,.72); font-size:20px; }
+#viewport { flex:1; overflow:hidden; position:relative; }
+#thread { position:absolute; left:0; right:0; top:0; padding:24px 22px 10px;
+          display:flex; flex-direction:column; gap:16px; }
+.bub { max-width:84%; border-radius:22px; padding:18px 22px; font-size:25px; line-height:1.36;
+       color:#0B3A31; opacity:0; }
+.out { align-self:flex-end; background:#DCF8C6; border-bottom-right-radius:6px; }
+.in  { align-self:flex-start; background:#FFFFFF; border-bottom-left-radius:6px; }
+.opt { font-weight:700; margin-top:10px; }
+.sys { align-self:center; background:rgba(13,70,56,.10); color:#0D4638; font-weight:700;
+       font-size:22px; border-radius:999px; padding:12px 24px; opacity:0; }
+#typing { align-self:flex-start; background:#fff; border-radius:22px; padding:22px 26px;
+          display:flex; gap:10px; opacity:0; }
+#typing i { display:block; width:12px; height:12px; border-radius:999px; background:#9BB3AA; }
+#qrbub { align-self:flex-start; background:#fff; border-radius:22px; padding:16px; opacity:0; }
+#qrbub img { width:250px; height:250px; display:block; border-radius:10px; }
+#qrbub div { font-size:22px; color:#0B3A31; margin-top:12px; text-align:center; }
+#scan { position:absolute; left:0; width:100%; height:10px; background:#A7E23C;
+        opacity:0; top:0; z-index:4; }
+#inbar { height:84px; flex:none; background:#ECE5DD; display:flex; align-items:center;
+         gap:14px; padding:0 20px; }
+#infield { flex:1; height:56px; background:#fff; border-radius:999px; display:flex;
+           align-items:center; padding:0 24px; color:#9BB3AA; font-size:24px; }
+#inmic { width:56px; height:56px; border-radius:999px; background:#075E54; flex:none;
+         display:flex; align-items:center; justify-content:center; }
+
+/* ---------- tarjetas flotantes ---------- */
+.fcard { position:absolute; background:#FFFFFF; border:2px solid #F1F5F9; border-radius:34px;
+         padding:32px 36px; width:470px; opacity:0;
+         box-shadow:0 30px 60px rgba(11,58,49,.12); }
+.fct { font-size:36px; font-weight:700; color:#0B3A31; line-height:1.15; }
+.fcs { font-size:26px; color:rgba(13,70,56,.72); margin-top:10px; line-height:1.3; }
+.frow { display:flex; align-items:center; gap:24px; }
+.fic { width:76px; height:76px; border-radius:24px; background:#F2F9EF; flex:none;
+       display:flex; align-items:center; justify-content:center; }
+.chips { display:flex; gap:12px; margin-top:16px; }
+.chip { background:#C6F6DB; color:#0D4638; font-weight:700; font-size:22px;
+        border-radius:999px; padding:10px 20px; }
+/* separadas del iPhone: borde derecho 1260, el equipo arranca en 1330 */
+.fcard { width:500px; }
+#f1 { left:760px; top:690px; }
+#f2 { left:760px; top:250px; }
+#f3 { left:760px; top:572px; }
+#f4 { left:760px; top:640px; }
+
+/* ---------- barrido ---------- */
+#wipe { position:absolute; top:-200px; width:320px; height:1480px; background:#A7E23C;
+        opacity:0; transform:rotate(12deg); left:0; }
+</style>
+</head>
+<body>
+
+<div class="bg" id="bgdark">
+  <div class="blob" id="bd1"></div><div class="blob" id="bd2"></div>
+</div>
+<div class="bg" id="bglight">
+  <div class="blob" id="bl1"></div><div class="blob" id="bl2"></div>
+</div>
+
+<!-- S1 -->
+<div class="full" id="s1">
+  <div class="wm" id="s1wm">servy.</div>
+  <div id="s1line"></div>
+  <div id="s1sub">Pedí un técnico. Por WhatsApp.</div>
+</div>
+
+<!-- S2 -->
+<div class="col" id="s2">
+  <div class="h2 hd" id="s2h">Algo se rompió<br/>en casa.</div>
+  <div id="s2rot">
+    <div class="rotw" id="r1">La canilla que pierde.</div>
+    <div class="rotw" id="r2">Se fue la luz.</div>
+    <div class="rotw" id="r3">Te quedaste afuera.</div>
+  </div>
+  <div class="p pd" id="s2p">Y ahí arranca el problema de verdad:<br/>conseguir a alguien de confianza.</div>
+</div>
+
+<!-- S3 -->
+<div class="col" id="s3">
+  <div class="ghost gl">01</div>
+  <div class="steppill" id="s3pill">PASO 1</div>
+  <div class="h2 hl" id="s3h">Contanos<br/>el problema</div>
+  <div class="p pl" id="s3p">Escribís por WhatsApp: texto, foto o audio.<br/>Elegís urgente o programado.</div>
+</div>
+
+<!-- S4 -->
+<div class="col" id="s4">
+  <div class="ghost gl">02</div>
+  <div class="steppill" id="s4pill">PASO 2</div>
+  <div class="h2 hl" id="s4h">Pagás<br/>la visita</div>
+  <div class="p pl" id="s4p">El dinero queda retenido hasta que confirmás la visita.</div>
+</div>
+
+<!-- S5 -->
+<div class="col" id="s5">
+  <div class="ghost gd">03</div>
+  <div class="steppill" id="s5pill">PASO 3</div>
+  <div class="h2 hd" id="s5h">Llega<br/>y lo confirmás</div>
+  <div class="p pd" id="s5p">Te mandamos tu QR. El técnico lo escanea cuando llega a tu casa.</div>
+</div>
+
+<!-- S6 -->
+<div class="full" id="s6">
+  <div class="wm" id="s6wm">servy.</div>
+  <div id="s6h">Técnicos verificados.<br/>Plata protegida.</div>
+  <div id="s6p">Visita urgente $55.000 · Programada $39.000</div>
+  <div id="s6cta">Hablar con Servy</div>
+  <div id="s6u">servy.lat</div>
+</div>
+
+<!-- iPhone -->
+<div id="device">
+  <div id="body3d">
+    <div id="screen">
+      <div id="island"></div>
+      <div id="status">
+        <div>9:41</div>
+        <div id="sbars">
+          <i style="height:8px"></i><i style="height:12px"></i><i style="height:16px"></i><i style="height:20px"></i>
+          <div id="battery" style="margin-left:10px"><span></span></div>
+        </div>
+      </div>
+      <div id="wahead">
+        <div id="waav">S</div>
+        <div><div id="wan">Servy</div><div id="was">en línea</div></div>
+      </div>
+      <div id="viewport">
+        <div id="thread">
+          <div id="typing"><i></i><i></i><i></i></div>
+          <div class="bub out" id="b1"></div>
+          <div class="bub in" id="b2">¿Cómo lo necesitás?
+            <div class="opt">1. Urgente — $55.000</div>
+            <div class="opt">2. Programado — $39.000</div>
+          </div>
+          <div class="bub out" id="b3">1</div>
+          <div class="bub in" id="b4">Listo. Te paso el link para pagar la visita.</div>
+          <div class="sys" id="b5">Pago recibido · queda retenido</div>
+          <div class="bub in" id="b6">Tu técnico: Juan P. — verificado.</div>
+          <div class="bub in" id="b7">Este es tu código de visita.</div>
+          <div id="qrbub"><img src="__QR__" alt="QR" /><div>Mostráselo al técnico</div></div>
+          <div class="sys" id="b8">Visita confirmada</div>
+        </div>
+        <div id="scan"></div>
+      </div>
+      <div id="inbar">
+        <div id="infield">Mensaje</div>
+        <div id="inmic">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"
+               stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/>
+               <path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- tarjetas flotantes -->
+<div class="fcard" id="f1">
+  <div class="frow">
+    <div class="fic">
+      <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#0D4638" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    </div>
+    <div><div class="fct">Sin bajar ninguna app</div>
+         <div class="fcs">Todo en el WhatsApp que ya usás.</div></div>
+  </div>
+</div>
+
+<div class="fcard" id="f2">
+  <div class="frow">
+    <div class="fic">
+      <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#0D4638" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/>
+           <path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <div><div class="fct">Tu plata queda retenida</div>
+         <div class="fcs">No se libera hasta que confirmás la visita.</div></div>
+  </div>
+</div>
+
+<div class="fcard" id="f3">
+  <div class="fct">Técnico verificado</div>
+  <div class="chips"><div class="chip">DNI</div><div class="chip">Antecedentes</div><div class="chip">Oficio</div></div>
+</div>
+
+<div class="fcard" id="f4">
+  <div class="frow">
+    <div class="fic" style="background:#A7E23C">
+      <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#0D4638" stroke-width="3"
+           stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 6"/></svg>
+    </div>
+    <div><div class="fct">Visita confirmada</div>
+         <div class="fcs">Escaneó tu QR al llegar.</div></div>
+  </div>
+</div>
+
+<div id="wipe"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const easeOut = (p) => 1 - Math.pow(1 - clamp(p, 0, 1), 3);
+const easeInOut = (p) => { p = clamp(p, 0, 1); return p < .5 ? 4*p*p*p : 1 - Math.pow(-2*p + 2, 3)/2; };
+const easeBack = (p) => { p = clamp(p, 0, 1); const c = 1.70158, c3 = c + 1;
+                          return 1 + c3*Math.pow(p-1,3) + c*Math.pow(p-1,2); };
+
+function sceneAlpha(t, tin, tout, f) {
+  f = f || 0.5;
+  return Math.min(clamp((t - tin) / f, 0, 1), clamp((tout - t) / f, 0, 1));
+}
+function fade(el, lt, start, dur, dy, ease) {
+  dur = dur || 0.6; dy = (dy === undefined) ? 34 : dy;
+  const p = (ease || easeOut)((lt - start) / dur);
+  el.style.opacity = clamp(p, 0, 1);
+  el.style.transform = 'translateY(' + ((1 - p) * dy).toFixed(2) + 'px)';
+}
+function reveal(el, lt, start, dur) {
+  const p = easeInOut((lt - start) / (dur || 0.75));
+  el.style.clipPath = 'inset(0 ' + ((1 - p) * 100).toFixed(2) + '% 0 0)';
+}
+// tarjeta flotante: entra con rebote y se va antes del siguiente paso
+function fadeInOut(el, t, tin, tout) {
+  const p = clamp(easeBack((t - tin) / 0.7), 0, 1);
+  const o = easeInOut((t - tout) / 0.45);
+  el.style.opacity = clamp(p - o, 0, 1);
+  el.style.transform = 'translateY(' + ((1 - p) * 46 - o * 26).toFixed(2) + 'px)';
+}
+
+const MSG = 'Se me rompió la canilla del baño y no para de perder';
+
+const S = [
+  { id:'s1', in:0.0,  out:4.2  },
+  { id:'s2', in:4.2,  out:9.0  },
+  { id:'s3', in:9.0,  out:16.0 },
+  { id:'s4', in:16.0, out:22.6 },
+  { id:'s5', in:22.6, out:29.2 },
+  { id:'s6', in:29.2, out:34.0 }
+];
+const DURATION = 33.6;
+
+// burbujas: [id, momento de aparición]
+const BUBBLES = [
+  ['typing', 10.0], ['b1', 10.9], ['b2', 12.6], ['b3', 14.2],
+  ['b4', 17.0], ['b5', 18.9], ['b6', 20.4],
+  ['b7', 23.6], ['qrbub', 24.4], ['b8', 27.2]
+];
+
+function threadOffset(t) {
+  const vp = $('viewport').clientHeight;
+  const targetFor = (i) => {
+    const el = $(BUBBLES[i][0]);
+    return Math.max(0, el.offsetTop + el.offsetHeight + 22 - vp);
+  };
+  let idx = -1;
+  for (let i = 0; i < BUBBLES.length; i++) if (t >= BUBBLES[i][1]) idx = i;
+  if (idx < 0) return 0;
+  const to = targetFor(idx);
+  const from = idx > 0 ? targetFor(idx - 1) : 0;
+  return from + (to - from) * easeInOut((t - BUBBLES[idx][1]) / 0.7);
+}
+
+function wipeAt(t, tw) {
+  const p = (t - tw) / 0.85;
+  if (p < 0 || p > 1) return null;
+  return { x: -420 + easeInOut(p) * 2340, a: Math.sin(Math.PI * p) * 0.9 };
+}
+
+function render(t) {
+  for (const s of S) $(s.id).style.opacity = sceneAlpha(t, s.in, s.out);
+
+  // fondos: claro en S3 y S4
+  $('bglight').style.opacity = clamp(Math.min((t - 8.7) / 0.7, (22.5 - t) / 0.7), 0, 1);
+
+  // parallax de blobs
+  $('bd1').style.transform = 'translate(' + (t * 7).toFixed(1) + 'px,' + (t * 4).toFixed(1) + 'px)';
+  $('bd2').style.transform = 'translate(' + (-t * 6).toFixed(1) + 'px,' + (-t * 3).toFixed(1) + 'px)';
+  $('bl1').style.transform = 'translate(' + (t * 5).toFixed(1) + 'px,' + (-t * 4).toFixed(1) + 'px)';
+  $('bl2').style.transform = 'translate(' + (-t * 4).toFixed(1) + 'px,' + (t * 5).toFixed(1) + 'px)';
+
+  // S1
+  let lt = t - S[0].in;
+  reveal($('s1wm'), lt, 0.2, 0.9);
+  $('s1line').style.width = (easeInOut((lt - 0.9) / 0.7) * 420) + 'px';
+  fade($('s1sub'), lt, 1.3, 0.7, 26);
+
+  // S2
+  lt = t - S[1].in;
+  reveal($('s2h'), lt, 0.15, 0.8);
+  const rots = [['r1', 0.9], ['r2', 2.0], ['r3', 3.1]];
+  rots.forEach(([id, st], i) => {
+    const el = $(id);
+    const inP = easeOut((lt - st) / 0.45);
+    const outP = (i < 2) ? easeOut((lt - (st + 1.0)) / 0.35) : 0;
+    el.style.opacity = clamp(inP - outP, 0, 1);
+    el.style.transform = 'translateY(' + ((1 - inP) * 34 - outP * 30).toFixed(2) + 'px)';
+  });
+  fade($('s2p'), lt, 3.9, 0.7, 28);
+
+  // S3
+  lt = t - S[2].in;
+  fade($('s3pill'), lt, 0.1, 0.5, 24);
+  reveal($('s3h'), lt, 0.3, 0.8);
+  fade($('s3p'), lt, 0.9, 0.7, 28);
+  fadeInOut($('f1'), t, 13.1, 15.6);
+
+  // S4
+  lt = t - S[3].in;
+  fade($('s4pill'), lt, 0.1, 0.5, 24);
+  reveal($('s4h'), lt, 0.3, 0.8);
+  fade($('s4p'), lt, 0.9, 0.7, 28);
+  fadeInOut($('f2'), t, 17.4, 22.2);
+  fadeInOut($('f3'), t, 19.8, 22.2);
+
+  // S5
+  lt = t - S[4].in;
+  fade($('s5pill'), lt, 0.1, 0.5, 24);
+  reveal($('s5h'), lt, 0.3, 0.8);
+  fade($('s5p'), lt, 0.9, 0.7, 28);
+  const sp = clamp((t - 25.2) / 1.3, 0, 1);
+  $('scan').style.opacity = (sp > 0 && sp < 1) ? 0.85 : 0;
+  $('scan').style.top = (sp * 100) + '%';
+  fadeInOut($('f4'), t, 27.4, 29.05);
+
+  // S6
+  lt = t - S[5].in;
+  fade($('s6wm'), lt, 0.15, 0.6, 36);
+  fade($('s6h'), lt, 0.45, 0.6, 32);
+  fade($('s6p'), lt, 0.8, 0.6, 26);
+  fade($('s6cta'), lt, 1.1, 0.6, 26, easeBack);
+  fade($('s6u'), lt, 1.45, 0.6, 22);
+
+  // iPhone: entra junto con el Paso 1, se va en el cierre
+  const dIn = easeOut((t - 8.3) / 1.0);
+  const dOut = easeInOut((t - 29.0) / 0.8);
+  $('device').style.opacity = clamp(dIn - dOut, 0, 1);
+  const tilt = (1 - dIn) * -14;
+  const floatY = Math.sin(t * 0.9) * 9;
+  const rise = (1 - dIn) * 150 + dOut * 120;
+  $('device').style.transform =
+    'perspective(2200px) rotateY(' + tilt.toFixed(2) + 'deg) rotateX(' + ((1 - dIn) * 5).toFixed(2) + 'deg)' +
+    ' translateY(' + (rise + floatY).toFixed(2) + 'px) scale(' + (0.94 + dIn * 0.06).toFixed(3) + ')';
+
+  // chat
+  const typed = Math.floor(clamp((t - 10.9) / 1.4, 0, 1) * MSG.length);
+  $('b1').textContent = MSG.slice(0, typed);
+  for (const [id, tb] of BUBBLES) {
+    const el = $(id);
+    const p = easeBack((t - tb) / 0.45);
+    // el indicador de "escribiendo" desaparece cuando llega el mensaje
+    const off = (id === 'typing') ? easeOut((t - 10.9) / 0.3) : 0;
+    el.style.opacity = clamp(p - off, 0, 1);
+    el.style.transform = 'translateY(' + ((1 - clamp(p, 0, 1)) * 18).toFixed(2) + 'px)';
+  }
+  const dots = $('typing').children;
+  for (let i = 0; i < dots.length; i++) {
+    dots[i].style.opacity = (0.35 + 0.65 * Math.abs(Math.sin(t * 5 - i * 0.6))).toFixed(3);
+  }
+  $('thread').style.transform = 'translateY(' + (-threadOffset(t)).toFixed(2) + 'px)';
+
+  // barridos lima en los cambios de escena
+  const w = wipeAt(t, 8.75) || wipeAt(t, 22.35) || wipeAt(t, 29.0);
+  if (w) {
+    $('wipe').style.opacity = w.a;
+    $('wipe').style.transform = 'translateX(' + w.x.toFixed(1) + 'px) rotate(12deg)';
+  } else {
+    $('wipe').style.opacity = 0;
+  }
+}
+
+window.render = render;
+window.DURATION = DURATION;
+render(0);
+</script>
+</body>
+</html>
