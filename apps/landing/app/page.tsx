@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Wrench, Zap, Key, ShieldCheck, Clock, Star, HeartHandshake, Flame, Wind } from 'lucide-react';
+import { HowItWorksVideo } from './components/HowItWorksVideo';
 import { SiteHeader } from './components/SiteHeader';
 import { WhatsAppFloat } from './components/WhatsAppFloat';
 import { WA_LINK } from '@/lib/whatsapp';
@@ -55,7 +56,10 @@ export default function Home() {
             {/* Cómo Funciona */}
             <section id="como-funciona" className="w-full py-24 px-6 md:px-12 bg-white flex flex-col items-center relative">
                 <h2 className="text-3xl md:text-5xl font-bold text-[#0B3A31] text-center mb-16">Así funciona Servy</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full">
+                <HowItWorksVideo />
+                {/* En desktop el video cuenta los tres pasos; las tarjetas quedan
+                    para mobile, donde un video de 33s pesa de más y se lee peor. */}
+                <div className="grid grid-cols-1 md:hidden gap-8 max-w-6xl w-full">
                     {/* Step 1 */}
                     <div className="relative p-8 rounded-3xl bg-[#F2F9EF]/50 border border-slate-100 shadow-sm hover:shadow-xl transition-shadow group flex flex-col items-center text-center">
                         <div className="w-16 h-16 rounded-2xl bg-[#C6F6DB]/30 text-[#0D4638] flex justify-center items-center mb-6 group-hover:scale-110 transition-transform">
