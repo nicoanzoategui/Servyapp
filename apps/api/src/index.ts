@@ -10,7 +10,6 @@ import publicRoutes from './routes/public.routes';
 import leadsRoutes from './routes/leads.routes';
 import professionalRoutes from './routes/professional.routes';
 import adminRoutes from './routes/admin.routes';
-import operationalApiRoutes from './routes/operational-api.routes';
 import { financeRouter } from './routes/finance';
 import { handleMPWebhook } from './controllers/webhook.controller';
 import { env } from './utils/env';
@@ -106,7 +105,6 @@ app.post('/webhook/mercadopago', handleMPWebhook);
 app.use('/leads', leadsRoutes);
 app.use('/professional', professionalRoutes);
 app.use('/admin', adminRoutes);
-app.use('/api', operationalApiRoutes);
 app.use('/api/finance', financeRouter);
 
 // Apply global error handler middleware

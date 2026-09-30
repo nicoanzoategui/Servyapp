@@ -9,6 +9,13 @@ import {
     createProfessional,
     updateProfessional,
     updateProfessionalStatus,
+    deleteProfessional,
+    getUsers,
+    getUserDetail,
+    createUser,
+    updateUser,
+    updateUserStatus,
+    deleteUser,
     listAdminProfessionalDocuments,
     uploadAdminProfessionalDocument,
     deleteAdminProfessionalDocument,
@@ -43,9 +50,18 @@ router.post('/professionals', createProfessional);
 router.get('/professionals/:id', getProfessionalDetail);
 router.put('/professionals/:id', updateProfessional);
 router.put('/professionals/:id/status', updateProfessionalStatus);
+router.delete('/professionals/:id', deleteProfessional);
 router.get('/professionals/:id/documents', listAdminProfessionalDocuments);
 router.post('/professionals/:id/documents', uploadAdminProfessionalDocument);
 router.delete('/professionals/:id/documents/:docId', deleteAdminProfessionalDocument);
+
+// Users
+router.get('/users', getUsers);
+router.post('/users', createUser);
+router.get('/users/:id', getUserDetail);
+router.put('/users/:id', updateUser);
+router.put('/users/:id/status', updateUserStatus);
+router.delete('/users/:id', deleteUser);
 
 router.get('/service-requests/unassigned', getUnassignedServiceRequests);
 router.post('/service-requests/:id/assign-technician', assignTechnician);

@@ -18,10 +18,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
 }
 
-/**
- * Solo rutas de la app. Nunca `/_next/*` (CSS/JS/fuentes) → evita redirect a /login
- * que rompe Tailwind (el navegador recibe HTML en lugar del .css).
- */
 export const config = {
     matcher: [
         '/',
@@ -30,28 +26,12 @@ export const config = {
         '/dashboard/:path*',
         '/conversations/:path*',
         '/professionals/:path*',
+        '/users',
+        '/users/:path*',
         '/jobs/:path*',
         '/unassigned',
         '/unassigned/:path*',
         '/finance/:path*',
         '/settings/:path*',
-        '/pricing',
-        '/pricing/:path*',
-        '/operations-map',
-        '/operations-map/:path*',
-        '/quality',
-        '/quality/:path*',
-        '/provider-retention',
-        '/provider-retention/:path*',
-        '/fraud',
-        '/fraud/:path*',
-        '/forecast',
-        '/forecast/:path*',
-        '/recruitment',
-        '/recruitment/:path*',
-        '/experiments',
-        '/experiments/:path*',
-        '/agent-logs',
-        '/agent-logs/:path*',
     ],
 };

@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { API_URL } from '@/lib/api';
 import { SERVICE_CATEGORIES } from '@/lib/service-categories';
@@ -42,6 +42,7 @@ const fetchProfessional = async (id: string): Promise<Professional> => {
 export default function EditProfessionalPage() {
     const params = useParams();
     const id = String(params.id || '');
+    const router = useRouter();
     const qc = useQueryClient();
 
     const { data, isLoading, isError, error } = useQuery({
@@ -134,6 +135,22 @@ export default function EditProfessionalPage() {
             setFormError(null);
             qc.invalidateQueries({ queryKey: ['adminProfessional', id] });
             qc.invalidateQueries({ queryKey: ['adminProfessionals'] });
+        },
+        onError: (e: Error) => {
+            setFormOk(null);
+            setFormError(e.message);
+        },
+    });
+
+    const deleteMut = useMutation({
+        mutationFn: async () => {
+            const res = await fetch(`${API_URL}/admin/professionals/${id}`, { method: 'DELETE', headers: authHeaders() });
+            const payload = await res.json();
+            if (!res.ok) throw new Error(payload?.error?.message || 'No se pudo eliminar');
+        },
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['adminProfessionals'] });
+            router.push('/professionals');
         },
         onError: (e: Error) => {
             setFormOk(null);
@@ -272,6 +289,23 @@ export default function EditProfessionalPage() {
             </form>
 
             <ProfessionalDocumentsSection professionalId={id} />
+
+            <div className="border border-red-200 bg-red-50 rounded-xl p-5 space-y-3">
+                <p className="font-medium text-red-800">Eliminar profesional</p>
+                <p className="text-sm text-red-700">
+                    Se borra de la base si no tiene ofertas ni pagos. Si tiene historial, suspendelo.
+                </p>
+                <button
+                    type="button"
+                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-60"
+                    disabled={deleteMut.isPending}
+                    onClick={() => {
+                        if (confirm('¿Eliminar este profesional?')) deleteMut.mutate();
+                    }}
+                >
+                    {deleteMut.isPending ? 'Eliminando…' : 'Eliminar'}
+                </button>
+            </div>
         </div>
     );
 }

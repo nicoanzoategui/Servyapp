@@ -2,6 +2,7 @@ import { env } from '../utils/env';
 import { twilioWebhookAls } from '../lib/twilio-request-context';
 import { maskPhoneDigitsTail, normalizeTwilioWhatsAppFrom } from '../utils/twilio-phone';
 import twilio from 'twilio';
+import { logWhatsappMessage } from './chat-log.service';
 
 const twilioClient = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
 
@@ -69,6 +70,7 @@ export class WhatsAppService {
                     '[whatsapp] outbound: destino ≠ remitente del webhook (normal: mediación a técnico, o log de CRON/otro proceso sin contexto Twilio)'
                 );
             }
+            void logWhatsappMessage({ phone: digits, direction: 'outbound', type: 'text', body: text });
         } catch (err) {
             console.error('[whatsapp] outbound FAIL sendTextMessage', {
                 toMask: maskPhoneDigitsTail(digits),
@@ -96,6 +98,7 @@ export class WhatsAppService {
                 toMask: maskPhoneDigitsTail(digits),
                 twilioStatus: meta.status,
             });
+            void logWhatsappMessage({ phone: digits, direction: 'outbound', type: 'image', body: imageUrl });
         } catch (err) {
             console.error('[whatsapp] outbound FAIL sendImage', {
                 toMask: maskPhoneDigitsTail(digits),

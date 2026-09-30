@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserStatus {
+  active
+  inactive
+}
+
 model User {
   id                   String           @id @default(cuid())
   phone                String           @unique
@@ -15,9 +20,10 @@ model User {
   address              String?
   postal_code          String?
   onboarding_completed Boolean          @default(false)
+  status               UserStatus       @default(active)
   created_at           DateTime         @default(now())
   last_active_at       DateTime         @default(now())
-  
+
   service_requests     ServiceRequest[]
 
   @@map("users")
@@ -238,6 +244,19 @@ model WhatsappSession {
   expires_at DateTime
 
   @@map("whatsapp_sessions")
+}
+
+/// Hilo persistido para el admin. Se llena desde el webhook (in) y WhatsAppService (out).
+model WhatsappMessage {
+  id         String   @id @default(cuid())
+  phone      String
+  direction  String // inbound | outbound
+  type       String   @default("text")
+  body       String
+  created_at DateTime @default(now())
+
+  @@index([phone, created_at])
+  @@map("whatsapp_messages")
 }
 
 model ProfessionalSession {

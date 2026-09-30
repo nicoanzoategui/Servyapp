@@ -302,6 +302,13 @@ export class ConversationService {
 
     static async processMessage(phone: string, messageType: string, content: string) {
         const user = await prisma.user.findUnique({ where: { phone } });
+        if (user?.status === 'inactive') {
+            await WhatsAppService.sendTextMessage(
+                phone,
+                'Tu cuenta está inactiva. Si necesitás ayuda, escribinos a +54 11 5607-4152.'
+            );
+            return;
+        }
 
         let session = await this.getSession(phone);
         if (session.state === 'EXPIRED') {

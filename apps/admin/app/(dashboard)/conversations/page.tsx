@@ -26,9 +26,19 @@ const SESSION_STATE_LABELS: Record<string, string> = {
 };
 
 function sessionStateLabel(state: string | null | undefined): string {
-    const key = (state || 'unknown').toUpperCase();
+    if (!state) return 'Sin sesión';
+    const key = state.toUpperCase();
     return SESSION_STATE_LABELS[key] || key.replace(/_/g, ' ').toLowerCase();
 }
+
+type Row = {
+    phone: string;
+    name: string | null;
+    state: string | null;
+    expires_at: string | null;
+    last_message: string | null;
+    last_at: string | null;
+};
 
 const fetchConversations = async () => {
     const token = Cookies.get('token');
@@ -37,13 +47,14 @@ const fetchConversations = async () => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error('Error fetching data');
-    return data.data;
+    return data.data as Row[];
 };
 
 export default function ConversationsPage() {
     const { data, isLoading, isError } = useQuery({
         queryKey: ['adminConversations'],
         queryFn: fetchConversations,
+        refetchInterval: 15000,
     });
 
     if (isLoading) return <div className="text-slate-500">Cargando conversaciones...</div>;
@@ -59,23 +70,31 @@ export default function ConversationsPage() {
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-slate-50 border-b border-slate-200 text-slate-500">
-                            <th className="p-4 font-medium">Usuario / Teléfono</th>
-                            <th className="p-4 font-medium">Estado del Bot</th>
-                            <th className="p-4 font-medium">Expira en</th>
+                            <th className="p-4 font-medium">Usuario</th>
+                            <th className="p-4 font-medium">Último mensaje</th>
+                            <th className="p-4 font-medium">Estado del bot</th>
                             <th className="p-4 font-medium">Acción</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {(data || []).map((session: { phone: string; id?: string; state?: string; step?: string; expires_at: string }) => (
+                        {(data || []).map((session) => (
                             <tr key={session.phone} className="border-b border-slate-100 hover:bg-slate-50/50 transition">
-                                <td className="p-4 font-medium text-slate-900 tracking-tight">+{session.phone}</td>
                                 <td className="p-4">
-                                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium" title={session.state || session.step}>
-                                        {sessionStateLabel(session.state || session.step)}
-                                    </span>
+                                    <p className="font-medium text-slate-900">{session.name || 'Sin nombre'}</p>
+                                    <p className="text-sm text-slate-500">+{session.phone}</p>
                                 </td>
-                                <td className="p-4 text-slate-600">
-                                    {format(new Date(session.expires_at), "dd MMM 'a las' HH:mm", { locale: es })}
+                                <td className="p-4 text-slate-600 max-w-md">
+                                    <p className="line-clamp-2">{session.last_message || '—'}</p>
+                                    {session.last_at && (
+                                        <p className="text-xs text-slate-400 mt-1">
+                                            {format(new Date(session.last_at), "dd MMM HH:mm", { locale: es })}
+                                        </p>
+                                    )}
+                                </td>
+                                <td className="p-4">
+                                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
+                                        {sessionStateLabel(session.state)}
+                                    </span>
                                 </td>
                                 <td className="p-4">
                                     <Link href={`/conversations/${session.phone}`} className="text-blue-600 font-medium hover:text-blue-800 transition">
@@ -86,7 +105,7 @@ export default function ConversationsPage() {
                         ))}
                         {data?.length === 0 && (
                             <tr>
-                                <td colSpan={4} className="p-8 text-center text-slate-500">No hay interacciones activas</td>
+                                <td colSpan={4} className="p-8 text-center text-slate-500">No hay conversaciones todavía</td>
                             </tr>
                         )}
                     </tbody>

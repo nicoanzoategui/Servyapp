@@ -8,44 +8,25 @@ import {
     Home,
     MessageCircle,
     Users,
+    UserRound,
     UserPlus,
     Briefcase,
     DollarSign,
     Settings,
     LogOut,
-    Tag,
-    MapPin,
-    Star,
-    HeartHandshake,
-    Shield,
-    TrendingUp,
-    Megaphone,
-    FlaskConical,
-    ScrollText,
     Menu,
     X,
 } from 'lucide-react';
 
 const MAIN_LINKS = [
-    { href: '/dashboard', label: 'Panel Principal', icon: Home },
+    { href: '/dashboard', label: 'Dashboard', icon: Home },
     { href: '/conversations', label: 'Conversaciones', icon: MessageCircle },
-    { href: '/unassigned', label: 'Pedidos sin técnico', icon: UserPlus },
+    { href: '/unassigned', label: 'Órdenes', icon: UserPlus },
+    { href: '/users', label: 'Usuarios', icon: UserRound },
     { href: '/professionals', label: 'Profesionales', icon: Users },
     { href: '/jobs', label: 'Trabajos', icon: Briefcase },
     { href: '/finance', label: 'Finanzas', icon: DollarSign },
     { href: '/settings', label: 'Configuración', icon: Settings },
-];
-
-const AGENT_LINKS = [
-    { href: '/pricing', label: 'Pricing', icon: Tag },
-    { href: '/operations-map', label: 'Operaciones', icon: MapPin },
-    { href: '/quality', label: 'Calidad', icon: Star },
-    { href: '/provider-retention', label: 'Retención', icon: HeartHandshake },
-    { href: '/fraud', label: 'Fraude', icon: Shield },
-    { href: '/forecast', label: 'Forecast', icon: TrendingUp },
-    { href: '/recruitment', label: 'Reclutamiento', icon: Megaphone },
-    { href: '/experiments', label: 'Experimentos', icon: FlaskConical },
-    { href: '/agent-logs', label: 'Logs agentes', icon: ScrollText },
 ];
 
 function logout() {
@@ -65,15 +46,6 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
     return (
         <>
             {MAIN_LINKS.map((link) => {
-                const Icon = link.icon;
-                return (
-                    <Link key={link.href} href={link.href} className={linkClass(link.href)} onClick={onNavigate}>
-                        <Icon size={20} /> {link.label}
-                    </Link>
-                );
-            })}
-            <div className="pt-4 pb-1 text-xs uppercase tracking-wide text-slate-500 px-3">Agentes</div>
-            {AGENT_LINKS.map((link) => {
                 const Icon = link.icon;
                 return (
                     <Link key={link.href} href={link.href} className={linkClass(link.href)} onClick={onNavigate}>

@@ -114,13 +114,13 @@ export default function UnassignedRequestsPage() {
         [professionals]
     );
 
-    if (isLoading) return <p className="text-slate-500">Cargando pedidos sin técnico...</p>;
+    if (isLoading) return <p className="text-slate-500">Cargando órdenes...</p>;
     if (isError) return <p className="text-red-600">{(error as Error)?.message || 'Error al cargar.'}</p>;
 
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-slate-900">Pedidos sin técnico</h1>
+                <h1 className="text-2xl font-bold text-slate-900">Órdenes</h1>
                 <p className="text-sm text-slate-500 mt-1">
                     Visitas pagadas que esperan asignación manual. Se actualiza cada 10 segundos.
                 </p>
@@ -128,7 +128,7 @@ export default function UnassignedRequestsPage() {
 
             {(requests || []).length === 0 ? (
                 <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-500">
-                    No hay pedidos pendientes de asignación.
+                    No hay órdenes pendientes de asignación.
                 </div>
             ) : (
                 <div className="space-y-4">

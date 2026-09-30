@@ -9,9 +9,7 @@ export default function DashboardError({
     return (
         <div className="flex flex-col items-start gap-4 max-w-lg">
             <h1 className="text-2xl font-bold text-slate-900">No se pudo cargar esta pantalla</h1>
-            <p className="text-slate-500 text-sm">
-                Si es una sección de agentes, puede no haber datos todavía. El resto del panel sigue disponible.
-            </p>
+            <p className="text-slate-500 text-sm">Revisá que la API esté corriendo e intentá de nuevo.</p>
             <button
                 type="button"
                 onClick={() => reset()}

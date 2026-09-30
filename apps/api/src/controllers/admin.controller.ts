@@ -43,6 +43,59 @@ export const getDashboard = async (req: Request, res: Response) => {
 
         const totalUsers = await prisma.user.count();
 
+        const [unassignedOrders, awaitingArrival, refundPending] = await Promise.all([
+            prisma.serviceRequest.count({
+                where: {
+                    status: { in: ['visit_paid', 'awaiting_assignment'] },
+                    job_offers: {
+                        some: {
+                            professional_id: null,
+                            quotations: { some: { quotation_type: 'visit', payment: { status: 'approved' } } },
+                        },
+                    },
+                },
+            }),
+            prisma.job.findMany({
+                where: { status: { in: ['confirmed', 'in_progress'] }, arrival_confirmed_at: null },
+                orderBy: { updated_at: 'desc' },
+                take: 20,
+                include: {
+                    quotation: {
+                        include: {
+                            job_offer: {
+                                include: {
+                                    professional: { select: { name: true, last_name: true } },
+                                    service_request: {
+                                        select: {
+                                            address: true,
+                                            user: { select: { name: true, last_name: true, phone: true } },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            }),
+            prisma.payment.findMany({
+                where: { status: 'refund_pending' },
+                take: 20,
+                include: {
+                    quotation: {
+                        include: {
+                            job_offer: {
+                                include: {
+                                    service_request: {
+                                        select: { id: true, address: true, user_phone: true },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            }),
+        ]);
+
         res.json({
             success: true,
             data: {
@@ -54,7 +107,28 @@ export const getDashboard = async (req: Request, res: Response) => {
                     day: gmvDay._sum.amount || 0,
                     week: gmvWeek._sum.amount || 0,
                     month: gmvMonth._sum.amount || 0,
-                }
+                },
+                live: {
+                    unassigned_count: unassignedOrders,
+                    awaiting_arrival: awaitingArrival.map((job) => {
+                        const sr = job.quotation.job_offer.service_request;
+                        const pro = job.quotation.job_offer.professional;
+                        return {
+                            job_id: job.id,
+                            address: sr.address,
+                            client: sr.user,
+                            technician: pro ? `${pro.name} ${pro.last_name}`.trim() : null,
+                            status: job.status,
+                            scheduled_at: job.scheduled_at,
+                        };
+                    }),
+                    refund_pending: refundPending.map((p) => ({
+                        payment_id: p.id,
+                        amount: p.amount,
+                        address: p.quotation.job_offer.service_request.address,
+                        user_phone: p.quotation.job_offer.service_request.user_phone,
+                    })),
+                },
             }
         });
     } catch (error) {
@@ -67,13 +141,42 @@ export const getConversations = async (req: Request, res: Response) => {
         const sessions = await prisma.whatsappSession.findMany({
             orderBy: { expires_at: 'desc' },
         });
-        res.json({
-            success: true,
-            data: sessions.map((s) => ({
-                ...s,
-                state: s.step,
-            })),
+        const recent = await prisma.whatsappMessage.findMany({
+            orderBy: { created_at: 'desc' },
+            take: 400,
+            select: { phone: true, body: true, created_at: true, direction: true },
         });
+        const lastByPhone = new Map<string, (typeof recent)[number]>();
+        for (const m of recent) {
+            if (!lastByPhone.has(m.phone)) lastByPhone.set(m.phone, m);
+        }
+        const sessionByPhone = new Map(sessions.map((s) => [s.phone, s]));
+        const phones = new Set([...sessionByPhone.keys(), ...lastByPhone.keys()]);
+        const users = await prisma.user.findMany({
+            where: { phone: { in: [...phones] } },
+            select: { phone: true, name: true, last_name: true },
+        });
+        const userByPhone = new Map(users.map((u) => [u.phone, u]));
+
+        const data = [...phones].map((phone) => {
+            const session = sessionByPhone.get(phone);
+            const last = lastByPhone.get(phone);
+            const user = userByPhone.get(phone);
+            return {
+                phone,
+                name: user ? `${user.name || ''} ${user.last_name || ''}`.trim() : null,
+                state: session?.step ?? null,
+                expires_at: session?.expires_at ?? null,
+                last_message: last?.body ?? null,
+                last_at: last?.created_at ?? session?.expires_at ?? null,
+            };
+        });
+        data.sort((a, b) => {
+            const ta = a.last_at ? new Date(a.last_at).getTime() : 0;
+            const tb = b.last_at ? new Date(b.last_at).getTime() : 0;
+            return tb - ta;
+        });
+        res.json({ success: true, data });
     } catch (error) {
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Error fetching conversations' } });
     }
@@ -109,13 +212,19 @@ export const getConversationMessages = async (req: Request, res: Response) => {
             },
         });
 
+        const messages = await prisma.whatsappMessage.findMany({
+            where: { phone },
+            orderBy: { created_at: 'asc' },
+            take: 500,
+        });
+
         res.json({
             success: true,
             data: {
                 user: user || professional,
                 session: session ? { ...session, state: session.step } : null,
                 requests,
-                messages: [],
+                messages,
             },
         });
     } catch (error) {
@@ -210,6 +319,166 @@ export const updateProfessionalStatus = async (req: Request, res: Response) => {
         res.json({ success: true, data: pro });
     } catch (error) {
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR' } });
+    }
+};
+
+export const deleteProfessional = async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        const [offers, earnings] = await Promise.all([
+            prisma.jobOffer.count({ where: { professional_id: id } }),
+            prisma.earning.count({ where: { professional_id: id } }),
+        ]);
+        if (offers > 0 || earnings > 0) {
+            return res.status(409).json({
+                success: false,
+                error: {
+                    message:
+                        'No se puede eliminar: este técnico tiene ofertas o pagos asociados. Suspendelo para sacarlo de circulación.',
+                },
+            });
+        }
+        const pro = await prisma.professional.findUnique({ where: { id } });
+        if (!pro) {
+            return res.status(404).json({ success: false, error: { message: 'Profesional no encontrado' } });
+        }
+        await prisma.$transaction([
+            prisma.professionalDocument.deleteMany({ where: { professional_id: id } }),
+            prisma.providerSchedule.deleteMany({ where: { provider_id: id } }),
+            prisma.professionalSession.deleteMany({ where: { phone: pro.phone } }),
+            prisma.professional.delete({ where: { id } }),
+        ]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'No se pudo eliminar' } });
+    }
+};
+
+export const getUsers = async (req: Request, res: Response) => {
+    try {
+        const { status } = req.query;
+        const filter: { status?: 'active' | 'inactive' } = {};
+        if (status === 'active' || status === 'inactive') filter.status = status;
+        const users = await prisma.user.findMany({
+            where: filter,
+            orderBy: { created_at: 'desc' },
+        });
+        res.json({ success: true, data: users });
+    } catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR' } });
+    }
+};
+
+export const getUserDetail = async (req: Request, res: Response) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: req.params.id },
+            include: {
+                service_requests: {
+                    orderBy: { created_at: 'desc' },
+                    take: 20,
+                    select: { id: true, category: true, status: true, created_at: true, description: true },
+                },
+            },
+        });
+        if (!user) {
+            return res.status(404).json({ success: false, error: { message: 'Usuario no encontrado' } });
+        }
+        res.json({ success: true, data: user });
+    } catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR' } });
+    }
+};
+
+export const createUser = async (req: Request, res: Response) => {
+    try {
+        const phone = String(req.body?.phone || '').replace(/\D/g, '');
+        if (!phone) {
+            return res.status(400).json({ success: false, error: { message: 'El teléfono es obligatorio' } });
+        }
+        const existing = await prisma.user.findUnique({ where: { phone } });
+        if (existing) {
+            return res.status(409).json({ success: false, error: { message: 'Ya existe un usuario con ese teléfono' } });
+        }
+        const user = await prisma.user.create({
+            data: {
+                phone,
+                name: String(req.body?.name || '').trim() || null,
+                last_name: String(req.body?.last_name || '').trim() || null,
+                address: String(req.body?.address || '').trim() || null,
+                postal_code: String(req.body?.postal_code || '').trim() || null,
+                onboarding_completed: Boolean(req.body?.onboarding_completed),
+                status: req.body?.status === 'inactive' ? 'inactive' : 'active',
+            },
+        });
+        res.json({ success: true, data: user });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR' } });
+    }
+};
+
+export const updateUser = async (req: Request, res: Response) => {
+    try {
+        const body = req.body as Record<string, unknown>;
+        const data: Record<string, unknown> = {};
+        if (typeof body.name === 'string') data.name = body.name.trim() || null;
+        if (typeof body.last_name === 'string') data.last_name = body.last_name.trim() || null;
+        if (typeof body.address === 'string') data.address = body.address.trim() || null;
+        if (typeof body.postal_code === 'string') data.postal_code = body.postal_code.trim() || null;
+        if (typeof body.phone === 'string') data.phone = body.phone.replace(/\D/g, '');
+        if (typeof body.onboarding_completed === 'boolean') data.onboarding_completed = body.onboarding_completed;
+        if (body.status === 'active' || body.status === 'inactive') data.status = body.status;
+        const user = await prisma.user.update({
+            where: { id: req.params.id },
+            data,
+        });
+        res.json({ success: true, data: user });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR' } });
+    }
+};
+
+export const updateUserStatus = async (req: Request, res: Response) => {
+    try {
+        const status = req.body?.status === 'inactive' ? 'inactive' : 'active';
+        const user = await prisma.user.update({
+            where: { id: req.params.id },
+            data: { status },
+        });
+        res.json({ success: true, data: user });
+    } catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR' } });
+    }
+};
+
+export const deleteUser = async (req: Request, res: Response) => {
+    try {
+        const user = await prisma.user.findUnique({ where: { id: req.params.id } });
+        if (!user) {
+            return res.status(404).json({ success: false, error: { message: 'Usuario no encontrado' } });
+        }
+        const requests = await prisma.serviceRequest.count({ where: { user_phone: user.phone } });
+        if (requests > 0) {
+            return res.status(409).json({
+                success: false,
+                error: {
+                    message:
+                        'No se puede eliminar: este usuario tiene pedidos. Ponelo inactivo para que el bot no le responda.',
+                },
+            });
+        }
+        await prisma.$transaction([
+            prisma.whatsappSession.deleteMany({ where: { phone: user.phone } }),
+            prisma.whatsappMessage.deleteMany({ where: { phone: user.phone } }),
+            prisma.user.delete({ where: { id: user.id } }),
+        ]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'No se pudo eliminar' } });
     }
 };
 

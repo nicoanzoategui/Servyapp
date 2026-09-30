@@ -14,6 +14,7 @@ import { verifyMercadoPagoWebhookSignature } from '../lib/mp-webhook-signature';
 import { verifyTwilioWebhookSignature } from '../lib/twilio-webhook-signature';
 import { formatClientChosenSchedule } from '../services/manual-assignment.service';
 import { isUserCancelCommand } from '../services/visit-cancel.service';
+import { logWhatsappMessage } from '../services/chat-log.service';
 import { twilioWebhookAls } from '../lib/twilio-request-context';
 import {
     maskPhoneDigitsTail,
@@ -102,6 +103,7 @@ export const handleWhatsAppMessage = async (req: Request, res: Response) => {
                 }
 
                 if (phone && content) {
+                    await logWhatsappMessage({ phone, direction: 'inbound', type: messageType, body: content });
                     await ConversationService.processMessage(phone, messageType, content).catch(console.error);
                 }
             }
@@ -416,6 +418,8 @@ export const handleTwilioMessage = async (req: Request, res: Response) => {
             messageType,
             contentPreview: content.slice(0, 120),
         });
+
+        await logWhatsappMessage({ phone, direction: 'inbound', type: messageType, body: content });
 
         // Comando global cancelar para ambos flujos
         if (isUserCancelCommand(content)) {
