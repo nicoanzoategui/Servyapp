@@ -29,6 +29,7 @@ import {
     getConfig,
     updateConfig,
     getUnassignedServiceRequests,
+    getOrders,
     assignTechnician,
 } from '../controllers/admin.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth.middleware';
@@ -64,6 +65,7 @@ router.put('/users/:id/status', updateUserStatus);
 router.delete('/users/:id', deleteUser);
 
 router.get('/service-requests/unassigned', getUnassignedServiceRequests);
+router.get('/orders', getOrders);
 router.post('/service-requests/:id/assign-technician', assignTechnician);
 
 // Jobs

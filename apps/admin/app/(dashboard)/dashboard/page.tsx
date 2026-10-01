@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
-import { Activity, AlertTriangle, Users, DollarSign, ClipboardList, MapPin, Banknote } from 'lucide-react';
+import { Activity, AlertTriangle, Users, DollarSign, ClipboardList, MapPin, Banknote, CheckCircle2 } from 'lucide-react';
 import { API_URL } from '@/lib/api';
 
 type LiveArrival = {
@@ -41,6 +41,8 @@ const fetchDashboard = async () => {
         gmv?: { day?: number };
         live?: {
             unassigned_count?: number;
+            completed_today?: number;
+            completed_week?: number;
             awaiting_arrival?: LiveArrival[];
             refund_pending?: LiveRefund[];
         };
@@ -64,6 +66,8 @@ export default function DashboardPage() {
     if (isError) return <div className="text-red-500">Error cargando información. Revisá que la API esté corriendo.</div>;
 
     const unassigned = data?.live?.unassigned_count || 0;
+    const completedToday = data?.live?.completed_today || 0;
+    const completedWeek = data?.live?.completed_week || 0;
     const arrivals = data?.live?.awaiting_arrival || [];
     const refunds = data?.live?.refund_pending || [];
     const todoCount = unassigned + arrivals.length + refunds.length;
@@ -83,7 +87,7 @@ export default function DashboardPage() {
                     </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <Link href="/unassigned" className="border border-slate-200 rounded-xl p-4 hover:border-slate-400 transition">
                         <div className="flex items-center justify-between mb-2">
                             <p className="text-slate-600 font-medium">Sin técnico</p>
@@ -106,6 +110,14 @@ export default function DashboardPage() {
                         </div>
                         <p className="text-3xl font-bold text-slate-900">{refunds.length}</p>
                     </div>
+                    <Link href="/unassigned?status=completada" className="border border-slate-200 rounded-xl p-4 hover:border-slate-400 transition">
+                        <div className="flex items-center justify-between mb-2">
+                            <p className="text-slate-600 font-medium">Completadas hoy</p>
+                            <CheckCircle2 className="text-green-600" size={20} />
+                        </div>
+                        <p className="text-3xl font-bold text-slate-900">{completedToday}</p>
+                        <p className="text-xs text-slate-500 mt-2">{completedWeek} esta semana · ver en Órdenes</p>
+                    </Link>
                 </div>
 
                 {arrivals.length > 0 && (

@@ -43,7 +43,7 @@ export const getDashboard = async (req: Request, res: Response) => {
 
         const totalUsers = await prisma.user.count();
 
-        const [unassignedOrders, awaitingArrival, refundPending] = await Promise.all([
+        const [unassignedOrders, awaitingArrival, refundPending, completedToday, completedWeek] = await Promise.all([
             prisma.serviceRequest.count({
                 where: {
                     status: { in: ['visit_paid', 'awaiting_assignment'] },
@@ -94,6 +94,15 @@ export const getDashboard = async (req: Request, res: Response) => {
                     },
                 },
             }),
+            prisma.job.count({
+                where: { status: 'completed', OR: [{ completed_at: { gte: today } }, { completed_at: null, updated_at: { gte: today } }] },
+            }),
+            prisma.job.count({
+                where: {
+                    status: 'completed',
+                    OR: [{ completed_at: { gte: firstDayOfWeek } }, { completed_at: null, updated_at: { gte: firstDayOfWeek } }],
+                },
+            }),
         ]);
 
         res.json({
@@ -110,6 +119,8 @@ export const getDashboard = async (req: Request, res: Response) => {
                 },
                 live: {
                     unassigned_count: unassignedOrders,
+                    completed_today: completedToday,
+                    completed_week: completedWeek,
                     awaiting_arrival: awaitingArrival.map((job) => {
                         const sr = job.quotation.job_offer.service_request;
                         const pro = job.quotation.job_offer.professional;
@@ -141,11 +152,17 @@ export const getConversations = async (req: Request, res: Response) => {
         const sessions = await prisma.whatsappSession.findMany({
             orderBy: { expires_at: 'desc' },
         });
-        const recent = await prisma.whatsappMessage.findMany({
-            orderBy: { created_at: 'desc' },
-            take: 400,
-            select: { phone: true, body: true, created_at: true, direction: true },
-        });
+        let recent: { phone: string; body: string; created_at: Date; direction: string }[] = [];
+        try {
+            recent = await prisma.whatsappMessage.findMany({
+                orderBy: { created_at: 'desc' },
+                take: 400,
+                select: { phone: true, body: true, created_at: true, direction: true },
+            });
+        } catch (e) {
+            // Tabla todavía no migrada: el listado igual muestra sesiones activas.
+            console.error('[admin] whatsapp_messages no disponible', e);
+        }
         const lastByPhone = new Map<string, (typeof recent)[number]>();
         for (const m of recent) {
             if (!lastByPhone.has(m.phone)) lastByPhone.set(m.phone, m);
@@ -212,11 +229,16 @@ export const getConversationMessages = async (req: Request, res: Response) => {
             },
         });
 
-        const messages = await prisma.whatsappMessage.findMany({
-            where: { phone },
-            orderBy: { created_at: 'asc' },
-            take: 500,
-        });
+        let messages: Awaited<ReturnType<typeof prisma.whatsappMessage.findMany>> = [];
+        try {
+            messages = await prisma.whatsappMessage.findMany({
+                where: { phone },
+                orderBy: { created_at: 'asc' },
+                take: 500,
+            });
+        } catch (e) {
+            console.error('[admin] whatsapp_messages no disponible', e);
+        }
 
         res.json({
             success: true,
@@ -730,6 +752,113 @@ export const getUnassignedServiceRequests = async (_req: Request, res: Response)
         );
 
         res.json({ success: true, data });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR' } });
+    }
+};
+
+type OrderBucket = 'nueva' | 'pendiente' | 'completada' | 'cancelada';
+
+function orderBucket(row: {
+    status: string;
+    job_offers: {
+        professional_id: string | null;
+        professional: { name: string; last_name: string } | null;
+        quotations: { job: { id: string; status: string; completed_at: Date | null } | null }[];
+    }[];
+}): OrderBucket {
+    const jobs = row.job_offers.flatMap((o) => o.quotations.map((q) => q.job).filter(Boolean)) as {
+        id: string;
+        status: string;
+        completed_at: Date | null;
+    }[];
+    if (jobs.some((j) => j.status === 'completed')) return 'completada';
+    if (
+        ['cancelled', 'cancelled_by_user'].includes(row.status) ||
+        jobs.some((j) => j.status === 'cancelled')
+    ) {
+        return 'cancelada';
+    }
+    const assigned =
+        row.job_offers.some((o) => o.professional_id) ||
+        row.status === 'technician_assigned' ||
+        jobs.some((j) => j.status === 'confirmed' || j.status === 'in_progress');
+    if (assigned) return 'pendiente';
+    return 'nueva';
+}
+
+export const getOrders = async (req: Request, res: Response) => {
+    try {
+        const status = String(req.query.status || 'todas');
+        const rows = await prisma.serviceRequest.findMany({
+            orderBy: { created_at: 'desc' },
+            take: 300,
+            include: {
+                user: { select: { name: true, last_name: true, phone: true } },
+                job_offers: {
+                    orderBy: { created_at: 'desc' },
+                    include: {
+                        professional: { select: { id: true, name: true, last_name: true } },
+                        quotations: { include: { payment: true, job: true } },
+                    },
+                },
+            },
+        });
+
+        const mapped = await Promise.all(
+            rows.map(async (row) => {
+                const bucket = orderBucket(row);
+                const offer =
+                    row.job_offers.find((o) => o.professional_id) ??
+                    row.job_offers.find((o) => o.professional_id == null) ??
+                    row.job_offers[0];
+                const visitQuote = offer?.quotations.find((q) => q.quotation_type === 'visit');
+                const job =
+                    offer?.quotations.map((q) => q.job).find(Boolean) ??
+                    row.job_offers.flatMap((o) => o.quotations.map((q) => q.job)).find(Boolean);
+                const pro = offer?.professional;
+                const paidAt = visitQuote?.payment?.paid_at ?? null;
+                return {
+                    id: row.id,
+                    bucket,
+                    category: row.category,
+                    description: row.description,
+                    address: row.address,
+                    priority: row.priority,
+                    scheduled_slot: row.scheduled_slot,
+                    scheduled_date: row.scheduled_date,
+                    visit_fee: row.visit_fee,
+                    status: row.status,
+                    photos: await signedUrlsForPhotos(row.photos || []),
+                    created_at: row.created_at,
+                    waiting_since: paidAt ?? row.created_at,
+                    client: {
+                        name: row.user?.name ?? null,
+                        last_name: row.user?.last_name ?? null,
+                        phone: row.user_phone,
+                    },
+                    technician: pro ? `${pro.name} ${pro.last_name}`.trim() : null,
+                    job_id: job?.id ?? null,
+                    job_status: job?.status ?? null,
+                    completed_at: job?.completed_at ?? null,
+                };
+            })
+        );
+
+        const counts = {
+            todas: mapped.length,
+            nueva: mapped.filter((o) => o.bucket === 'nueva').length,
+            pendiente: mapped.filter((o) => o.bucket === 'pendiente').length,
+            completada: mapped.filter((o) => o.bucket === 'completada').length,
+            cancelada: mapped.filter((o) => o.bucket === 'cancelada').length,
+        };
+        const data =
+            status === 'todas' || !status
+                ? mapped
+                : mapped.filter((o) => o.bucket === status);
+
+        res.json({ success: true, data, counts });
     } catch (error) {
         console.error(error);
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR' } });
